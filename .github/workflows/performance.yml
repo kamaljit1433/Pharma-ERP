@@ -1,0 +1,167 @@
+name: Performance Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    - cron: '0 4 * * *'  # Run daily at 4 AM UTC
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  performance-tests:
+    name: Performance & Load Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ems_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7.2
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Install backend dependencies
+        run: cd backend && npm ci
+      
+      - name: Build backend
+        run: cd backend && npm run build
+      
+      - name: Start backend server
+        run: |
+          cd backend
+          npm start &
+          sleep 5
+        env:
+          NODE_ENV: test
+          PORT: 3000
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ems_test
+          REDIS_URL: redis://localhost:6379
+      
+      - name: Run payroll processing performance test
+        run: |
+          cd backend
+          npm run test -- --testNamePattern="payroll.*performance" --verbose
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ems_test
+          REDIS_URL: redis://localhost:6379
+        continue-on-error: true
+      
+      - name: Run concurrent attendance marking test
+        run: |
+          cd backend
+          npm run test -- --testNamePattern="attendance.*concurrent" --verbose
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ems_test
+          REDIS_URL: redis://localhost:6379
+        continue-on-error: true
+      
+      - name: Run API response time tests
+        run: |
+          cd backend
+          npm run test -- --testNamePattern="api.*response.*time" --verbose
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ems_test
+          REDIS_URL: redis://localhost:6379
+        continue-on-error: true
+      
+      - name: Generate performance report
+        if: always()
+        run: |
+          mkdir -p performance-reports
+          echo "# Performance Test Report" > performance-reports/report.md
+          echo "Generated: $(date)" >> performance-reports/report.md
+          echo "" >> performance-reports/report.md
+          echo "## Test Results" >> performance-reports/report.md
+          echo "See artifacts for detailed results" >> performance-reports/report.md
+      
+      - name: Upload performance report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-report
+          path: performance-reports/
+          retention-days: 30
+
+  bundle-size:
+    name: Bundle Size Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build frontend
+        run: cd frontend && npm run build
+      
+      - name: Analyze bundle size
+        run: |
+          mkdir -p bundle-analysis
+          cd frontend
+          du -sh dist/ > ../bundle-analysis/total-size.txt
+          find dist -type f -name "*.js" -o -name "*.css" | while read file; do
+            du -h "$file" >> ../bundle-analysis/file-sizes.txt
+          done
+      
+      - name: Upload bundle analysis
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-analysis
+          path: bundle-analysis/
+          retention-days: 30
+      
+      - name: Comment bundle size on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const totalSize = fs.readFileSync('bundle-analysis/total-size.txt', 'utf8');
+            const comment = `## 📦 Bundle Size Analysis\n\n**Total Size:** ${totalSize}`;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

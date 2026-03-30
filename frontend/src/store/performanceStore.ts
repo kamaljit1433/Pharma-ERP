@@ -1,0 +1,355 @@
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import { performanceService } from '../services/performanceService';
+
+interface Goal {
+  id: string;
+  employeeId: string;
+  cycleId: string;
+  type: 'OKR' | 'KPI';
+  title: string;
+  description: string;
+  targetValue: number;
+  currentValue: number;
+  unit: string;
+  weight: number;
+  dueDate: string;
+  status: 'On Track' | 'At Risk' | 'Behind' | 'Completed';
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface ReviewCycle {
+  id: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  status: 'Planning' | 'Active' | 'Closed' | 'Finalized';
+  createdAt: string;
+}
+
+interface PerformanceReview {
+  id: string;
+  employeeId: string;
+  cycleId: string;
+  selfRating?: number;
+  managerRating?: number;
+  peerRatings: number[];
+  finalRating: number;
+  comments: string;
+  status: 'Pending' | 'Self-Assessment Complete' | 'Manager Review Complete' | 'Finalized';
+  completedAt?: string;
+}
+
+interface Feedback {
+  id: string;
+  toEmployeeId: string;
+  fromEmployeeId: string;
+  type: 'Positive' | 'Constructive' | 'Neutral';
+  content: string;
+  isAnonymous: boolean;
+  visibility: 'Private' | 'Manager Only' | 'Public';
+  createdAt: string;
+}
+
+interface PIP {
+  id: string;
+  employeeId: string;
+  initiatedBy: string;
+  goalIds: string[];
+  startDate: string;
+  endDate: string;
+  status: 'Active' | 'Completed';
+  outcome?: 'Completed' | 'Extended' | 'Escalated';
+  createdAt: string;
+}
+
+interface PerformanceState {
+  // Goals
+  goals: Goal[];
+  loadingGoals: boolean;
+  fetchEmployeeGoals: (employeeId: string, cycleId?: string) => Promise<void>;
+  createGoal: (data: any) => Promise<void>;
+  updateGoal: (id: string, data: any) => Promise<void>;
+  updateGoalProgress: (id: string, currentValue: number, comment?: string) => Promise<void>;
+  deleteGoal: (id: string) => Promise<void>;
+
+  // Review Cycles
+  reviewCycles: ReviewCycle[];
+  loadingCycles: boolean;
+  fetchReviewCycles: (status?: string) => Promise<void>;
+  createReviewCycle: (data: any) => Promise<void>;
+  updateReviewCycle: (id: string, data: any) => Promise<void>;
+  transitionCycleStatus: (id: string, newStatus: string) => Promise<void>;
+  deleteReviewCycle: (id: string) => Promise<void>;
+
+  // Reviews
+  reviews: PerformanceReview[];
+  loadingReviews: boolean;
+  fetchEmployeeReviews: (employeeId: string, cycleId?: string) => Promise<void>;
+  submitReview: (data: any) => Promise<void>;
+  updateReview: (id: string, data: any) => Promise<void>;
+
+  // Feedback
+  feedback: Feedback[];
+  loadingFeedback: boolean;
+  fetchEmployeeFeedback: (employeeId: string) => Promise<void>;
+  provideFeedback: (data: any) => Promise<void>;
+
+  // PIPs
+  pips: PIP[];
+  loadingPIPs: boolean;
+  fetchActivePIPs: () => Promise<void>;
+  fetchEmployeePIPs: (employeeId: string) => Promise<void>;
+  initiatePIP: (data: any) => Promise<void>;
+  recordPIPCheckIn: (pipId: string, data: any) => Promise<void>;
+  recordPIPOutcome: (pipId: string, outcome: string, notes?: string) => Promise<void>;
+
+  // Dashboard
+  dashboardStats: any;
+  loadingDashboard: boolean;
+  fetchDashboardStats: () => Promise<void>;
+
+  // Error handling
+  error: string | null;
+  clearError: () => void;
+}
+
+export const usePerformanceStore = create<PerformanceState>()(
+  persist(
+    (set) => ({
+      // Goals
+      goals: [],
+      loadingGoals: false,
+      fetchEmployeeGoals: async (employeeId, cycleId) => {
+        set({ loadingGoals: true, error: null });
+        try {
+          const data = await performanceService.getEmployeeGoals(employeeId, cycleId);
+          set({ goals: data });
+        } catch (error) {
+          set({ error: (error as Error).message });
+        } finally {
+          set({ loadingGoals: false });
+        }
+      },
+      createGoal: async (data) => {
+        set({ error: null });
+        try {
+          await performanceService.createGoal(data);
+        } catch (error) {
+          set({ error: (error as Error).message });
+        }
+      },
+      updateGoal: async (id, data) => {
+        set({ error: null });
+        try {
+          await performanceService.updateGoal(id, data);
+        } catch (error) {
+          set({ error: (error as Error).message });
+        }
+      },
+      updateGoalProgress: async (id, currentValue, comment) => {
+        set({ error: null });
+        try {
+          await performanceService.updateGoalProgress(id, currentValue, comment);
+        } catch (error) {
+          set({ error: (error as Error).message });
+        }
+      },
+      deleteGoal: async (id) => {
+        set({ error: null });
+        try {
+          await performanceService.deleteGoal(id);
+          set((state) => ({
+            goals: state.goals.filter((g) => g.id !== id),
+          }));
+        } catch (error) {
+          set({ error: (error as Error).message });
+        }
+      },
+
+      // Review Cycles
+      reviewCycles: [],
+      loadingCycles: false,
+      fetchReviewCycles: async (status) => {
+        set({ loadingCycles: true, error: null });
+        try {
+          const data = await performanceService.getReviewCycles(status);
+          set({ reviewCycles: data });
+        } catch (error) {
+          set({ error: (error as Error).message });
+        } finally {
+          set({ loadingCycles: false });
+        }
+      },
+      createReviewCycle: async (data) => {
+        set({ error: null });
+        try {
+          await performanceService.createReviewCycle(data);
+        } catch (error) {
+          set({ error: (error as Error).message });
+        }
+      },
+      updateReviewCycle: async (id, data) => {
+        set({ error: null });
+        try {
+          await performanceService.updateReviewCycle(id, data);
+        } catch (error) {
+          set({ error: (error as Error).message });
+        }
+      },
+      transitionCycleStatus: async (id, newStatus) => {
+        set({ error: null });
+        try {
+          await performanceService.transitionCycleStatus(id, newStatus);
+        } catch (error) {
+          set({ error: (error as Error).message });
+        }
+      },
+      deleteReviewCycle: async (id) => {
+        set({ error: null });
+        try {
+          await performanceService.deleteReviewCycle(id);
+          set((state) => ({
+            reviewCycles: state.reviewCycles.filter((c) => c.id !== id),
+          }));
+        } catch (error) {
+          set({ error: (error as Error).message });
+        }
+      },
+
+      // Reviews
+      reviews: [],
+      loadingReviews: false,
+      fetchEmployeeReviews: async (employeeId, cycleId) => {
+        set({ loadingReviews: true, error: null });
+        try {
+          const data = await performanceService.getEmployeeReviews(employeeId, cycleId);
+          set({ reviews: data });
+        } catch (error) {
+          set({ error: (error as Error).message });
+        } finally {
+          set({ loadingReviews: false });
+        }
+      },
+      submitReview: async (data) => {
+        set({ error: null });
+        try {
+          await performanceService.submitReview(data);
+        } catch (error) {
+          set({ error: (error as Error).message });
+        }
+      },
+      updateReview: async (id, data) => {
+        set({ error: null });
+        try {
+          await performanceService.updateReview(id, data);
+        } catch (error) {
+          set({ error: (error as Error).message });
+        }
+      },
+
+      // Feedback
+      feedback: [],
+      loadingFeedback: false,
+      fetchEmployeeFeedback: async (employeeId) => {
+        set({ loadingFeedback: true, error: null });
+        try {
+          const data = await performanceService.getEmployeeFeedback(employeeId);
+          set({ feedback: data });
+        } catch (error) {
+          set({ error: (error as Error).message });
+        } finally {
+          set({ loadingFeedback: false });
+        }
+      },
+      provideFeedback: async (data) => {
+        set({ error: null });
+        try {
+          await performanceService.provideFeedback(data);
+        } catch (error) {
+          set({ error: (error as Error).message });
+        }
+      },
+
+      // PIPs
+      pips: [],
+      loadingPIPs: false,
+      fetchActivePIPs: async () => {
+        set({ loadingPIPs: true, error: null });
+        try {
+          const data = await performanceService.getActivePIPs();
+          set({ pips: data });
+        } catch (error) {
+          set({ error: (error as Error).message });
+        } finally {
+          set({ loadingPIPs: false });
+        }
+      },
+      fetchEmployeePIPs: async (employeeId) => {
+        set({ loadingPIPs: true, error: null });
+        try {
+          const data = await performanceService.getEmployeePIPs(employeeId);
+          set({ pips: data });
+        } catch (error) {
+          set({ error: (error as Error).message });
+        } finally {
+          set({ loadingPIPs: false });
+        }
+      },
+      initiatePIP: async (data) => {
+        set({ error: null });
+        try {
+          await performanceService.initiatePIP(data);
+        } catch (error) {
+          set({ error: (error as Error).message });
+        }
+      },
+      recordPIPCheckIn: async (pipId, data) => {
+        set({ error: null });
+        try {
+          await performanceService.recordPIPCheckIn(pipId, data);
+        } catch (error) {
+          set({ error: (error as Error).message });
+        }
+      },
+      recordPIPOutcome: async (pipId, outcome, notes) => {
+        set({ error: null });
+        try {
+          await performanceService.recordPIPOutcome(pipId, outcome, notes);
+        } catch (error) {
+          set({ error: (error as Error).message });
+        }
+      },
+
+      // Dashboard
+      dashboardStats: null,
+      loadingDashboard: false,
+      fetchDashboardStats: async () => {
+        set({ loadingDashboard: true, error: null });
+        try {
+          const data = await performanceService.getPerformanceDashboard();
+          set({ dashboardStats: data });
+        } catch (error) {
+          set({ error: (error as Error).message });
+        } finally {
+          set({ loadingDashboard: false });
+        }
+      },
+
+      // Error handling
+      error: null,
+      clearError: () => set({ error: null }),
+    }),
+    {
+      name: 'performance-store',
+      partialize: (state) => ({
+        goals: state.goals,
+        reviewCycles: state.reviewCycles,
+        reviews: state.reviews,
+        feedback: state.feedback,
+        pips: state.pips,
+      }),
+    }
+  )
+);

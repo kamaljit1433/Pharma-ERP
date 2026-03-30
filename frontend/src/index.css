@@ -1,0 +1,89 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Base Colors (Monochromatic) */
+    --background: 0 0% 100%; /* Pure White - #FFFFFF */
+    --foreground: 0 0% 3.9%; /* Near Black - #0A0A0A */
+
+    /* Neutral Grays */
+    --card: 0 0% 100%; /* White - #FFFFFF */
+    --card-foreground: 0 0% 3.9%; /* Near Black - #0A0A0A */
+    --popover: 0 0% 100%; /* White - #FFFFFF */
+    --popover-foreground: 0 0% 3.9%; /* Near Black - #0A0A0A */
+
+    /* Muted Elements */
+    --muted: 0 0% 96.1%; /* Light Gray - #F5F5F5 */
+    --muted-foreground: 0 0% 45.1%; /* Medium Gray - #737373 */
+
+    /* Borders & Inputs */
+    --border: 0 0% 89.8%; /* Border Gray - #E5E5E5 */
+    --input: 0 0% 89.8%; /* Input Border - #E5E5E5 */
+    --ring: 0 0% 3.9%; /* Focus Ring - #0A0A0A */
+
+    /* Primary Action (Black) */
+    --primary: 0 0% 9%; /* Primary Black - #171717 */
+    --primary-foreground: 0 0% 98%; /* White Text - #FAFAFA */
+
+    /* Secondary Action (Gray) */
+    --secondary: 0 0% 96.1%; /* Light Gray - #F5F5F5 */
+    --secondary-foreground: 0 0% 9%; /* Black Text - #171717 */
+
+    /* Accent (Subtle Gray) */
+    --accent: 0 0% 96.1%; /* Light Gray - #F5F5F5 */
+    --accent-foreground: 0 0% 9%; /* Black Text - #171717 */
+
+    /* Semantic Accent Colors (Status Indicators) */
+    /* Success - Green */
+    --success: 142 76% 36%; /* Green - #16A34A */
+    --success-foreground: 0 0% 98%; /* White Text - #FAFAFA */
+
+    /* Warning - Amber */
+    --warning: 38 92% 50%; /* Amber - #F59E0B */
+    --warning-foreground: 0 0% 9%; /* Black Text - #171717 */
+
+    /* Error/Destructive - Red */
+    --destructive: 0 84% 60%; /* Red - #EF4444 */
+    --destructive-foreground: 0 0% 98%; /* White Text - #FAFAFA */
+
+    /* Info - Blue */
+    --info: 221 83% 53%; /* Blue - #3B82F6 */
+    --info-foreground: 0 0% 98%; /* White Text - #FAFAFA */
+
+    /* Pending - Orange */
+    --pending: 25 95% 53%; /* Orange - #FB923C */
+    --pending-foreground: 0 0% 9%; /* Black Text - #171717 */
+
+    /* Approved - Emerald */
+    --approved: 160 84% 39%; /* Emerald - #10B981 */
+    --approved-foreground: 0 0% 98%; /* White Text - #FAFAFA */
+
+    /* Rejected - Rose */
+    --rejected: 0 72% 51%; /* Rose - #E11D48 */
+    --rejected-foreground: 0 0% 98%; /* White Text - #FAFAFA */
+
+    /* Border Radius */
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 0 0% 3.9%; /* Near Black */
+    --foreground: 0 0% 98%; /* Off White */
+    --muted: 0 0% 14.9%; /* Dark Gray */
+    --muted-foreground: 0 0% 63.9%; /* Light Gray */
+    --border: 0 0% 14.9%; /* Dark Border */
+    /* Status colors remain the same for consistency */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+}

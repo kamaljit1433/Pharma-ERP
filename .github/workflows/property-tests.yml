@@ -1,0 +1,94 @@
+name: Property-Based Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    - cron: '0 3 * * *'  # Run daily at 3 AM UTC
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  property-tests:
+    name: Property-Based Tests (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18, 20, 22]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ems_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7.2
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Install backend dependencies
+        run: cd backend && npm ci
+      
+      - name: Run property-based tests with fast-check
+        run: cd backend && npm run test -- --testPathPattern="\.property\.test\.ts$" --coverage --verbose
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ems_test
+          REDIS_URL: redis://localhost:6379
+          FAST_CHECK_ITERATIONS: 1000
+      
+      - name: Upload property test coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./backend/coverage/coverage-final.json
+          flags: property-tests-node${{ matrix.node-version }}
+          name: property-tests-coverage-node${{ matrix.node-version }}
+      
+      - name: Generate property test report
+        if: always()
+        run: |
+          cd backend
+          npm run test -- --testPathPattern="\.property\.test\.ts$" --json --outputFile=property-test-results.json
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ems_test
+          REDIS_URL: redis://localhost:6379
+          FAST_CHECK_ITERATIONS: 1000
+        continue-on-error: true
+      
+      - name: Upload property test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: property-test-results-node${{ matrix.node-version }}
+          path: backend/property-test-results.json
+          retention-days: 30

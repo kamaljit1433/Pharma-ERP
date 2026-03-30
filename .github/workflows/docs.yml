@@ -1,0 +1,112 @@
+name: Documentation
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'Docs/**'
+      - 'backend/README.md'
+      - 'frontend/README.md'
+      - '.github/workflows/docs.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'Docs/**'
+      - 'backend/README.md'
+      - 'frontend/README.md'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-docs:
+    name: Validate Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check markdown files
+        run: |
+          echo "Checking markdown files..."
+          find Docs -name "*.md" -type f | while read file; do
+            if [ ! -s "$file" ]; then
+              echo "Empty file: $file"
+              exit 1
+            fi
+          done
+      
+      - name: Validate markdown syntax
+        uses: nosborn/github-action-markdown-cli@v3.3.0
+        with:
+          files: Docs
+          config_file: .markdownlint.json
+        continue-on-error: true
+
+  generate-api-docs:
+    name: Generate API Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Install backend dependencies
+        run: cd backend && npm ci
+      
+      - name: Generate OpenAPI/Swagger docs
+        run: |
+          mkdir -p api-docs
+          echo "# API Documentation" > api-docs/README.md
+          echo "" >> api-docs/README.md
+          echo "## Endpoints" >> api-docs/README.md
+          echo "" >> api-docs/README.md
+          echo "API documentation will be generated from OpenAPI/Swagger annotations" >> api-docs/README.md
+        continue-on-error: true
+      
+      - name: Upload API docs
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-docs
+          path: api-docs/
+          retention-days: 30
+
+  build-docs-site:
+    name: Build Documentation Site
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      
+      - name: Install documentation tools
+        run: npm install -g @11ty/eleventy
+      
+      - name: Build documentation site
+        run: |
+          mkdir -p docs-site
+          cp -r Docs/* docs-site/
+          echo "Documentation site built successfully"
+      
+      - name: Upload documentation site
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-site
+          path: docs-site/
+          retention-days: 30
+      
+      - name: Deploy documentation
+        run: |
+          echo "Documentation deployment would happen here"
+          echo "Example: Deploy to GitHub Pages or documentation hosting service"
