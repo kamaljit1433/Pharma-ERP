@@ -1,12 +1,28 @@
 import { Knex } from 'knex';
-import { Employee, CreateEmployeeDTO, UpdateEmployeeDTO, EmployeeFilters, EmergencyContact, CreateEmergencyContactDTO, UpdateEmergencyContactDTO, EmploymentHistory } from '../types/employee';
+import {
+  Employee,
+  CreateEmployeeDTO,
+  UpdateEmployeeDTO,
+  EmployeeFilters,
+  EmergencyContact,
+  CreateEmergencyContactDTO,
+  UpdateEmergencyContactDTO,
+  EmploymentHistory,
+  CreateEmploymentHistoryDTO,
+} from '../types/employee';
 import { v4 as uuidv4 } from 'uuid';
+
+/** Escape PostgreSQL LIKE special characters to prevent unintended wildcard matches. */
+function escapeLike(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+}
 
 export class EmployeeRepository {
   constructor(private db: Knex) {}
 
   async createEmployee(data: CreateEmployeeDTO): Promise<Employee> {
-    const employeeId = `EMP${Date.now()}`;
+    // Use a UUID prefix for employee_id to avoid timestamp collisions under concurrency.
+    const employeeId = `EMP-${uuidv4().slice(0, 8).toUpperCase()}`;
     const id = uuidv4();
 
     const [employee] = await this.db('employees')
@@ -37,6 +53,10 @@ export class EmployeeRepository {
       })
       .returning('*');
 
+    if (!employee) {
+      throw new Error('Failed to create employee record');
+    }
+
     return employee;
   }
 
@@ -53,27 +73,29 @@ export class EmployeeRepository {
   }
 
   async updateEmployee(id: string, data: UpdateEmployeeDTO): Promise<Employee> {
-    const [employee] = await this.db('employees')
+    const result = await this.db('employees')
       .where('id', id)
-      .update({
-        ...data,
-        updated_at: this.db.fn.now(),
-      })
+      .update({ ...data, updated_at: this.db.fn.now() })
       .returning('*');
 
-    return employee;
+    if (!result.length) {
+      throw new Error('Employee not found or update failed');
+    }
+
+    return result[0];
   }
 
   async updateEmployeeStatus(id: string, status: Employee['status']): Promise<Employee> {
-    const [employee] = await this.db('employees')
+    const result = await this.db('employees')
       .where('id', id)
-      .update({
-        status,
-        updated_at: this.db.fn.now(),
-      })
+      .update({ status, updated_at: this.db.fn.now() })
       .returning('*');
 
-    return employee;
+    if (!result.length) {
+      throw new Error('Employee not found or status update failed');
+    }
+
+    return result[0];
   }
 
   async searchEmployees(filters: EmployeeFilters): Promise<Employee[]> {
@@ -96,10 +118,11 @@ export class EmployeeRepository {
     }
 
     if (filters.search) {
+      const safe = escapeLike(filters.search.toLowerCase());
       query = query.where((q) => {
-        q.whereRaw('LOWER(first_name) LIKE ?', [`%${filters.search!.toLowerCase()}%`])
-          .orWhereRaw('LOWER(last_name) LIKE ?', [`%${filters.search!.toLowerCase()}%`])
-          .orWhereRaw('LOWER(email) LIKE ?', [`%${filters.search!.toLowerCase()}%`])
+        q.whereRaw('LOWER(first_name) LIKE ? ESCAPE \'\\\'', [`%${safe}%`])
+          .orWhereRaw('LOWER(last_name) LIKE ? ESCAPE \'\\\'', [`%${safe}%`])
+          .orWhereRaw('LOWER(email) LIKE ? ESCAPE \'\\\'', [`%${safe}%`])
           .orWhere('employee_id', filters.search!);
       });
     }
@@ -111,10 +134,7 @@ export class EmployeeRepository {
   }
 
   async getAllEmployees(limit: number = 50, offset: number = 0): Promise<Employee[]> {
-    return this.db('employees')
-      .limit(limit)
-      .offset(offset)
-      .orderBy('created_at', 'desc');
+    return this.db('employees').limit(limit).offset(offset).orderBy('created_at', 'desc');
   }
 
   async getEmployeeCount(filters?: EmployeeFilters): Promise<number> {
@@ -138,10 +158,11 @@ export class EmployeeRepository {
       }
 
       if (filters.search) {
+        const safe = escapeLike(filters.search.toLowerCase());
         query = query.where((q) => {
-          q.whereRaw('LOWER(first_name) LIKE ?', [`%${filters.search!.toLowerCase()}%`])
-            .orWhereRaw('LOWER(last_name) LIKE ?', [`%${filters.search!.toLowerCase()}%`])
-            .orWhereRaw('LOWER(email) LIKE ?', [`%${filters.search!.toLowerCase()}%`])
+          q.whereRaw('LOWER(first_name) LIKE ? ESCAPE \'\\\'', [`%${safe}%`])
+            .orWhereRaw('LOWER(last_name) LIKE ? ESCAPE \'\\\'', [`%${safe}%`])
+            .orWhereRaw('LOWER(email) LIKE ? ESCAPE \'\\\'', [`%${safe}%`])
             .orWhere('employee_id', filters.search!);
         });
       }
@@ -152,7 +173,10 @@ export class EmployeeRepository {
   }
 
   // Emergency Contacts
-  async addEmergencyContact(employeeId: string, data: CreateEmergencyContactDTO): Promise<EmergencyContact> {
+  async addEmergencyContact(
+    employeeId: string,
+    data: CreateEmergencyContactDTO
+  ): Promise<EmergencyContact> {
     const id = uuidv4();
 
     const [contact] = await this.db('emergency_contacts')
@@ -177,20 +201,31 @@ export class EmployeeRepository {
       .orderBy('priority', 'asc');
   }
 
-  async updateEmergencyContact(id: string, data: UpdateEmergencyContactDTO): Promise<EmergencyContact> {
-    const [contact] = await this.db('emergency_contacts')
+  async getEmergencyContactById(id: string): Promise<EmergencyContact | null> {
+    return this.db('emergency_contacts').where('id', id).first() ?? null;
+  }
+
+  async updateEmergencyContact(
+    id: string,
+    data: UpdateEmergencyContactDTO
+  ): Promise<EmergencyContact> {
+    const result = await this.db('emergency_contacts')
       .where('id', id)
-      .update({
-        ...data,
-        updated_at: this.db.fn.now(),
-      })
+      .update({ ...data, updated_at: this.db.fn.now() })
       .returning('*');
 
-    return contact;
+    if (!result.length) {
+      throw new Error('Emergency contact not found or update failed');
+    }
+
+    return result[0];
   }
 
   async deleteEmergencyContact(id: string): Promise<void> {
-    await this.db('emergency_contacts').where('id', id).delete();
+    const deleted = await this.db('emergency_contacts').where('id', id).delete();
+    if (!deleted) {
+      throw new Error('Emergency contact not found');
+    }
   }
 
   async getEmergencyContactCount(employeeId: string): Promise<number> {
@@ -202,7 +237,10 @@ export class EmployeeRepository {
   }
 
   // Employment History
-  async addEmploymentHistory(employeeId: string, data: Omit<EmploymentHistory, 'id' | 'created_at' | 'employee_id'>): Promise<EmploymentHistory> {
+  async addEmploymentHistory(
+    employeeId: string,
+    data: CreateEmploymentHistoryDTO
+  ): Promise<EmploymentHistory> {
     const id = uuidv4();
 
     const [history] = await this.db('employment_history')

@@ -2,10 +2,21 @@ import React, { useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { registerServiceWorker, onOnlineStatusChange, isStandalone } from '@/utils/pwaRegister';
 import { initializeOfflineStorage } from '@/utils/offlineStorage';
+import { useSessionManagement } from '@/hooks/useSessionManagement';
+import { useThemeInitialization } from '@/hooks/useThemeInitialization';
 
 const App: React.FC = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isInstalled, setIsInstalled] = useState(false);
+  
+  // Initialize session management
+  useSessionManagement();
+  
+  // Initialize theme system
+  // Requirement 24.5: Detect system theme preference on first load
+  // Requirement 24.2: Use CSS variables for theme colors
+  // Requirement 24.3: Apply theme consistently across all components
+  useThemeInitialization(true);
 
   useEffect(() => {
     // Initialize PWA
@@ -60,7 +71,7 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#ffffff', color: '#0a0a0a' }}>
+    <div style={{ minHeight: '100vh' }}>
       {!isOnline && (
         <div
           style={{

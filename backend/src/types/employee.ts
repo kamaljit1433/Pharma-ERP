@@ -50,6 +50,15 @@ export interface EmploymentHistory {
   to_date?: string;
   reason?: string;
   created_at: string;
+  updated_at?: string;
+}
+
+export interface CreateEmploymentHistoryDTO {
+  designation_id?: string;
+  department_id?: string;
+  from_date: string;
+  to_date?: string;
+  reason?: string;
 }
 
 export interface CreateEmployeeDTO {

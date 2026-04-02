@@ -63,12 +63,14 @@ export class SalaryStructureRepository {
 
   async updateSalaryStructure(
     id: string,
-    data: UpdateSalaryStructureDTO
+    data: UpdateSalaryStructureDTO,
+    updatedBy?: string
   ): Promise<SalaryStructure> {
     const [updated] = await this.knex('salary_structures')
       .where({ id })
       .update({
         ...data,
+        ...(updatedBy && { updated_by: updatedBy }),
         updated_at: this.knex.fn.now(),
       })
       .returning('*');

@@ -1,10 +1,10 @@
-import api from './api';
+import apiClient from './api';
 
 export const documentService = {
   // ============ Document Management ============
 
   uploadDocument: async (data: FormData) => {
-    const response = await api.post('/documents', data, {
+    const response = await apiClient.post('/documents', data, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -13,36 +13,36 @@ export const documentService = {
   },
 
   getDocument: async (id: string) => {
-    const response = await api.get(`/documents/${id}`);
+    const response = await apiClient.get(`/documents/${id}`);
     return response.data;
   },
 
   updateDocument: async (id: string, data: any) => {
-    const response = await api.put(`/documents/${id}`, data);
+    const response = await apiClient.put(`/documents/${id}`, data);
     return response.data;
   },
 
   deleteDocument: async (id: string) => {
-    const response = await api.delete(`/documents/${id}`);
+    const response = await apiClient.delete(`/documents/${id}`);
     return response.data;
   },
 
   getEmployeeDocuments: async (employeeId: string) => {
-    const response = await api.get(`/documents/employee/${employeeId}`);
+    const response = await apiClient.get(`/documents/employee/${employeeId}`);
     return response.data;
   },
 
   // ============ Document Expiry Management ============
 
   getExpiringDocuments: async (daysThreshold: number = 30) => {
-    const response = await api.get('/documents/expiring', {
+    const response = await apiClient.get('/documents/expiring', {
       params: { daysThreshold },
     });
     return response.data;
   },
 
   getEmployeeExpiringDocuments: async (employeeId: string, daysThreshold: number = 30) => {
-    const response = await api.get(`/documents/employee/${employeeId}/expiring`, {
+    const response = await apiClient.get(`/documents/employee/${employeeId}/expiring`, {
       params: { daysThreshold },
     });
     return response.data;
@@ -51,7 +51,7 @@ export const documentService = {
   // ============ Document Verification (HR) ============
 
   verifyDocument: async (id: string, status: 'verified' | 'rejected', comment?: string) => {
-    const response = await api.put(`/documents/${id}/verify`, {
+    const response = await apiClient.put(`/documents/${id}/verify`, {
       status,
       comment,
     });
@@ -59,14 +59,14 @@ export const documentService = {
   },
 
   getPendingDocuments: async () => {
-    const response = await api.get('/documents/pending/review');
+    const response = await apiClient.get('/documents/pending/review');
     return response.data;
   },
 
   // ============ Document Download ============
 
   downloadDocument: async (id: string) => {
-    const response = await api.get(`/documents/${id}/download`, {
+    const response = await apiClient.get(`/documents/${id}/download`, {
       responseType: 'blob',
     });
     return response.data;
@@ -75,7 +75,7 @@ export const documentService = {
   // ============ Document Version History ============
 
   getDocumentVersions: async (id: string) => {
-    const response = await api.get(`/documents/${id}/versions`);
+    const response = await apiClient.get(`/documents/${id}/versions`);
     return response.data;
   },
 };

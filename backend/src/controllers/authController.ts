@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import authService from '../services/authService';
+import logger from '../utils/logger';
 import {
   LoginRequest,
   RegisterRequest,
@@ -144,6 +145,7 @@ export class AuthController {
         message: 'Logout successful',
       });
     } catch (error) {
+      logger.error('Logout failed', { error });
       res.status(500).json({
         error: 'Internal server error',
         message: 'An unexpected error occurred',
@@ -173,6 +175,7 @@ export class AuthController {
         },
       });
     } catch (error) {
+      logger.error('getProfile failed', { error });
       res.status(500).json({
         error: 'Internal server error',
         message: 'An unexpected error occurred',
@@ -229,17 +232,17 @@ export class AuthController {
         return;
       }
 
-      const { token, secret }: { token: string; secret: string } = req.body;
+      const { token }: { token: string } = req.body;
 
-      if (!token || !secret) {
+      if (!token) {
         res.status(400).json({
           error: 'Bad request',
-          message: 'Token and secret are required',
+          message: 'Token is required',
         });
         return;
       }
 
-      await authService.enableMFA(req.user.id, token, secret);
+      await authService.enableMFA(req.user.id, token);
 
       res.status(200).json({
         message: 'MFA enabled successfully',

@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1';
+import apiClient from './api';
 
 export interface Department {
   id: string;
@@ -46,66 +44,66 @@ export interface OrgChartData {
 class HierarchyService {
   // Department operations
   async createDepartment(data: Omit<Department, 'id' | 'createdAt' | 'updatedAt'>) {
-    const response = await axios.post(`${API_BASE_URL}/hierarchy/departments`, data);
+    const response = await apiClient.post('/hierarchy/departments', data);
     return response.data;
   }
 
   async getDepartments() {
-    const response = await axios.get(`${API_BASE_URL}/hierarchy/departments`);
+    const response = await apiClient.get('/hierarchy/departments');
     return response.data;
   }
 
   async updateDepartment(id: string, data: Partial<Department>) {
-    const response = await axios.put(`${API_BASE_URL}/hierarchy/departments/${id}`, data);
+    const response = await apiClient.put(`/hierarchy/departments/${id}`, data);
     return response.data;
   }
 
   async deleteDepartment(id: string) {
-    await axios.delete(`${API_BASE_URL}/hierarchy/departments/${id}`);
+    await apiClient.delete(`/hierarchy/departments/${id}`);
   }
 
   // Designation operations
   async createDesignation(data: Omit<Designation, 'id' | 'createdAt' | 'updatedAt'>) {
-    const response = await axios.post(`${API_BASE_URL}/hierarchy/designations`, data);
+    const response = await apiClient.post('/hierarchy/designations', data);
     return response.data;
   }
 
   async getDesignations(departmentId?: string) {
-    const response = await axios.get(`${API_BASE_URL}/hierarchy/designations`, {
+    const response = await apiClient.get('/hierarchy/designations', {
       params: { departmentId },
     });
     return response.data;
   }
 
   async updateDesignation(id: string, data: Partial<Designation>) {
-    const response = await axios.put(`${API_BASE_URL}/hierarchy/designations/${id}`, data);
+    const response = await apiClient.put(`/hierarchy/designations/${id}`, data);
     return response.data;
   }
 
   async deleteDesignation(id: string) {
-    await axios.delete(`${API_BASE_URL}/hierarchy/designations/${id}`);
+    await apiClient.delete(`/hierarchy/designations/${id}`);
   }
 
   // Hierarchy operations
   async getOrgChart(rootEmployeeId?: string): Promise<OrgChartData> {
-    const response = await axios.get(`${API_BASE_URL}/hierarchy/org-chart`, {
+    const response = await apiClient.get('/hierarchy/org-chart', {
       params: { rootEmployeeId },
     });
     return response.data;
   }
 
   async getEmployeeHierarchy(employeeId: string): Promise<HierarchyNode> {
-    const response = await axios.get(`${API_BASE_URL}/hierarchy/employees/${employeeId}`);
+    const response = await apiClient.get(`/hierarchy/employees/${employeeId}`);
     return response.data;
   }
 
   async getDirectReports(managerId: string): Promise<HierarchyNode[]> {
-    const response = await axios.get(`${API_BASE_URL}/hierarchy/managers/${managerId}/reports`);
+    const response = await apiClient.get(`/hierarchy/managers/${managerId}/reports`);
     return response.data;
   }
 
   async getReportingChain(employeeId: string): Promise<HierarchyNode[]> {
-    const response = await axios.get(`${API_BASE_URL}/hierarchy/employees/${employeeId}/chain`);
+    const response = await apiClient.get(`/hierarchy/employees/${employeeId}/chain`);
     return response.data;
   }
 
@@ -115,8 +113,8 @@ class HierarchyService {
     managerId?: string;
     startDate: Date;
   }) {
-    const response = await axios.put(
-      `${API_BASE_URL}/hierarchy/employees/${employeeId}/position`,
+    const response = await apiClient.put(
+      `/hierarchy/employees/${employeeId}/position`,
       data
     );
     return response.data;

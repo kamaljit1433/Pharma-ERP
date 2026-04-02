@@ -1,4 +1,4 @@
-import { api } from './api';
+import apiClient from './api';
 import {
   DashboardStats,
   EmployeeStatistics,
@@ -12,32 +12,32 @@ import {
 
 export const dashboardService = {
   async getDashboardStats(): Promise<DashboardStats> {
-    const response = await api.get('/dashboard/stats');
+    const response = await apiClient.get('/dashboard/stats');
     return response.data.data;
   },
 
   async getEmployeeStats(): Promise<EmployeeStatistics> {
-    const response = await api.get('/dashboard/employees');
+    const response = await apiClient.get('/dashboard/employees');
     return response.data.data;
   },
 
   async getAttendanceStats(): Promise<AttendanceStatistics> {
-    const response = await api.get('/dashboard/attendance');
+    const response = await apiClient.get('/dashboard/attendance');
     return response.data.data;
   },
 
   async getLeaveStats(): Promise<LeaveStatistics> {
-    const response = await api.get('/dashboard/leaves');
+    const response = await apiClient.get('/dashboard/leaves');
     return response.data.data;
   },
 
   async getPayrollStats(): Promise<PayrollStatistics> {
-    const response = await api.get('/dashboard/payroll');
+    const response = await apiClient.get('/dashboard/payroll');
     return response.data.data;
   },
 
   async getRecruitmentStats(): Promise<RecruitmentStatistics> {
-    const response = await api.get('/dashboard/recruitment');
+    const response = await apiClient.get('/dashboard/recruitment');
     return response.data.data;
   },
 
@@ -52,7 +52,7 @@ export const dashboardService = {
     if (filter?.offset) params.append('offset', filter.offset.toString());
     params.append('format', format);
 
-    const response = await api.get(`/dashboard/reports/employees?${params.toString()}`, {
+    const response = await apiClient.get(`/dashboard/reports/employees?${params.toString()}`, {
       responseType: format === 'csv' ? 'blob' : 'json',
     });
 
@@ -69,7 +69,7 @@ export const dashboardService = {
     if (filter?.offset) params.append('offset', filter.offset.toString());
     params.append('format', format);
 
-    const response = await api.get(`/dashboard/reports/attendance?${params.toString()}`, {
+    const response = await apiClient.get(`/dashboard/reports/attendance?${params.toString()}`, {
       responseType: format === 'csv' ? 'blob' : 'json',
     });
 
@@ -87,7 +87,7 @@ export const dashboardService = {
     if (filter?.offset) params.append('offset', filter.offset.toString());
     params.append('format', format);
 
-    const response = await api.get(`/dashboard/reports/leaves?${params.toString()}`, {
+    const response = await apiClient.get(`/dashboard/reports/leaves?${params.toString()}`, {
       responseType: format === 'csv' ? 'blob' : 'json',
     });
 
@@ -105,7 +105,7 @@ export const dashboardService = {
     if (filter?.offset) params.append('offset', filter.offset.toString());
     params.append('format', format);
 
-    const response = await api.get(`/dashboard/reports/payroll?${params.toString()}`, {
+    const response = await apiClient.get(`/dashboard/reports/payroll?${params.toString()}`, {
       responseType: format === 'csv' ? 'blob' : 'json',
     });
 
@@ -123,7 +123,7 @@ export const dashboardService = {
     if (filter?.offset) params.append('offset', filter.offset.toString());
     params.append('format', format);
 
-    const response = await api.get(`/dashboard/reports/performance?${params.toString()}`, {
+    const response = await apiClient.get(`/dashboard/reports/performance?${params.toString()}`, {
       responseType: format === 'csv' ? 'blob' : 'json',
     });
 
@@ -141,7 +141,7 @@ export const dashboardService = {
     if (filter?.offset) params.append('offset', filter.offset.toString());
     params.append('format', format);
 
-    const response = await api.get(`/dashboard/reports/training?${params.toString()}`, {
+    const response = await apiClient.get(`/dashboard/reports/training?${params.toString()}`, {
       responseType: format === 'csv' ? 'blob' : 'json',
     });
 

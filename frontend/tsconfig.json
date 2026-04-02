@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
     /* Language and Environment */
-    "target": "ES2024",
-    "lib": ["ES2024", "DOM", "DOM.Iterable", "WebWorker"],
+    "target": "ES2023",
+    "lib": ["ES2023", "DOM", "DOM.Iterable", "WebWorker"],
     "jsx": "react-jsx",
     "useDefineForClassFields": true,
 

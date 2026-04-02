@@ -5,3 +5,7 @@ export { TeamLeaveCalendar } from './TeamLeaveCalendar';
 export { LeaveApproval } from './LeaveApproval';
 export { LeaveTypeManagement } from './LeaveTypeManagement';
 export { HolidayCalendar } from './HolidayCalendar';
+export { LeaveRequestForm } from './LeaveRequestForm';
+export { LeaveCalendarComponent } from './LeaveCalendarComponent';
+export { LeaveHistoryComponent } from './LeaveHistoryComponent';
+export { LeaveApprovalPanel } from './LeaveApprovalPanel';

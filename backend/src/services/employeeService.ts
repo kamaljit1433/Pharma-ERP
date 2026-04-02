@@ -1,6 +1,17 @@
 import { Knex } from 'knex';
 import { EmployeeRepository } from '../repositories/employeeRepository';
-import { Employee, CreateEmployeeDTO, UpdateEmployeeDTO, EmployeeFilters, CreateEmergencyContactDTO, UpdateEmergencyContactDTO } from '../types/employee';
+import {
+  Employee,
+  CreateEmployeeDTO,
+  UpdateEmployeeDTO,
+  EmployeeFilters,
+  EmergencyContact,
+  EmploymentHistory,
+  CreateEmergencyContactDTO,
+  UpdateEmergencyContactDTO,
+  CreateEmploymentHistoryDTO,
+} from '../types/employee';
+import { isValidEmail, isValidPhone } from '../utils/validation';
 
 export class EmployeeService {
   private employeeRepository: EmployeeRepository;
@@ -13,6 +24,11 @@ export class EmployeeService {
     // Validate required fields
     if (!data.first_name || !data.last_name || !data.email || !data.date_of_joining) {
       throw new Error('Missing required fields: first_name, last_name, email, date_of_joining');
+    }
+
+    // Validate email format
+    if (!isValidEmail(data.email)) {
+      throw new Error('Invalid email format');
     }
 
     // Check if email already exists
@@ -63,7 +79,10 @@ export class EmployeeService {
   }
 
   // Emergency Contact Management
-  async addEmergencyContact(employeeId: string, data: CreateEmergencyContactDTO): Promise<any> {
+  async addEmergencyContact(
+    employeeId: string,
+    data: CreateEmergencyContactDTO
+  ): Promise<EmergencyContact> {
     const employee = await this.employeeRepository.getEmployee(employeeId);
     if (!employee) {
       throw new Error('Employee not found');
@@ -79,10 +98,15 @@ export class EmployeeService {
       throw new Error('Missing required fields: name, relationship, phone');
     }
 
+    // Validate phone format
+    if (!isValidPhone(data.phone)) {
+      throw new Error('Invalid phone number format');
+    }
+
     return this.employeeRepository.addEmergencyContact(employeeId, data);
   }
 
-  async getEmergencyContacts(employeeId: string): Promise<any[]> {
+  async getEmergencyContacts(employeeId: string): Promise<EmergencyContact[]> {
     const employee = await this.employeeRepository.getEmployee(employeeId);
     if (!employee) {
       throw new Error('Employee not found');
@@ -91,16 +115,41 @@ export class EmployeeService {
     return this.employeeRepository.getEmergencyContacts(employeeId);
   }
 
-  async updateEmergencyContact(contactId: string, data: UpdateEmergencyContactDTO): Promise<any> {
+  async updateEmergencyContact(
+    employeeId: string,
+    contactId: string,
+    data: UpdateEmergencyContactDTO
+  ): Promise<EmergencyContact> {
+    // Verify contact exists and belongs to the specified employee
+    const contact = await this.employeeRepository.getEmergencyContactById(contactId);
+    if (!contact) {
+      throw new Error('Emergency contact not found');
+    }
+    if (contact.employee_id !== employeeId) {
+      throw new Error('Emergency contact does not belong to the specified employee');
+    }
+
     return this.employeeRepository.updateEmergencyContact(contactId, data);
   }
 
-  async deleteEmergencyContact(contactId: string): Promise<void> {
+  async deleteEmergencyContact(employeeId: string, contactId: string): Promise<void> {
+    // Verify contact exists and belongs to the specified employee
+    const contact = await this.employeeRepository.getEmergencyContactById(contactId);
+    if (!contact) {
+      throw new Error('Emergency contact not found');
+    }
+    if (contact.employee_id !== employeeId) {
+      throw new Error('Emergency contact does not belong to the specified employee');
+    }
+
     return this.employeeRepository.deleteEmergencyContact(contactId);
   }
 
   // Employment History
-  async addEmploymentHistory(employeeId: string, data: any): Promise<any> {
+  async addEmploymentHistory(
+    employeeId: string,
+    data: CreateEmploymentHistoryDTO
+  ): Promise<EmploymentHistory> {
     const employee = await this.employeeRepository.getEmployee(employeeId);
     if (!employee) {
       throw new Error('Employee not found');
@@ -113,7 +162,7 @@ export class EmployeeService {
     return this.employeeRepository.addEmploymentHistory(employeeId, data);
   }
 
-  async getEmploymentHistory(employeeId: string): Promise<any[]> {
+  async getEmploymentHistory(employeeId: string): Promise<EmploymentHistory[]> {
     const employee = await this.employeeRepository.getEmployee(employeeId);
     if (!employee) {
       throw new Error('Employee not found');

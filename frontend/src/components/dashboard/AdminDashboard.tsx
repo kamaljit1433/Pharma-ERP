@@ -1,41 +1,29 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Badge } from '../ui/badge';
-import { Loader2 } from 'lucide-react';
-import { dashboardService } from '../../services/dashboardService';
-import { DashboardStats } from '../../types/dashboard';
+import { Button } from '../ui/button';
+import { Loader2, Users, Calendar, Wallet, UserPlus, RefreshCw, Settings } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useDashboardStore } from '../../store/dashboardStore';
+import { useDashboardRefresh } from '../../hooks/useDashboardRefresh';
+import { useNotificationStore } from '../../store/notificationStore';
 import EmployeeStatsCard from './EmployeeStatsCard';
 import AttendanceStatsCard from './AttendanceStatsCard';
 import LeaveStatsCard from './LeaveStatsCard';
 import PayrollStatsCard from './PayrollStatsCard';
 import RecruitmentStatsCard from './RecruitmentStatsCard';
+import RecentNotifications from './RecentNotifications';
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const { stats, loading, error } = useDashboardStore();
+  const { fetchStats } = useDashboardRefresh();
+  const { notifications } = useNotificationStore();
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        setLoading(true);
-        const data = await dashboardService.getDashboardStats();
-        setStats(data);
-        setError(null);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load dashboard');
-        console.error('Dashboard error:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
+  const handleManualRefresh = () => {
     fetchStats();
-    // Refresh stats every 5 minutes
-    const interval = setInterval(fetchStats, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, []);
+  };
 
   if (loading) {
     return (
@@ -72,9 +60,69 @@ export default function AdminDashboard() {
             Real-time overview of your organization
           </p>
         </div>
-        <Badge variant="outline" className="text-xs">
-          Last updated: {new Date(stats.generatedAt).toLocaleTimeString()}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-xs">
+            Last updated: {stats?.generatedAt ? new Date(stats.generatedAt).toLocaleTimeString() : 'Never'}
+          </Badge>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleManualRefresh}
+            disabled={loading}
+            aria-label="Refresh dashboard"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          </Button>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="flex flex-wrap gap-2">
+        <Button 
+          variant="default" 
+          size="sm" 
+          onClick={() => navigate('/employees/new')}
+          aria-label="Add new employee"
+        >
+          <UserPlus className="h-4 w-4 mr-2" />
+          Add Employee
+        </Button>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => navigate('/leave')}
+          aria-label="Approve pending leave requests"
+        >
+          <Calendar className="h-4 w-4 mr-2" />
+          Approve Leaves
+        </Button>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => navigate('/payroll')}
+          aria-label="Process payroll"
+        >
+          <Wallet className="h-4 w-4 mr-2" />
+          Process Payroll
+        </Button>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => navigate('/recruitment')}
+          aria-label="View recruitment dashboard"
+        >
+          <Users className="h-4 w-4 mr-2" />
+          View Recruitment
+        </Button>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => navigate('/settings')}
+          aria-label="System settings"
+        >
+          <Settings className="h-4 w-4 mr-2" />
+          Settings
+        </Button>
       </div>
 
       {/* Main Stats Cards */}
@@ -82,6 +130,7 @@ export default function AdminDashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Employees</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.employees.total}</div>
@@ -94,6 +143,7 @@ export default function AdminDashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Present Today</CardTitle>
+            <Badge className="bg-success">Today</Badge>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.attendance.presentToday}</div>
@@ -106,6 +156,7 @@ export default function AdminDashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pending Leaves</CardTitle>
+            <Badge className="bg-warning">Pending</Badge>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.leaves.pendingApprovals}</div>
@@ -118,6 +169,7 @@ export default function AdminDashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Payroll Pending</CardTitle>
+            <Badge className="bg-warning">Pending</Badge>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.payroll.pendingProcessing}</div>
@@ -130,6 +182,7 @@ export default function AdminDashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Open Positions</CardTitle>
+            <UserPlus className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.recruitment.openPositions}</div>
@@ -139,6 +192,11 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Recent Notifications */}
+      {notifications.length > 0 && (
+        <RecentNotifications notifications={notifications.slice(0, 5)} />
+      )}
 
       {/* Detailed Stats Tabs */}
       <Tabs defaultValue="employees" className="space-y-4">

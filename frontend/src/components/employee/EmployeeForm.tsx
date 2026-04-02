@@ -27,6 +27,7 @@ interface EmployeeFormData {
 
 interface EmployeeFormProps {
   initialData?: Partial<EmployeeFormData>;
+  employee?: any;
   onSubmit: (data: EmployeeFormData) => Promise<void>;
   onCancel?: () => void;
   isLoading?: boolean;
@@ -34,20 +35,22 @@ interface EmployeeFormProps {
 
 export const EmployeeForm: React.FC<EmployeeFormProps> = ({
   initialData,
+  employee,
   onSubmit,
   onCancel,
   isLoading = false,
 }) => {
+  const data = employee || initialData;
   const [formData, setFormData] = useState<EmployeeFormData>({
-    first_name: initialData?.first_name || '',
-    last_name: initialData?.last_name || '',
-    email: initialData?.email || '',
-    phone: initialData?.phone || '',
-    personal_email: initialData?.personal_email || '',
-    date_of_birth: initialData?.date_of_birth || '',
-    gender: initialData?.gender || 'male',
-    address: initialData?.address || '',
-    city: initialData?.city || '',
+    first_name: data?.first_name || '',
+    last_name: data?.last_name || '',
+    email: data?.email || '',
+    phone: data?.phone || '',
+    personal_email: data?.personal_email || '',
+    date_of_birth: data?.date_of_birth || '',
+    gender: data?.gender || 'male',
+    address: data?.address || '',
+    city: data?.city || '',
     state: initialData?.state || '',
     postal_code: initialData?.postal_code || '',
     country: initialData?.country || '',
@@ -113,10 +116,10 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <UserPlus className="h-5 w-5" />
-          {initialData ? 'Edit Employee' : 'Add New Employee'}
+          {employee || initialData ? 'Edit Employee' : 'Add New Employee'}
         </CardTitle>
         <CardDescription>
-          {initialData
+          {employee || initialData
             ? 'Update employee information'
             : 'Create a new employee record in the system'}
         </CardDescription>

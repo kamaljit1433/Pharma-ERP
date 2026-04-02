@@ -59,7 +59,7 @@ export class AuthService {
     await this.authRepo.logAuthEvent({
       userId: user.id,
       email: user.email,
-      eventType: 'login_success',
+      eventType: 'register_success',
     });
 
     return { user, tokens };
@@ -218,6 +218,9 @@ export class AuthService {
     // Generate MFA secret and QR code
     const mfaSetup = await generateMFASecret(user.email);
 
+    // Store the secret server-side so enableMFA can verify against it (not client-supplied)
+    await this.authRepo.storePendingMFASecret(userId, mfaSetup.secret);
+
     // Store backup codes (hashed)
     const hashedCodes = mfaSetup.backupCodes.map(hashBackupCode);
     await this.authRepo.storeBackupCodes(userId, hashedCodes);
@@ -226,22 +229,28 @@ export class AuthService {
   }
 
   /**
-   * Enable MFA after verification
+   * Enable MFA after verification.
+   * The secret is read from the server-side store (set during setupMFA) and never accepted from the client.
    */
-  async enableMFA(userId: string, token: string, secret: string): Promise<void> {
+  async enableMFA(userId: string, token: string): Promise<void> {
     const user = await this.authRepo.findById(userId);
     if (!user) {
       throw new Error('User not found');
     }
 
-    // Verify token
-    const isValid = verifyMFAToken(token, secret);
+    // Secret must have been stored by setupMFA
+    if (!user.mfaSecret) {
+      throw new Error('MFA setup not initiated. Call /mfa/setup first.');
+    }
+
+    // Verify token against the server-stored secret
+    const isValid = verifyMFAToken(token, user.mfaSecret);
     if (!isValid) {
       throw new Error('Invalid MFA token');
     }
 
-    // Enable MFA
-    await this.authRepo.enableMFA(userId, secret);
+    // Enable MFA — secret is already stored from the setup phase
+    await this.authRepo.enableMFA(userId);
 
     // Log MFA enabled
     await this.authRepo.logAuthEvent({
@@ -278,7 +287,9 @@ export class AuthService {
   }
 
   /**
-   * Verify MFA token or backup code
+   * Verify MFA token or backup code.
+   * TODO (Issue 10): Add per-user rate limiting on backup code attempts (e.g., max 5 failures in 15 min)
+   * to prevent brute-force. Implement using a dedicated attempts table or Redis counter.
    */
   private async verifyMFA(user: User, token: string): Promise<boolean> {
     if (!user.mfaSecret) {
@@ -420,8 +431,10 @@ export class AuthService {
         const randomPassword = crypto.randomBytes(32).toString('hex');
         const passwordHash = await hashPassword(randomPassword);
 
+        // Generate a unique placeholder ID; an onboarding flow must link this to a real employee record.
+        const placeholderId = `OAUTH_${crypto.randomBytes(8).toString('hex').toUpperCase()}`;
         user = await this.authRepo.createUser({
-          employeeId: `OAUTH_${Date.now()}`, // Temporary, should be updated
+          employeeId: placeholderId,
           email: profile.email,
           passwordHash,
         });

@@ -15,9 +15,10 @@ export const generateAccessToken = (payload: TokenPayload): string => {
 
 /**
  * Generate refresh token (7 days expiry)
+ * Uses a separate secret from access tokens so compromising one does not compromise the other.
  */
 export const generateRefreshToken = (payload: TokenPayload): string => {
-  return jwt.sign(payload, config.jwt.secret, {
+  return jwt.sign(payload, config.jwt.refreshSecret, {
     expiresIn: config.jwt.refreshExpiresIn,
     issuer: 'ems-api',
     audience: 'ems-client',
@@ -60,7 +61,7 @@ export const verifyAccessToken = (token: string): TokenPayload => {
  */
 export const verifyRefreshToken = (token: string): TokenPayload => {
   try {
-    const decoded = jwt.verify(token, config.jwt.secret, {
+    const decoded = jwt.verify(token, config.jwt.refreshSecret, {
       issuer: 'ems-api',
       audience: 'ems-client',
     }) as TokenPayload;
@@ -73,17 +74,6 @@ export const verifyRefreshToken = (token: string): TokenPayload => {
       throw new Error('Invalid refresh token');
     }
     throw error;
-  }
-};
-
-/**
- * Decode token without verification (for debugging)
- */
-export const decodeToken = (token: string): TokenPayload | null => {
-  try {
-    return jwt.decode(token) as TokenPayload;
-  } catch {
-    return null;
   }
 };
 

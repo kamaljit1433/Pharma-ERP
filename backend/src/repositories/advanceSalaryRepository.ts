@@ -67,16 +67,18 @@ export class AdvanceSalaryRepository {
 
   async rejectAdvanceRequest(
     id: string,
-    approvedBy: string,
+    rejectedBy: string,
     notes?: string
   ): Promise<AdvanceSalaryRequest> {
+    // Use rejection-specific fields to keep the audit trail accurate.
+    // Previously this wrote to approved_by/approved_at, corrupting the audit log.
     const [updated] = await this.knex('advance_salary_requests')
       .where({ id })
       .update({
         status: 'rejected',
-        approved_by: approvedBy,
-        approval_notes: notes,
-        approved_at: this.knex.fn.now(),
+        rejected_by: rejectedBy,
+        rejection_notes: notes,
+        rejected_at: this.knex.fn.now(),
         updated_at: this.knex.fn.now(),
       })
       .returning('*');
@@ -105,7 +107,7 @@ export class AdvanceSalaryRepository {
       status: row.status,
       approved_by: row.approved_by,
       approval_notes: row.approval_notes,
-      approved_at: row.approved_at ? new Date(row.approved_at) : (undefined as any),
+      approved_at: row.approved_at ? new Date(row.approved_at) : undefined,
       deduction_months: row.deduction_months,
       created_at: new Date(row.created_at),
       updated_at: new Date(row.updated_at),

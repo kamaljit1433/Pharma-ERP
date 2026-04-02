@@ -94,11 +94,9 @@ export class SalaryStructureService {
   async updateSalaryStructure(
     id: string,
     data: UpdateSalaryStructureDTO,
-    _updatedBy: string
+    updatedBy: string
   ): Promise<SalaryStructure> {
-    const structure = await this.salaryStructureRepository.getSalaryStructureById(
-      id
-    );
+    const structure = await this.salaryStructureRepository.getSalaryStructureById(id);
 
     if (!structure) {
       throw new Error(`Salary structure with ID ${id} not found`);
@@ -123,7 +121,7 @@ export class SalaryStructureService {
       throw new Error('Base salary must be greater than 0');
     }
 
-    return this.salaryStructureRepository.updateSalaryStructure(id, data);
+    return this.salaryStructureRepository.updateSalaryStructure(id, data, updatedBy);
   }
 
   async calculateGrossSalary(employeeId: string): Promise<number> {

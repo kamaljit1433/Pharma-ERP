@@ -3,7 +3,22 @@ import { SalaryStructureService } from '../services/salaryStructureService';
 import { PayslipService } from '../services/payslipService';
 import { PayrollProcessingService } from '../services/payrollProcessingService';
 import { AdvanceSalaryService } from '../services/advanceSalaryService';
+import { AuthenticatedRequest } from '../middleware/auth';
 import { Knex } from 'knex';
+
+/** Map service errors to appropriate HTTP status codes. */
+function httpStatusFor(error: unknown): number {
+  if (!(error instanceof Error)) return 500;
+  const msg = error.message.toLowerCase();
+  if (msg.includes('not found')) return 404;
+  if (
+    msg.includes('invalid') ||
+    msg.includes('required') ||
+    msg.includes('must be') ||
+    msg.includes('already')
+  ) return 400;
+  return 500;
+}
 
 export class PayrollController {
   private salaryStructureService: SalaryStructureService;
@@ -20,32 +35,27 @@ export class PayrollController {
 
   async configureSalaryStructure(req: Request, res: Response): Promise<void> {
     try {
-      const { employee_id, salary_mode, base_salary, hra, dearness_allowance, other_allowances, pf_contribution_rate, esi_contribution_rate, professional_tax, effective_from } = req.body;
+      const authReq = req as AuthenticatedRequest;
+      const {
+        employee_id, salary_mode, base_salary, hra, dearness_allowance,
+        other_allowances, pf_contribution_rate, esi_contribution_rate,
+        professional_tax, effective_from,
+      } = req.body;
 
       const result = await this.salaryStructureService.configureSalaryStructure(
         {
-          employee_id,
-          salary_mode,
-          base_salary,
-          hra,
-          dearness_allowance,
-          other_allowances,
-          pf_contribution_rate,
-          esi_contribution_rate,
-          professional_tax,
-          effective_from,
+          employee_id, salary_mode, base_salary, hra, dearness_allowance,
+          other_allowances, pf_contribution_rate, esi_contribution_rate,
+          professional_tax, effective_from,
         },
-        (req as any).user?.id
+        authReq.user?.id ?? ''
       );
 
-      res.status(201).json({
-        success: true,
-        data: result,
-      });
-    } catch (error: any) {
-      res.status(400).json({
+      res.status(201).json({ success: true, data: result });
+    } catch (error) {
+      res.status(httpStatusFor(error)).json({
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : 'An unexpected error occurred',
       });
     }
   }
@@ -53,49 +63,38 @@ export class PayrollController {
   async getSalaryStructure(req: Request, res: Response): Promise<void> {
     try {
       const { employeeId } = req.params;
-
-      const result = await this.salaryStructureService.getSalaryStructure(
-        employeeId as string
-      );
+      const result = await this.salaryStructureService.getSalaryStructure(employeeId);
 
       if (!result) {
-        res.status(404).json({
-          success: false,
-          error: 'Salary structure not found',
-        });
+        res.status(404).json({ success: false, error: 'Salary structure not found' });
         return;
       }
 
-      res.status(200).json({
-        success: true,
-        data: result,
-      });
-    } catch (error: any) {
-      res.status(400).json({
+      res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      res.status(httpStatusFor(error)).json({
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : 'An unexpected error occurred',
       });
     }
   }
 
   async processMonthlyPayroll(req: Request, res: Response): Promise<void> {
     try {
+      const authReq = req as AuthenticatedRequest;
       const { month, year } = req.body;
 
       const result = await this.payrollProcessingService.processMonthlyPayroll(
         month,
         year,
-        (req as any).user?.id
+        authReq.user?.id ?? ''
       );
 
-      res.status(200).json({
-        success: true,
-        data: result,
-      });
-    } catch (error: any) {
-      res.status(400).json({
+      res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      res.status(httpStatusFor(error)).json({
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : 'An unexpected error occurred',
       });
     }
   }
@@ -107,27 +106,21 @@ export class PayrollController {
       const payroll = await this.knex('payroll')
         .where({
           employee_id: employeeId,
-          month: parseInt(month as string),
-          year: parseInt(year as string),
+          month: parseInt(month),
+          year: parseInt(year),
         })
         .first();
 
       if (!payroll) {
-        res.status(404).json({
-          success: false,
-          error: 'Payroll record not found',
-        });
+        res.status(404).json({ success: false, error: 'Payroll record not found' });
         return;
       }
 
-      res.status(200).json({
-        success: true,
-        data: payroll,
-      });
-    } catch (error: any) {
-      res.status(400).json({
+      res.status(200).json({ success: true, data: payroll });
+    } catch (error) {
+      res.status(httpStatusFor(error)).json({
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : 'An unexpected error occurred',
       });
     }
   }
@@ -135,25 +128,18 @@ export class PayrollController {
   async getPayslip(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-
-      const payslip = await this.payslipService.getPayslip(id as string);
+      const payslip = await this.payslipService.getPayslip(id);
 
       if (!payslip) {
-        res.status(404).json({
-          success: false,
-          error: 'Payslip not found',
-        });
+        res.status(404).json({ success: false, error: 'Payslip not found' });
         return;
       }
 
-      res.status(200).json({
-        success: true,
-        data: payslip,
-      });
-    } catch (error: any) {
-      res.status(400).json({
+      res.status(200).json({ success: true, data: payslip });
+    } catch (error) {
+      res.status(httpStatusFor(error)).json({
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : 'An unexpected error occurred',
       });
     }
   }
@@ -163,38 +149,30 @@ export class PayrollController {
       const { employee_id, amount, reason, deduction_months } = req.body;
 
       const result = await this.advanceSalaryService.requestAdvanceSalary({
-        employee_id,
-        amount,
-        reason,
-        deduction_months,
+        employee_id, amount, reason, deduction_months,
       });
 
-      res.status(201).json({
-        success: true,
-        data: result,
-      });
-    } catch (error: any) {
-      res.status(400).json({
+      res.status(201).json({ success: true, data: result });
+    } catch (error) {
+      res.status(httpStatusFor(error)).json({
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : 'An unexpected error occurred',
       });
     }
   }
 
   async lockPayroll(req: Request, res: Response): Promise<void> {
     try {
+      const authReq = req as AuthenticatedRequest;
       const { id } = req.params;
 
-      await this.payrollProcessingService.lockPayroll(id as string, (req as any).user?.id);
+      await this.payrollProcessingService.lockPayroll(id, authReq.user?.id ?? '');
 
-      res.status(200).json({
-        success: true,
-        message: 'Payroll locked successfully',
-      });
-    } catch (error: any) {
-      res.status(400).json({
+      res.status(200).json({ success: true, message: 'Payroll locked successfully' });
+    } catch (error) {
+      res.status(httpStatusFor(error)).json({
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : 'An unexpected error occurred',
       });
     }
   }
@@ -204,9 +182,22 @@ export class PayrollController {
       const { month, year } = req.params;
       const { format } = req.query;
 
+      // Validate month and year before passing to the service
+      const parsedMonth = parseInt(month);
+      const parsedYear = parseInt(year);
+
+      if (isNaN(parsedMonth) || parsedMonth < 1 || parsedMonth > 12) {
+        res.status(400).json({ success: false, error: 'Invalid month. Must be 1–12.' });
+        return;
+      }
+      if (isNaN(parsedYear) || parsedYear < 2000 || parsedYear > 2100) {
+        res.status(400).json({ success: false, error: 'Invalid year.' });
+        return;
+      }
+
       const buffer = await this.payrollProcessingService.exportBankFile(
-        parseInt(month as string),
-        parseInt(year as string),
+        parsedMonth,
+        parsedYear,
         (format as string) === 'NEFT' ? 'NEFT' : 'CSV'
       );
 
@@ -216,10 +207,10 @@ export class PayrollController {
         `attachment; filename="payroll-${month}-${year}.${format === 'NEFT' ? 'txt' : 'csv'}"`
       );
       res.send(buffer);
-    } catch (error: any) {
-      res.status(400).json({
+    } catch (error) {
+      res.status(httpStatusFor(error)).json({
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : 'An unexpected error occurred',
       });
     }
   }

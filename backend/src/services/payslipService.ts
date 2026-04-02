@@ -1,7 +1,8 @@
 import { Knex } from 'knex';
+import { v4 as uuidv4 } from 'uuid';
 import { PayslipRepository } from '../repositories/payslipRepository';
 import { PayrollRepository } from '../repositories/payrollRepository';
-import { Payslip } from '../types/payroll';
+import { Payslip, SalaryComponent } from '../types/payroll';
 
 export class PayslipService {
   private payslipRepository: PayslipRepository;
@@ -16,7 +17,9 @@ export class PayslipService {
     payrollId: string,
     employeeId: string,
     month: number,
-    year: number
+    year: number,
+    earningsComponents?: SalaryComponent[],
+    deductionsComponents?: SalaryComponent[]
   ): Promise<Payslip> {
     // Get payroll record
     const payroll = await this.payrollRepository.getPayrollById(payrollId);
@@ -57,15 +60,15 @@ export class PayslipService {
       return existingPayslip;
     }
 
-    // Create payslip
+    // Create payslip — use component arrays if provided, otherwise fall back to totals
     const payslip = await this.payslipRepository.createPayslip({
       payroll_id: payrollId,
       employee_id: employeeId,
       month,
       year,
       payslip_number: payslipNumber,
-      earnings: this.extractEarnings(payroll),
-      deductions: this.extractDeductions(payroll),
+      earnings: this.extractEarnings(payroll, earningsComponents),
+      deductions: this.extractDeductions(payroll, deductionsComponents),
       gross_salary: payroll.gross_salary,
       net_salary: payroll.net_salary,
     });
@@ -107,25 +110,39 @@ export class PayslipService {
     year: number
   ): string {
     const monthStr = String(month).padStart(2, '0');
-    return `PS-${employeeId}-${year}${monthStr}-${Date.now()}`;
+    // Use a UUID suffix to guarantee uniqueness even under concurrent generation
+    return `PS-${employeeId}-${year}${monthStr}-${uuidv4().slice(0, 8).toUpperCase()}`;
   }
 
-  private extractEarnings(payroll: any): Record<string, number> {
-    const earnings: Record<string, number> = {};
+  private extractEarnings(
+    payroll: { gross_salary: number },
+    components?: SalaryComponent[]
+  ): Record<string, number> {
+    if (components && components.length > 0) {
+      // Serialize full component breakdown so employees can verify each line item
+      return components.reduce<Record<string, number>>((acc, c) => {
+        acc[c.name] = c.amount;
+        return acc;
+      }, {});
+    }
 
-    // This would be populated from the payroll calculation
-    // For now, we'll calculate from gross salary and deductions
-    earnings['gross_salary'] = payroll.gross_salary;
-
-    return earnings;
+    // Fallback when component detail is unavailable
+    return { gross_salary: payroll.gross_salary };
   }
 
-  private extractDeductions(payroll: any): Record<string, number> {
-    const deductions: Record<string, number> = {};
+  private extractDeductions(
+    payroll: { total_deductions: number },
+    components?: SalaryComponent[]
+  ): Record<string, number> {
+    if (components && components.length > 0) {
+      // Serialize full component breakdown so employees can verify each deduction
+      return components.reduce<Record<string, number>>((acc, c) => {
+        acc[c.name] = c.amount;
+        return acc;
+      }, {});
+    }
 
-    // This would be populated from the payroll calculation
-    deductions['total_deductions'] = payroll.total_deductions;
-
-    return deductions;
+    // Fallback when component detail is unavailable
+    return { total_deductions: payroll.total_deductions };
   }
 }

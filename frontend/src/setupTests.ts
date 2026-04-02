@@ -21,3 +21,23 @@ Object.defineProperty(window, 'matchMedia', {
     dispatchEvent: vi.fn(),
   })),
 });
+
+// Mock scrollIntoView for Radix UI Select component
+Element.prototype.scrollIntoView = vi.fn();
+
+// Mock GeolocationPositionError for jsdom environment
+class GeolocationPositionError extends Error {
+  public code: number;
+  public PERMISSION_DENIED: number = 1;
+  public POSITION_UNAVAILABLE: number = 2;
+  public TIMEOUT: number = 3;
+
+  constructor(code?: number, message?: string) {
+    super(message || 'Geolocation error');
+    this.name = 'GeolocationPositionError';
+    this.code = code || 0;
+  }
+}
+
+// Add to global scope
+(global as any).GeolocationPositionError = GeolocationPositionError;

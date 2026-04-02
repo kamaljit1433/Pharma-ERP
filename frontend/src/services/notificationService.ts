@@ -1,4 +1,4 @@
-import axios from 'axios';
+import apiClient from './api';
 
 export interface Notification {
   id: string;
@@ -52,78 +52,67 @@ export interface UpdateTemplateDTO {
   is_active?: boolean;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1';
-
 class NotificationService {
   async getNotifications(limit: number = 50, offset: number = 0): Promise<GetNotificationsResponse> {
-    const response = await axios.get<GetNotificationsResponse>(
-      `${API_BASE_URL}/notifications`,
+    const response = await apiClient.get<GetNotificationsResponse>(
+      '/notifications',
       {
         params: { limit, offset },
-        withCredentials: true,
       }
     );
     return response.data;
   }
 
   async markAsRead(notificationId: string): Promise<Notification> {
-    const response = await axios.put<Notification>(
-      `${API_BASE_URL}/notifications/${notificationId}/read`,
-      {},
-      { withCredentials: true }
+    const response = await apiClient.put<Notification>(
+      `/notifications/${notificationId}/read`,
+      {}
     );
     return response.data;
   }
 
   async markMultipleAsRead(notificationIds: string[]): Promise<void> {
-    await axios.put(
-      `${API_BASE_URL}/notifications/mark-read`,
-      { ids: notificationIds },
-      { withCredentials: true }
+    await apiClient.put(
+      '/notifications/mark-read',
+      { ids: notificationIds }
     );
   }
 
   async getTemplates(activeOnly: boolean = true): Promise<{ data: NotificationTemplate[]; count: number }> {
-    const response = await axios.get<{ data: NotificationTemplate[]; count: number }>(
-      `${API_BASE_URL}/notifications/templates`,
+    const response = await apiClient.get<{ data: NotificationTemplate[]; count: number }>(
+      '/notifications/templates',
       {
         params: { activeOnly },
-        withCredentials: true,
       }
     );
     return response.data;
   }
 
   async getTemplate(templateId: string): Promise<NotificationTemplate> {
-    const response = await axios.get<NotificationTemplate>(
-      `${API_BASE_URL}/notifications/templates/${templateId}`,
-      { withCredentials: true }
+    const response = await apiClient.get<NotificationTemplate>(
+      `/notifications/templates/${templateId}`
     );
     return response.data;
   }
 
   async createTemplate(data: CreateTemplateDTO): Promise<NotificationTemplate> {
-    const response = await axios.post<NotificationTemplate>(
-      `${API_BASE_URL}/notifications/templates`,
-      data,
-      { withCredentials: true }
+    const response = await apiClient.post<NotificationTemplate>(
+      '/notifications/templates',
+      data
     );
     return response.data;
   }
 
   async updateTemplate(templateId: string, data: UpdateTemplateDTO): Promise<NotificationTemplate> {
-    const response = await axios.put<NotificationTemplate>(
-      `${API_BASE_URL}/notifications/templates/${templateId}`,
-      data,
-      { withCredentials: true }
+    const response = await apiClient.put<NotificationTemplate>(
+      `/notifications/templates/${templateId}`,
+      data
     );
     return response.data;
   }
 
   async deleteTemplate(templateId: string): Promise<void> {
-    await axios.delete(`${API_BASE_URL}/notifications/templates/${templateId}`, {
-      withCredentials: true,
-    });
+    await apiClient.delete(`/notifications/templates/${templateId}`);
   }
 }
 

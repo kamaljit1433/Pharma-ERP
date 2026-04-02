@@ -1,4 +1,4 @@
-import { api } from './api';
+import apiClient from './api';
 
 export interface TrainingProgram {
   id: string;
@@ -79,32 +79,32 @@ export interface SkillGap {
 class TrainingService {
   // Training Program Methods
   async createTrainingProgram(data: Omit<TrainingProgram, 'id' | 'created_at' | 'updated_at'>): Promise<TrainingProgram> {
-    const response = await api.post('/training/programs', data);
+    const response = await apiClient.post('/training/programs', data);
     return response.data;
   }
 
   async getTrainingProgram(id: string): Promise<TrainingProgram> {
-    const response = await api.get(`/training/programs/${id}`);
+    const response = await apiClient.get(`/training/programs/${id}`);
     return response.data;
   }
 
   async getAllTrainingPrograms(status?: string): Promise<TrainingProgram[]> {
-    const response = await api.get('/training/programs', { params: { status } });
+    const response = await apiClient.get('/training/programs', { params: { status } });
     return response.data;
   }
 
   async updateTrainingProgram(id: string, data: Partial<TrainingProgram>): Promise<TrainingProgram> {
-    const response = await api.put(`/training/programs/${id}`, data);
+    const response = await apiClient.put(`/training/programs/${id}`, data);
     return response.data;
   }
 
   async deleteTrainingProgram(id: string): Promise<void> {
-    await api.delete(`/training/programs/${id}`);
+    await apiClient.delete(`/training/programs/${id}`);
   }
 
   // Training Enrollment Methods
   async enrollEmployee(employeeId: string, trainingProgramId: string, enrollmentDate: Date): Promise<TrainingEnrollment> {
-    const response = await api.post('/training/enroll', {
+    const response = await apiClient.post('/training/enroll', {
       employee_id: employeeId,
       training_program_id: trainingProgramId,
       enrollment_date: enrollmentDate,
@@ -113,79 +113,79 @@ class TrainingService {
   }
 
   async getEmployeeEnrollments(employeeId: string): Promise<TrainingEnrollment[]> {
-    const response = await api.get(`/training/enrollments/${employeeId}`);
+    const response = await apiClient.get(`/training/enrollments/${employeeId}`);
     return response.data;
   }
 
   async markEnrollmentComplete(enrollmentId: string): Promise<TrainingEnrollment> {
-    const response = await api.put(`/training/enrollments/${enrollmentId}/complete`);
+    const response = await apiClient.put(`/training/enrollments/${enrollmentId}/complete`);
     return response.data;
   }
 
   // Certification Methods
   async addCertification(data: Omit<Certification, 'id' | 'created_at' | 'updated_at'>): Promise<Certification> {
-    const response = await api.post('/training/certifications', data);
+    const response = await apiClient.post('/training/certifications', data);
     return response.data;
   }
 
   async getEmployeeCertifications(employeeId: string): Promise<Certification[]> {
-    const response = await api.get(`/training/certifications/${employeeId}`);
+    const response = await apiClient.get(`/training/certifications/${employeeId}`);
     return response.data;
   }
 
   async getExpiringCertifications(daysBeforeExpiry: number = 30): Promise<Certification[]> {
-    const response = await api.get('/training/certifications/expiring', {
+    const response = await apiClient.get('/training/certifications/expiring', {
       params: { daysBeforeExpiry },
     });
     return response.data;
   }
 
   async updateCertification(id: string, data: Partial<Certification>): Promise<Certification> {
-    const response = await api.put(`/training/certifications/${id}`, data);
+    const response = await apiClient.put(`/training/certifications/${id}`, data);
     return response.data;
   }
 
   // Skill Methods
   async createSkill(data: Omit<Skill, 'id' | 'created_at'>): Promise<Skill> {
-    const response = await api.post('/training/skills', data);
+    const response = await apiClient.post('/training/skills', data);
     return response.data;
   }
 
   async getAllSkills(): Promise<Skill[]> {
-    const response = await api.get('/training/skills');
+    const response = await apiClient.get('/training/skills');
     return response.data;
   }
 
   async getSkillsByCategory(category: string): Promise<Skill[]> {
-    const response = await api.get(`/training/skills/category/${category}`);
+    const response = await apiClient.get(`/training/skills/category/${category}`);
     return response.data;
   }
 
   // Employee Skill Methods
   async addEmployeeSkill(data: Omit<EmployeeSkill, 'id' | 'created_at' | 'updated_at'>): Promise<EmployeeSkill> {
-    const response = await api.post('/training/employee-skills', data);
+    const response = await apiClient.post('/training/employee-skills', data);
     return response.data;
   }
 
   async getEmployeeSkills(employeeId: string): Promise<EmployeeSkill[]> {
-    const response = await api.get(`/training/employee-skills/${employeeId}`);
+    const response = await apiClient.get(`/training/employee-skills/${employeeId}`);
     return response.data;
   }
 
   async updateEmployeeSkill(id: string, data: Partial<EmployeeSkill>): Promise<EmployeeSkill> {
-    const response = await api.put(`/training/employee-skills/${id}`, data);
+    const response = await apiClient.put(`/training/employee-skills/${id}`, data);
     return response.data;
   }
 
   // Skill Gap Report
   async generateSkillGapReport(departmentId: string): Promise<SkillGapReport> {
-    const response = await api.get(`/training/skill-gap/${departmentId}`);
+    const response = await apiClient.get(`/training/skill-gap/${departmentId}`);
     return response.data;
   }
 
   // Bulk enrollment
   async bulkEnrollEmployees(employeeIds: string[], trainingProgramId: string): Promise<any> {
-    const response = await api.post('/training/bulk-enroll', {
+    const response = await apiClient.post('/training/bulk-enroll', {
       employee_ids: employeeIds,
       training_program_id: trainingProgramId,
     });
@@ -194,7 +194,7 @@ class TrainingService {
 
   // Self-enrollment request
   async requestSelfEnrollment(employeeId: string, trainingProgramId: string): Promise<TrainingEnrollment> {
-    const response = await api.post('/training/self-enroll', {
+    const response = await apiClient.post('/training/self-enroll', {
       employee_id: employeeId,
       training_program_id: trainingProgramId,
     });
@@ -203,37 +203,37 @@ class TrainingService {
 
   // Send training reminders
   async sendTrainingReminders(): Promise<any> {
-    const response = await api.post('/training/reminders/send');
+    const response = await apiClient.post('/training/reminders/send');
     return response.data;
   }
 
   // Issue certificate
   async issueCertificate(enrollmentId: string, data: any): Promise<Certification> {
-    const response = await api.post(`/training/enrollments/${enrollmentId}/certificate`, data);
+    const response = await apiClient.post(`/training/enrollments/${enrollmentId}/certificate`, data);
     return response.data;
   }
 
   // Send certification expiry alerts
   async sendCertificationExpiryAlerts(): Promise<any> {
-    const response = await api.post('/training/certifications/alerts/send');
+    const response = await apiClient.post('/training/certifications/alerts/send');
     return response.data;
   }
 
   // Get certification inventory
   async getCertificationInventory(): Promise<any> {
-    const response = await api.get('/training/certifications/inventory');
+    const response = await apiClient.get('/training/certifications/inventory');
     return response.data;
   }
 
   // Get team skill matrix
   async getTeamSkillMatrix(departmentId: string): Promise<any> {
-    const response = await api.get(`/training/team-skills/${departmentId}`);
+    const response = await apiClient.get(`/training/team-skills/${departmentId}`);
     return response.data;
   }
 
   // Delete employee skill
   async deleteEmployeeSkill(id: string): Promise<void> {
-    await api.delete(`/training/employee-skills/${id}`);
+    await apiClient.delete(`/training/employee-skills/${id}`);
   }
 }
 

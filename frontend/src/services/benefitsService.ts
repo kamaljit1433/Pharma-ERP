@@ -1,51 +1,51 @@
-import api from './api';
+import apiClient from './api';
 
 export const benefitsService = {
   // ============ Insurance Plans ============
 
   createInsurancePlan: async (data: any) => {
-    const response = await api.post('/benefits/insurance-plans', data);
+    const response = await apiClient.post('/benefits/insurance-plans', data);
     return response.data;
   },
 
   getInsurancePlans: async (isActive?: boolean) => {
-    const response = await api.get('/benefits/insurance-plans', {
+    const response = await apiClient.get('/benefits/insurance-plans', {
       params: { active: isActive },
     });
     return response.data;
   },
 
   getInsurancePlan: async (id: string) => {
-    const response = await api.get(`/benefits/insurance-plans/${id}`);
+    const response = await apiClient.get(`/benefits/insurance-plans/${id}`);
     return response.data;
   },
 
   updateInsurancePlan: async (id: string, data: any) => {
-    const response = await api.put(`/benefits/insurance-plans/${id}`, data);
+    const response = await apiClient.put(`/benefits/insurance-plans/${id}`, data);
     return response.data;
   },
 
   deleteInsurancePlan: async (id: string) => {
-    const response = await api.delete(`/benefits/insurance-plans/${id}`);
+    const response = await apiClient.delete(`/benefits/insurance-plans/${id}`);
     return response.data;
   },
 
   // ============ Insurance Enrollment ============
 
   enrollInInsurance: async (data: any) => {
-    const response = await api.post('/benefits/insurance/enroll', data);
+    const response = await apiClient.post('/benefits/insurance/enroll', data);
     return response.data;
   },
 
   getEmployeeEnrollments: async (employeeId: string) => {
-    const response = await api.get(`/benefits/insurance/enrollments/${employeeId}`);
+    const response = await apiClient.get(`/benefits/insurance/enrollments/${employeeId}`);
     return response.data;
   },
 
   // ============ PF Details ============
 
   getPFDetails: async (employeeId: string) => {
-    const response = await api.get(`/benefits/pf/${employeeId}`);
+    const response = await apiClient.get(`/benefits/pf/${employeeId}`);
     return response.data;
   },
 
@@ -56,7 +56,7 @@ export const benefitsService = {
     toMonth: number,
     toYear: number
   ) => {
-    const response = await api.get(`/benefits/pf/${employeeId}/statement`, {
+    const response = await apiClient.get(`/benefits/pf/${employeeId}/statement`, {
       params: { fromMonth, fromYear, toMonth, toYear },
     });
     return response.data;
@@ -65,14 +65,14 @@ export const benefitsService = {
   // ============ Gratuity ============
 
   calculateGratuity: async (employeeId: string, lastDrawnSalary: number) => {
-    const response = await api.post(`/benefits/gratuity/${employeeId}/calculate`, {
+    const response = await apiClient.post(`/benefits/gratuity/${employeeId}/calculate`, {
       lastDrawnSalary,
     });
     return response.data;
   },
 
   getGratuityReport: async (employeeId: string, lastDrawnSalary: number) => {
-    const response = await api.post(`/benefits/gratuity/${employeeId}/report`, {
+    const response = await apiClient.post(`/benefits/gratuity/${employeeId}/report`, {
       lastDrawnSalary,
     });
     return response.data;
@@ -81,22 +81,22 @@ export const benefitsService = {
   // ============ Reimbursement Claims ============
 
   submitReimbursementClaim: async (data: any) => {
-    const response = await api.post('/benefits/reimbursements', data);
+    const response = await apiClient.post('/benefits/reimbursements', data);
     return response.data;
   },
 
   getReimbursementClaim: async (id: string) => {
-    const response = await api.get(`/benefits/reimbursements/${id}`);
+    const response = await apiClient.get(`/benefits/reimbursements/${id}`);
     return response.data;
   },
 
   getEmployeeClaims: async (employeeId: string) => {
-    const response = await api.get(`/benefits/reimbursements/employee/${employeeId}`);
+    const response = await apiClient.get(`/benefits/reimbursements/employee/${employeeId}`);
     return response.data;
   },
 
   approveClaim: async (id: string, approverId: string, approvalNotes?: string) => {
-    const response = await api.put(`/benefits/reimbursements/${id}/approve`, {
+    const response = await apiClient.put(`/benefits/reimbursements/${id}/approve`, {
       approverId,
       approvalNotes,
     });
@@ -104,7 +104,7 @@ export const benefitsService = {
   },
 
   rejectClaim: async (id: string, approverId: string, approvalNotes: string) => {
-    const response = await api.put(`/benefits/reimbursements/${id}/reject`, {
+    const response = await apiClient.put(`/benefits/reimbursements/${id}/reject`, {
       approverId,
       approvalNotes,
     });
@@ -114,32 +114,32 @@ export const benefitsService = {
   // ============ Rewards ============
 
   awardReward: async (data: any) => {
-    const response = await api.post('/benefits/rewards', data);
+    const response = await apiClient.post('/benefits/rewards', data);
     return response.data;
   },
 
   getReward: async (id: string) => {
-    const response = await api.get(`/benefits/rewards/${id}`);
+    const response = await apiClient.get(`/benefits/rewards/${id}`);
     return response.data;
   },
 
   getEmployeeRewards: async (employeeId: string) => {
-    const response = await api.get(`/benefits/rewards/employee/${employeeId}`);
+    const response = await apiClient.get(`/benefits/rewards/employee/${employeeId}`);
     return response.data;
   },
 
   getPublicRewards: async () => {
-    const response = await api.get('/benefits/rewards/public/all');
+    const response = await apiClient.get('/benefits/rewards/public/all');
     return response.data;
   },
 
   updateReward: async (id: string, data: any) => {
-    const response = await api.put(`/benefits/rewards/${id}`, data);
+    const response = await apiClient.put(`/benefits/rewards/${id}`, data);
     return response.data;
   },
 
   deleteReward: async (id: string) => {
-    const response = await api.delete(`/benefits/rewards/${id}`);
+    const response = await apiClient.delete(`/benefits/rewards/${id}`);
     return response.data;
   },
 };

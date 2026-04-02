@@ -1,17 +1,33 @@
-export interface User {
+interface UserBase {
   id: string;
   employeeId: string;
   email: string;
   passwordHash: string;
   role: UserRole;
-  mfaEnabled: boolean;
-  mfaSecret?: string;
   refreshTokenVersion: number;
   isActive: boolean;
   lastLoginAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
+
+interface UserMfaEnabled extends UserBase {
+  mfaEnabled: true;
+  mfaSecret: string;
+}
+
+interface UserMfaDisabled extends UserBase {
+  mfaEnabled: false;
+  mfaSecret?: undefined;
+}
+
+// Pending state: setupMFA stores the secret before enableMFA is confirmed
+interface UserMfaPending extends UserBase {
+  mfaEnabled: false;
+  mfaSecret: string;
+}
+
+export type User = UserMfaEnabled | UserMfaDisabled | UserMfaPending;
 
 export enum UserRole {
   SUPER_ADMIN = 'super_admin',

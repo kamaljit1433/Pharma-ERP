@@ -1,4 +1,4 @@
-import { api } from './api';
+import apiClient from './api';
 import {
   Journey,
   GeoFence,
@@ -44,7 +44,7 @@ export const geoTrackingService = {
     altitude?: number;
     address?: string;
   }): Promise<TravelLogResponse> => {
-    const response = await api.post('/geo-tracking/track-location', data);
+    const response = await apiClient.post('/geo-tracking/track-location', data);
     return response.data;
   },
 
@@ -52,7 +52,7 @@ export const geoTrackingService = {
     employeeId: string,
     date: string
   ): Promise<TravelLogResponse[]> => {
-    const response = await api.get(`/geo-tracking/daily-journey/${employeeId}`, {
+    const response = await apiClient.get(`/geo-tracking/daily-journey/${employeeId}`, {
       params: { date },
     });
     return response.data;
@@ -63,7 +63,7 @@ export const geoTrackingService = {
     startDate: string,
     endDate: string
   ): Promise<TravelLogResponse[]> => {
-    const response = await api.get(`/geo-tracking/journeys/${employeeId}`, {
+    const response = await apiClient.get(`/geo-tracking/journeys/${employeeId}`, {
       params: { startDate, endDate },
     });
     return response.data;
@@ -74,7 +74,7 @@ export const geoTrackingService = {
     approverId: string,
     notes?: string
   ): Promise<void> => {
-    await api.put(`/geo-tracking/journeys/${journeyId}/approve`, {
+    await apiClient.put(`/geo-tracking/journeys/${journeyId}/approve`, {
       approverId,
       notes,
     });
@@ -85,7 +85,7 @@ export const geoTrackingService = {
     approverId: string,
     reason: string
   ): Promise<void> => {
-    await api.put(`/geo-tracking/journeys/${journeyId}/reject`, {
+    await apiClient.put(`/geo-tracking/journeys/${journeyId}/reject`, {
       approverId,
       reason,
     });
@@ -97,7 +97,7 @@ export const geoTrackingService = {
     endDate: string,
     format: 'csv' | 'pdf' = 'csv'
   ): Promise<Blob> => {
-    const response = await api.get(`/geo-tracking/export/${employeeId}`, {
+    const response = await apiClient.get(`/geo-tracking/export/${employeeId}`, {
       params: { startDate, endDate, format },
       responseType: 'blob',
     });
@@ -117,7 +117,7 @@ export const geoTrackingService = {
     currency: string;
     journeys: TravelLogResponse[];
   }> => {
-    const response = await api.get(`/geo-tracking/monthly-allowance/${employeeId}`, {
+    const response = await apiClient.get(`/geo-tracking/monthly-allowance/${employeeId}`, {
       params: { month, year },
     });
     return response.data;
@@ -127,7 +127,7 @@ export const geoTrackingService = {
     employeeId: string,
     year: number
   ): Promise<GeoTrackingStats> => {
-    const response = await api.get(`/geo-tracking/yearly-stats/${employeeId}`, {
+    const response = await apiClient.get(`/geo-tracking/yearly-stats/${employeeId}`, {
       params: { year },
     });
     return response.data;
@@ -140,19 +140,19 @@ export const geoTrackingService = {
     radius: number;
     type: 'Office' | 'Site' | 'Restricted' | 'Custom';
   }): Promise<GeoFenceResponse> => {
-    const response = await api.post('/geo-tracking/geo-fences', data);
+    const response = await apiClient.post('/geo-tracking/geo-fences', data);
     return response.data;
   },
 
   getGeoFences: async (type?: string): Promise<GeoFenceResponse[]> => {
-    const response = await api.get('/geo-tracking/geo-fences', {
+    const response = await apiClient.get('/geo-tracking/geo-fences', {
       params: { type },
     });
     return response.data;
   },
 
   getGeoFence: async (id: string): Promise<GeoFenceResponse> => {
-    const response = await api.get(`/geo-tracking/geo-fences/${id}`);
+    const response = await apiClient.get(`/geo-tracking/geo-fences/${id}`);
     return response.data;
   },
 
@@ -166,23 +166,23 @@ export const geoTrackingService = {
       enabled: boolean;
     }>
   ): Promise<GeoFenceResponse> => {
-    const response = await api.put(`/geo-tracking/geo-fences/${id}`, data);
+    const response = await apiClient.put(`/geo-tracking/geo-fences/${id}`, data);
     return response.data;
   },
 
   deleteGeoFence: async (id: string): Promise<void> => {
-    await api.delete(`/geo-tracking/geo-fences/${id}`);
+    await apiClient.delete(`/geo-tracking/geo-fences/${id}`);
   },
 
   toggleGeoFence: async (id: string, enabled: boolean): Promise<GeoFenceResponse> => {
-    const response = await api.put(`/geo-tracking/geo-fences/${id}/toggle`, {
+    const response = await apiClient.put(`/geo-tracking/geo-fences/${id}/toggle`, {
       enabled,
     });
     return response.data;
   },
 
   getPendingApprovals: async (): Promise<TravelLogResponse[]> => {
-    const response = await api.get('/geo-tracking/pending-approvals');
+    const response = await apiClient.get('/geo-tracking/pending-approvals');
     return response.data;
   },
 
@@ -191,7 +191,7 @@ export const geoTrackingService = {
     startDate: string,
     endDate: string
   ): Promise<TravelLogResponse[]> => {
-    const response = await api.get(`/geo-tracking/team-journeys/${managerId}`, {
+    const response = await apiClient.get(`/geo-tracking/team-journeys/${managerId}`, {
       params: { startDate, endDate },
     });
     return response.data;

@@ -20,6 +20,13 @@ export class AdvanceSalaryService {
       throw new Error('Advance amount must be greater than 0');
     }
 
+    // Validate and default deduction_months
+    if (data.deduction_months === undefined || data.deduction_months === null) {
+      data = { ...data, deduction_months: 1 };
+    } else if (!Number.isInteger(data.deduction_months) || data.deduction_months < 1 || data.deduction_months > 12) {
+      throw new Error('deduction_months must be a whole number between 1 and 12');
+    }
+
     // Validate employee exists
     const employee = await this.knex('employees')
       .where({ id: data.employee_id })

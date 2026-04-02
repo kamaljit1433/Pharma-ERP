@@ -51,6 +51,7 @@ interface Config {
   };
   jwt: {
     secret: string;
+    refreshSecret: string;
     expiresIn: string;
     refreshExpiresIn: string;
   };
@@ -148,6 +149,7 @@ const config: Config = {
   },
   jwt: {
     secret: process.env['JWT_SECRET'] || 'default_jwt_secret_change_me',
+    refreshSecret: process.env['JWT_REFRESH_SECRET'] || process.env['JWT_SECRET'] || 'default_jwt_refresh_secret_change_me',
     expiresIn: process.env['JWT_EXPIRES_IN'] || '15m',
     refreshExpiresIn: process.env['JWT_REFRESH_EXPIRES_IN'] || '7d',
   },

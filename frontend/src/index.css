@@ -69,12 +69,38 @@
   }
 
   .dark {
-    --background: 0 0% 3.9%; /* Near Black */
-    --foreground: 0 0% 98%; /* Off White */
-    --muted: 0 0% 14.9%; /* Dark Gray */
-    --muted-foreground: 0 0% 63.9%; /* Light Gray */
-    --border: 0 0% 14.9%; /* Dark Border */
-    /* Status colors remain the same for consistency */
+    /* Base Colors (Dark Mode) */
+    --background: 0 0% 3.9%; /* Near Black - #0A0A0A */
+    --foreground: 0 0% 98%; /* Off White - #FAFAFA */
+
+    /* Neutral Grays (Dark Mode) */
+    --card: 0 0% 9%; /* Dark Card - #171717 */
+    --card-foreground: 0 0% 98%; /* Off White - #FAFAFA */
+    --popover: 0 0% 9%; /* Dark Popover - #171717 */
+    --popover-foreground: 0 0% 98%; /* Off White - #FAFAFA */
+
+    /* Muted Elements (Dark Mode) */
+    --muted: 0 0% 14.9%; /* Dark Gray - #262626 */
+    --muted-foreground: 0 0% 63.9%; /* Light Gray - #A3A3A3 */
+
+    /* Borders & Inputs (Dark Mode) */
+    --border: 0 0% 14.9%; /* Dark Border - #262626 */
+    --input: 0 0% 14.9%; /* Input Border - #262626 */
+    --ring: 0 0% 83.1%; /* Focus Ring - #D4D4D4 */
+
+    /* Primary Action (Dark Mode) */
+    --primary: 0 0% 98%; /* White - #FAFAFA */
+    --primary-foreground: 0 0% 9%; /* Black Text - #171717 */
+
+    /* Secondary Action (Dark Mode) */
+    --secondary: 0 0% 14.9%; /* Dark Gray - #262626 */
+    --secondary-foreground: 0 0% 98%; /* White Text - #FAFAFA */
+
+    /* Accent (Dark Mode) */
+    --accent: 0 0% 14.9%; /* Dark Gray - #262626 */
+    --accent-foreground: 0 0% 98%; /* White Text - #FAFAFA */
+
+    /* Semantic colors remain the same for consistency across themes */
   }
 }
 
@@ -82,8 +108,31 @@
   * {
     @apply border-border;
   }
+  
   body {
     @apply bg-background text-foreground;
     font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+
+  /* Smooth theme transition animation */
+  html {
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  html * {
+    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+  }
+
+  /* Disable transitions for elements that shouldn't animate */
+  html *:where(
+    [data-no-transition],
+    input,
+    textarea,
+    select,
+    button:active,
+    [role="progressbar"],
+    [role="slider"]
+  ) {
+    transition: none !important;
   }
 }

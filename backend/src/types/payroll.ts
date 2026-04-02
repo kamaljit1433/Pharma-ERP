@@ -137,6 +137,7 @@ export interface PayrollSummary {
   total_net_salary: number;
   processed_count: number;
   pending_count: number;
+  failed_employees?: Array<{ employeeId: string; reason: string }>;
   month: number;
   year: number;
 }

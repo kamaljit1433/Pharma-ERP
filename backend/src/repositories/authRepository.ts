@@ -71,14 +71,23 @@ export class AuthRepository {
   }
 
   /**
-   * Enable MFA for user
+   * Store a pending MFA secret during the setup phase (before the user confirms with a token).
+   * mfa_enabled remains false until enableMFA() is called.
    */
-  async enableMFA(userId: string, secret: string): Promise<void> {
+  async storePendingMFASecret(userId: string, secret: string): Promise<void> {
+    await this.db('users')
+      .where({ id: userId })
+      .update({ mfa_secret: secret, updated_at: this.db.fn.now() });
+  }
+
+  /**
+   * Enable MFA for user. Secret must already be stored via storePendingMFASecret().
+   */
+  async enableMFA(userId: string): Promise<void> {
     await this.db('users')
       .where({ id: userId })
       .update({
         mfa_enabled: true,
-        mfa_secret: secret,
         updated_at: this.db.fn.now(),
       });
   }
@@ -139,29 +148,17 @@ export class AuthRepository {
   }
 
   /**
-   * Verify and mark backup code as used
+   * Atomically verify and mark a backup code as used.
+   * A single UPDATE...RETURNING prevents the race condition where two simultaneous
+   * requests could both read used=false and both succeed.
    */
   async useBackupCode(userId: string, codeHash: string): Promise<boolean> {
-    const code = await this.db('mfa_backup_codes')
-      .where({
-        user_id: userId,
-        code_hash: codeHash,
-        used: false,
-      })
-      .first();
+    const updated = await this.db('mfa_backup_codes')
+      .where({ user_id: userId, code_hash: codeHash, used: false })
+      .update({ used: true, used_at: this.db.fn.now() })
+      .returning('id');
 
-    if (!code) {
-      return false;
-    }
-
-    await this.db('mfa_backup_codes')
-      .where({ id: code.id })
-      .update({
-        used: true,
-        used_at: this.db.fn.now(),
-      });
-
-    return true;
+    return updated.length > 0;
   }
 
   /**
@@ -278,7 +275,7 @@ export class AuthRepository {
    */
   async logAuthEvent(data: {
     userId?: string;
-    email: string;
+    email?: string;
     eventType: string;
     ipAddress?: string;
     userAgent?: string;
@@ -286,7 +283,7 @@ export class AuthRepository {
   }): Promise<void> {
     await this.db('auth_audit_log').insert({
       user_id: data.userId,
-      email: data.email.toLowerCase(),
+      email: data.email?.toLowerCase() ?? '',
       event_type: data.eventType,
       ip_address: data.ipAddress,
       user_agent: data.userAgent,
@@ -297,21 +294,40 @@ export class AuthRepository {
   /**
    * Map database row to User object
    */
-  private mapToUser(row: any): User {
-    return {
+  private mapToUser(row: {
+    id: string;
+    employee_id: string;
+    email: string;
+    password_hash: string;
+    role: string;
+    mfa_enabled: boolean;
+    mfa_secret: string | null;
+    refresh_token_version: number;
+    is_active: boolean;
+    last_login_at: Date | null;
+    created_at: Date;
+    updated_at: Date;
+  }): User {
+    const base = {
       id: row.id,
       employeeId: row.employee_id,
       email: row.email,
       passwordHash: row.password_hash,
       role: row.role as UserRole,
-      mfaEnabled: row.mfa_enabled,
-      mfaSecret: row.mfa_secret,
       refreshTokenVersion: row.refresh_token_version,
       isActive: row.is_active,
-      lastLoginAt: row.last_login_at,
+      ...(row.last_login_at !== null && { lastLoginAt: row.last_login_at }),
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };
+
+    if (row.mfa_enabled) {
+      return { ...base, mfaEnabled: true as const, mfaSecret: row.mfa_secret! };
+    }
+    if (row.mfa_secret) {
+      return { ...base, mfaEnabled: false as const, mfaSecret: row.mfa_secret };
+    }
+    return { ...base, mfaEnabled: false as const };
   }
 }
 

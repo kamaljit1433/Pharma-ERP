@@ -10,7 +10,7 @@ import {
 import { Badge } from '../ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Leave } from '../../types/leave';
-import { Clock, CheckCircle2, XCircle } from 'lucide-react';
+import { Clock, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 
 interface LeaveHistoryProps {
   leaves: Leave[];
@@ -20,34 +20,55 @@ interface LeaveHistoryProps {
 const getStatusBadge = (status: string) => {
   switch (status) {
     case 'pending':
-      return <Badge className="bg-orange-500">Pending</Badge>;
+      return (
+        <Badge className="bg-orange-500 hover:bg-orange-600">
+          <Clock className="h-3 w-3 mr-1" />
+          Pending
+        </Badge>
+      );
     case 'approved':
-      return <Badge className="bg-emerald-500">Approved</Badge>;
+      return (
+        <Badge className="bg-emerald-500 hover:bg-emerald-600">
+          <CheckCircle2 className="h-3 w-3 mr-1" />
+          Approved
+        </Badge>
+      );
     case 'rejected':
-      return <Badge className="bg-rose-500">Rejected</Badge>;
+      return (
+        <Badge className="bg-rose-500 hover:bg-rose-600">
+          <XCircle className="h-3 w-3 mr-1" />
+          Rejected
+        </Badge>
+      );
     case 'cancelled':
-      return <Badge variant="secondary">Cancelled</Badge>;
+      return (
+        <Badge variant="secondary">
+          <AlertCircle className="h-3 w-3 mr-1" />
+          Cancelled
+        </Badge>
+      );
     default:
       return <Badge>{status}</Badge>;
   }
 };
 
-const getStatusIcon = (status: string) => {
-  switch (status) {
-    case 'pending':
-      return <Clock className="h-4 w-4" />;
-    case 'approved':
-      return <CheckCircle2 className="h-4 w-4" />;
-    case 'rejected':
-      return <XCircle className="h-4 w-4" />;
-    default:
-      return null;
-  }
+const formatDate = (dateString: string): string => {
+  return new Date(dateString).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
 };
 
 export const LeaveHistory: React.FC<LeaveHistoryProps> = ({ leaves, loading }) => {
   if (loading) {
-    return <div className="text-sm text-muted-foreground">Loading leave history...</div>;
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <p className="text-sm text-muted-foreground">Loading leave history...</p>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
@@ -60,35 +81,42 @@ export const LeaveHistory: React.FC<LeaveHistoryProps> = ({ leaves, loading }) =
         {leaves.length === 0 ? (
           <p className="text-sm text-muted-foreground">No leave requests found</p>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>From Date</TableHead>
-                <TableHead>To Date</TableHead>
-                <TableHead>Days</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Reason</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {leaves.map((leave) => (
-                <TableRow key={leave.id}>
-                  <TableCell>{new Date(leave.from_date).toLocaleDateString()}</TableCell>
-                  <TableCell>{new Date(leave.to_date).toLocaleDateString()}</TableCell>
-                  <TableCell>{leave.days_count}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      {getStatusIcon(leave.status)}
-                      {getStatusBadge(leave.status)}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {leave.reason || '-'}
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>From Date</TableHead>
+                  <TableHead>To Date</TableHead>
+                  <TableHead className="text-center">Days</TableHead>
+                  <TableHead>Leave Type</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Reason</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {leaves.map((leave) => (
+                  <TableRow key={leave.id} className="hover:bg-muted/50">
+                    <TableCell className="font-medium">
+                      {formatDate(leave.from_date)}
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      {formatDate(leave.to_date)}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant="outline">{leave.days_count}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm">{leave.leave_type_id}</span>
+                    </TableCell>
+                    <TableCell>{getStatusBadge(leave.status)}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground max-w-xs truncate">
+                      {leave.reason || '-'}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </CardContent>
     </Card>

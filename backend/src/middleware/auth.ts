@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import config from '../config';
+import knex from '../config/knex';
 
 export interface AuthenticatedRequest extends Request {
   user?: {
@@ -12,7 +13,7 @@ export interface AuthenticatedRequest extends Request {
 }
 
 export interface JWTPayload {
-  id: string;
+  userId: string;
   email: string;
   role: string;
   employeeId?: string;
@@ -23,11 +24,11 @@ export interface JWTPayload {
 /**
  * Middleware to authenticate JWT token
  */
-export const authenticateToken = (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
+export const authenticateToken = (req: Request, res: Response, next: NextFunction): void => {
+  const authReq = req as AuthenticatedRequest;
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
-  if (!token) {
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
     res.status(401).json({
       error: {
         code: 'MISSING_TOKEN',
@@ -39,10 +40,15 @@ export const authenticateToken = (req: AuthenticatedRequest, res: Response, next
     return;
   }
 
+  const token = authHeader.slice(7); // Remove 'Bearer ' prefix
+
   try {
-    const decoded = jwt.verify(token, config.jwt.secret) as JWTPayload;
-    req.user = {
-      id: decoded.id,
+    const decoded = jwt.verify(token, config.jwt.secret, {
+      issuer: 'ems-api',
+      audience: 'ems-client',
+    }) as JWTPayload;
+    authReq.user = {
+      id: decoded.userId,
       email: decoded.email,
       role: decoded.role,
       ...(decoded.employeeId && { employeeId: decoded.employeeId }),
@@ -120,9 +126,10 @@ export const requireRole = (roles: string | string[]) => {
 };
 
 /**
- * Middleware to check if user can access employee data
+ * Middleware to check if user can access employee data.
+ * targetEmployeeId is read exclusively from req.params to prevent parameter pollution.
  */
-export const canAccessEmployeeData = (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
+export const canAccessEmployeeData = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   if (!req.user) {
     res.status(401).json({
       error: {
@@ -135,25 +142,40 @@ export const canAccessEmployeeData = (req: AuthenticatedRequest, res: Response, 
     return;
   }
 
-  const targetEmployeeId = req.params['employeeId'] || req.body['employeeId'] || req.query['employeeId'];
-  
+  // Use only req.params as the authoritative source to prevent parameter pollution
+  const targetEmployeeId = req.params['employeeId'];
+
   // Super Admin and HR Manager can access all employee data
   if (['super_admin', 'hr_manager'].includes(req.user.role)) {
     next();
     return;
   }
 
-  // Employees can only access their own data
+  // Employees (and managers) can always access their own data
   if (req.user.employeeId === targetEmployeeId) {
     next();
     return;
   }
 
-  // Department managers can access their team's data (this would require additional logic to check hierarchy)
-  // For now, we'll allow department managers to access any employee data
-  if (req.user.role === 'department_manager') {
-    next();
-    return;
+  // Department managers may only access employees in their own department
+  if (req.user.role === 'department_manager' && req.user.employeeId && targetEmployeeId) {
+    try {
+      const [managerEmployee, targetEmployee] = await Promise.all([
+        knex('employees').where({ employee_id: req.user.employeeId }).select('department_id').first(),
+        knex('employees').where({ employee_id: targetEmployeeId }).select('department_id').first(),
+      ]);
+
+      if (
+        managerEmployee?.department_id &&
+        targetEmployee?.department_id &&
+        managerEmployee.department_id === targetEmployee.department_id
+      ) {
+        next();
+        return;
+      }
+    } catch {
+      // Fall through to deny on DB error
+    }
   }
 
   res.status(403).json({

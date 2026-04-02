@@ -153,8 +153,8 @@ export class PayrollRepository {
       total_earnings: parseFloat(row.total_earnings),
       status: row.status,
       processed_by: row.processed_by,
-      processed_at: row.processed_at ? new Date(row.processed_at) : (undefined as any),
-      paid_at: row.paid_at ? new Date(row.paid_at) : (undefined as any),
+      processed_at: row.processed_at ? new Date(row.processed_at) : undefined,
+      paid_at: row.paid_at ? new Date(row.paid_at) : undefined,
       created_at: new Date(row.created_at),
       updated_at: new Date(row.updated_at),
     };

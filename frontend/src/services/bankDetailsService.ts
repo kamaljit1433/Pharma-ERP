@@ -1,47 +1,47 @@
-import api from './api';
+import apiClient from './api';
 
 export const bankDetailsService = {
   // ============ Bank Account Management ============
 
   addBankAccount: async (data: any) => {
-    const response = await api.post('/bank-details', data);
+    const response = await apiClient.post('/bank-details', data);
     return response.data;
   },
 
   updateBankAccount: async (id: string, data: any) => {
-    const response = await api.put(`/bank-details/${id}`, data);
+    const response = await apiClient.put(`/bank-details/${id}`, data);
     return response.data;
   },
 
   setBankAccountPrimary: async (id: string) => {
-    const response = await api.put(`/bank-details/${id}/set-primary`, {});
+    const response = await apiClient.put(`/bank-details/${id}/set-primary`, {});
     return response.data;
   },
 
   verifyBankAccount: async (id: string) => {
-    const response = await api.put(`/bank-details/${id}/verify`, {});
+    const response = await apiClient.put(`/bank-details/${id}/verify`, {});
     return response.data;
   },
 
   getBankDetails: async (employeeId: string) => {
-    const response = await api.get(`/bank-details/${employeeId}`);
+    const response = await apiClient.get(`/bank-details/${employeeId}`);
     return response.data;
   },
 
   deleteBankAccount: async (id: string) => {
-    const response = await api.delete(`/bank-details/${id}`);
+    const response = await apiClient.delete(`/bank-details/${id}`);
     return response.data;
   },
 
   // ============ Bank Account Verification (Finance) ============
 
   getPendingVerifications: async () => {
-    const response = await api.get('/bank-details/pending/verifications');
+    const response = await apiClient.get('/bank-details/pending/verifications');
     return response.data;
   },
 
   approveBankVerification: async (id: string, approverId: string) => {
-    const response = await api.put(`/bank-details/${id}/verify`, {
+    const response = await apiClient.put(`/bank-details/${id}/verify`, {
       approverId,
       status: 'approved',
     });
@@ -49,7 +49,7 @@ export const bankDetailsService = {
   },
 
   rejectBankVerification: async (id: string, approverId: string, reason: string) => {
-    const response = await api.put(`/bank-details/${id}/verify`, {
+    const response = await apiClient.put(`/bank-details/${id}/verify`, {
       approverId,
       status: 'rejected',
       reason,

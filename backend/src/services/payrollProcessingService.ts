@@ -3,6 +3,7 @@ import { PayrollRepository } from '../repositories/payrollRepository';
 import { PayrollCalculationService } from './payrollCalculationService';
 import { PayslipService } from './payslipService';
 import { PayrollSummary } from '../types/payroll';
+import logger from '../utils/logger';
 
 export class PayrollProcessingService {
   private payrollRepository: PayrollRepository;
@@ -42,6 +43,7 @@ export class PayrollProcessingService {
     let totalGrossSalary = 0;
     let totalDeductions = 0;
     let totalNetSalary = 0;
+    const failedEmployees: Array<{ employeeId: string; reason: string }> = [];
 
     // Process payroll for each employee
     for (const employee of employees) {
@@ -63,18 +65,13 @@ export class PayrollProcessingService {
 
         let payroll;
         if (existingPayroll) {
-          // Update existing payroll
-          payroll = await this.payrollRepository.updatePayroll(
-            existingPayroll.id,
-            {
-              gross_salary: calculation.gross_pay,
-              net_salary: calculation.net_pay,
-              total_deductions: calculation.total_deductions,
-              total_earnings: calculation.gross_pay,
-            }
-          );
+          payroll = await this.payrollRepository.updatePayroll(existingPayroll.id, {
+            gross_salary: calculation.gross_pay,
+            net_salary: calculation.net_pay,
+            total_deductions: calculation.total_deductions,
+            total_earnings: calculation.gross_pay,
+          });
         } else {
-          // Create new payroll
           payroll = await this.payrollRepository.createPayroll({
             employee_id: employee.id,
             month,
@@ -87,30 +84,30 @@ export class PayrollProcessingService {
         }
 
         // Update payroll status to processed
-        await this.payrollRepository.updatePayrollStatus(
-          payroll.id,
-          'processed',
-          processedBy
-        );
+        await this.payrollRepository.updatePayrollStatus(payroll.id, 'processed', processedBy);
 
-        // Generate payslip
-        await this.payslipService.generatePayslip(
-          payroll.id,
-          employee.id,
-          month,
-          year
-        );
+        // Payslip generation is non-critical: failure must not block salary processing
+        try {
+          await this.payslipService.generatePayslip(
+            payroll.id,
+            employee.id,
+            month,
+            year,
+            calculation.earnings,
+            calculation.deductions
+          );
+        } catch (payslipError) {
+          logger.error(`Payslip generation failed for employee ${employee.id}`, { payslipError });
+        }
 
         processedCount++;
         totalGrossSalary += calculation.gross_pay;
         totalDeductions += calculation.total_deductions;
         totalNetSalary += calculation.net_pay;
       } catch (error) {
-        // Log error but continue processing other employees
-        console.error(
-          `Error processing payroll for employee ${employee.id}:`,
-          error
-        );
+        const reason = error instanceof Error ? error.message : 'Unknown error';
+        logger.error(`Payroll processing failed for employee ${employee.id}`, { error });
+        failedEmployees.push({ employeeId: employee.id, reason });
       }
     }
 
@@ -128,6 +125,7 @@ export class PayrollProcessingService {
       total_net_salary: totalNetSalary,
       processed_count: processedCount,
       pending_count: employees.length - processedCount,
+      failed_employees: failedEmployees,
       month,
       year,
     };
@@ -169,8 +167,8 @@ export class PayrollProcessingService {
       throw new Error('Only locked payroll can be unlocked');
     }
 
-    // Update status back to processed
-    await this.payrollRepository.updatePayrollStatus(payrollId, 'processed');
+    // Update status back to processed, recording who unlocked it
+    await this.payrollRepository.updatePayrollStatus(payrollId, 'processed', unlockedBy);
 
     // Create audit log
     await this.createAuditLog(
@@ -191,7 +189,7 @@ export class PayrollProcessingService {
       throw new Error('Payroll is already marked as paid');
     }
 
-    await this.payrollRepository.updatePayrollStatus(payrollId, 'paid');
+    await this.payrollRepository.updatePayrollStatus(payrollId, 'paid', paidBy);
 
     // Create audit log
     await this.createAuditLog(
@@ -228,41 +226,56 @@ export class PayrollProcessingService {
     throw new Error('Invalid export format');
   }
 
+  /** Mask a bank account number, showing only the last 4 digits. */
+  private maskAccountNumber(raw: string): string {
+    if (!raw || raw.length <= 4) return '****';
+    return `${'*'.repeat(raw.length - 4)}${raw.slice(-4)}`;
+  }
+
   private async generateCSVFile(payrolls: any[]): Promise<Buffer> {
-    let csv = 'Employee ID,Employee Name,Amount,Bank Account,IFSC Code\n';
+    let csv = 'Employee ID,Employee Name,Amount,Bank Account (Masked),IFSC Code\n';
+    const skipped: string[] = [];
 
     for (const payroll of payrolls) {
-      const employee = await this.knex('employees')
-        .where({ id: payroll.employee_id })
-        .first();
-
+      const employee = await this.knex('employees').where({ id: payroll.employee_id }).first();
       const bankAccount = await this.knex('bank_accounts')
         .where({ employee_id: payroll.employee_id, is_primary: true })
         .first();
 
       if (bankAccount) {
-        csv += `${employee.employee_id},${employee.first_name} ${employee.last_name},${payroll.net_salary},${bankAccount.account_number_encrypted},${bankAccount.ifsc_code}\n`;
+        // Mask the account number before writing to file — never expose raw/encrypted values
+        const masked = this.maskAccountNumber(bankAccount.account_number_encrypted);
+        csv += `${employee.employee_id},${employee.first_name} ${employee.last_name},${payroll.net_salary},${masked},${bankAccount.ifsc_code}\n`;
+      } else {
+        skipped.push(employee?.employee_id ?? payroll.employee_id);
+        logger.error(`No primary bank account for employee ${payroll.employee_id} — skipped in CSV export`);
       }
+    }
+
+    if (skipped.length > 0) {
+      csv += `\n# WARNING: The following employees were skipped (no primary bank account): ${skipped.join(', ')}\n`;
     }
 
     return Buffer.from(csv, 'utf-8');
   }
 
   private async generateNEFTFile(payrolls: any[]): Promise<Buffer> {
-    // NEFT file format (simplified)
     let neft = '';
+    const skipped: string[] = [];
 
     for (const payroll of payrolls) {
-      const employee = await this.knex('employees')
-        .where({ id: payroll.employee_id })
-        .first();
-
+      const employee = await this.knex('employees').where({ id: payroll.employee_id }).first();
       const bankAccount = await this.knex('bank_accounts')
         .where({ employee_id: payroll.employee_id, is_primary: true })
         .first();
 
       if (bankAccount) {
-        neft += `${employee.employee_id}|${employee.first_name} ${employee.last_name}|${payroll.net_salary}|${bankAccount.account_number_encrypted}|${bankAccount.ifsc_code}\n`;
+        // Mask the account number before writing to file
+        const masked = this.maskAccountNumber(bankAccount.account_number_encrypted);
+        neft += `${employee.employee_id}|${employee.first_name} ${employee.last_name}|${payroll.net_salary}|${masked}|${bankAccount.ifsc_code}\n`;
+      } else {
+        skipped.push(employee?.employee_id ?? payroll.employee_id);
+        logger.error(`No primary bank account for employee ${payroll.employee_id} — skipped in NEFT export`);
       }
     }
 

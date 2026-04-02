@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -E \"\\\\.ts$\")",
+      "Bash(ls:*)",
+      "Bash(find C:UserskamalDownloadsPharma-ERPbackend -type f -name *migration*)"
+    ]
+  }
+}

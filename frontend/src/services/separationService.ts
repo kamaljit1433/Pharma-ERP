@@ -1,4 +1,4 @@
-import { api } from './api';
+import apiClient from './api';
 
 export interface ResignationData {
   resignation_date: Date;
@@ -65,7 +65,7 @@ class SeparationService {
    * Submit resignation for an employee
    */
   async submitResignation(employeeId: string, data: ResignationData): Promise<any> {
-    const response = await api.post(`/separation/resignation`, {
+    const response = await apiClient.post(`/separation/resignation`, {
       employee_id: employeeId,
       resignation_date: data.resignation_date,
       last_working_day: data.last_working_day,
@@ -78,7 +78,7 @@ class SeparationService {
    * Initiate termination for an employee (HR only)
    */
   async initiateTermination(employeeId: string, data: TerminationData): Promise<any> {
-    const response = await api.post(`/separation/termination`, {
+    const response = await apiClient.post(`/separation/termination`, {
       employee_id: employeeId,
       termination_date: data.termination_date,
       reason: data.reason,
@@ -92,7 +92,7 @@ class SeparationService {
    * Schedule exit interview
    */
   async scheduleExitInterview(employeeId: string, date: Date): Promise<any> {
-    const response = await api.post(`/separation/exit-interview`, {
+    const response = await apiClient.post(`/separation/exit-interview`, {
       employee_id: employeeId,
       scheduled_date: date,
     });
@@ -103,7 +103,7 @@ class SeparationService {
    * Submit exit interview responses
    */
   async submitExitInterview(exitInterviewId: string, data: ExitInterviewData): Promise<any> {
-    const response = await api.post(`/separation/exit-interview/${exitInterviewId}/submit`, {
+    const response = await apiClient.post(`/separation/exit-interview/${exitInterviewId}/submit`, {
       conducted_by: data.conducted_by,
       questionnaire_responses: data.questionnaire_responses,
       feedback: data.feedback,
@@ -115,7 +115,7 @@ class SeparationService {
    * Get F&F settlement for an employee
    */
   async getFnFSettlement(employeeId: string): Promise<FnFSettlement> {
-    const response = await api.get(`/separation/fnf/${employeeId}`);
+    const response = await apiClient.get(`/separation/fnf/${employeeId}`);
     return response.data;
   }
 
@@ -123,7 +123,7 @@ class SeparationService {
    * Approve F&F settlement (Finance only)
    */
   async approveFnFSettlement(fnfId: string, approvedBy: string): Promise<any> {
-    const response = await api.put(`/separation/fnf/${fnfId}/approve`, {
+    const response = await apiClient.put(`/separation/fnf/${fnfId}/approve`, {
       approved_by: approvedBy,
     });
     return response.data;
@@ -133,7 +133,7 @@ class SeparationService {
    * Get asset recovery checklist for an employee
    */
   async getAssetRecoveryChecklist(employeeId: string): Promise<AssetRecoveryItem[]> {
-    const response = await api.get(`/separation/asset-recovery/${employeeId}`);
+    const response = await apiClient.get(`/separation/asset-recovery/${employeeId}`);
     return response.data;
   }
 
@@ -145,7 +145,7 @@ class SeparationService {
     status: string,
     damageCost?: number
   ): Promise<any> {
-    const response = await api.put(`/separation/asset-recovery/${assetRecoveryId}`, {
+    const response = await apiClient.put(`/separation/asset-recovery/${assetRecoveryId}`, {
       status,
       damage_cost: damageCost,
     });
@@ -156,7 +156,7 @@ class SeparationService {
    * Get offboarding status for an employee
    */
   async getOffboardingStatus(employeeId: string): Promise<OffboardingStatus> {
-    const response = await api.get(`/separation/offboarding-status/${employeeId}`);
+    const response = await apiClient.get(`/separation/offboarding-status/${employeeId}`);
     return response.data;
   }
 
@@ -164,7 +164,7 @@ class SeparationService {
    * Deactivate employee (HR only)
    */
   async deactivateEmployee(employeeId: string): Promise<any> {
-    const response = await api.put(`/separation/deactivate/${employeeId}`, {});
+    const response = await apiClient.put(`/separation/deactivate/${employeeId}`, {});
     return response.data;
   }
 }

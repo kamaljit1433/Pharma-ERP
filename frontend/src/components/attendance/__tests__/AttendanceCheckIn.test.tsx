@@ -4,23 +4,24 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { AttendanceCheckIn } from '../AttendanceCheckIn';
 
 // Mock the face detection service
-jest.mock('../../../services/faceDetectionService', () => ({
+vi.mock('../../../services/faceDetectionService', () => ({
   faceDetectionService: {
-    requestCameraAccess: jest.fn(),
-    initializeModel: jest.fn(),
-    detectHumanPresence: jest.fn(),
-    verifyLiveness: jest.fn(),
-    stopCameraStream: jest.fn(),
-    dispose: jest.fn(),
+    requestCameraAccess: vi.fn(),
+    initializeModel: vi.fn(),
+    detectHumanPresence: vi.fn(),
+    verifyLiveness: vi.fn(),
+    stopCameraStream: vi.fn(),
+    dispose: vi.fn(),
   },
 }));
 
 describe('AttendanceCheckIn Component', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should render check-in button', () => {
@@ -64,7 +65,7 @@ describe('AttendanceCheckIn Component', () => {
   });
 
   it('should call onCheckInSuccess callback on successful check-in', async () => {
-    const onCheckInSuccess = jest.fn();
+    const onCheckInSuccess = vi.fn();
     render(
       <AttendanceCheckIn
         employeeId="emp-123"
@@ -73,7 +74,7 @@ describe('AttendanceCheckIn Component', () => {
     );
 
     // Mock successful API response
-    global.fetch = jest.fn(() =>
+    global.fetch = vi.fn(() =>
       Promise.resolve({
         ok: true,
         json: () =>
@@ -81,7 +82,7 @@ describe('AttendanceCheckIn Component', () => {
             data: { id: 'att-123', employeeId: 'emp-123' },
           }),
       })
-    ) as jest.Mock;
+    ) as any;
 
     // Simulate check-in flow
     const button = screen.getByRole('button', { name: /check in/i });
@@ -91,7 +92,7 @@ describe('AttendanceCheckIn Component', () => {
   });
 
   it('should call onCheckInError callback on error', async () => {
-    const onCheckInError = jest.fn();
+    const onCheckInError = vi.fn();
     render(
       <AttendanceCheckIn
         employeeId="emp-123"
@@ -100,7 +101,7 @@ describe('AttendanceCheckIn Component', () => {
     );
 
     // Mock failed API response
-    global.fetch = jest.fn(() =>
+    global.fetch = vi.fn(() =>
       Promise.resolve({
         ok: false,
         json: () =>
@@ -108,7 +109,7 @@ describe('AttendanceCheckIn Component', () => {
             error: { message: 'Check-in failed' },
           }),
       })
-    ) as jest.Mock;
+    ) as any;
 
     // Note: Full integration test would require mocking more services
   });

@@ -103,8 +103,9 @@ export class PayrollCalculationService {
     month: number,
     year: number
   ) {
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0);
+    // Use UTC boundaries to avoid timezone-dependent month shifts
+    const startDate = new Date(Date.UTC(year, month - 1, 1));
+    const endDate = new Date(Date.UTC(year, month, 0));
 
     const attendance = await this.knex('attendance')
       .where({ employee_id: employeeId })
@@ -120,25 +121,23 @@ export class PayrollCalculationService {
   }
 
   private async getLeaveData(employeeId: string, month: number, year: number) {
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0);
+    // Use UTC boundaries to avoid timezone-dependent month shifts
+    const startDate = new Date(Date.UTC(year, month - 1, 1));
+    const endDate = new Date(Date.UTC(year, month, 0));
 
+    // Use a single JOIN to avoid N+1 queries (one query per leave record)
     const leaves = await this.knex('leaves')
-      .where({ employee_id: employeeId, status: 'approved' })
-      .whereBetween('from_date', [startDate, endDate])
-      .select('*');
+      .join('leave_types', 'leaves.leave_type_id', 'leave_types.id')
+      .where({ 'leaves.employee_id': employeeId, 'leaves.status': 'approved' })
+      .whereBetween('leaves.from_date', [startDate, endDate])
+      .select('leaves.from_date', 'leaves.to_date', 'leave_types.is_paid');
 
     let paidLeaveDays = 0;
     let unpaidLeaveDays = 0;
 
     for (const leave of leaves) {
-      const leaveType = await this.knex('leave_types')
-        .where({ id: leave.leave_type_id })
-        .first();
-
       const days = this.calculateLeaveDays(leave.from_date, leave.to_date);
-
-      if (leaveType.is_paid) {
+      if (leave.is_paid) {
         paidLeaveDays += days;
       } else {
         unpaidLeaveDays += days;
@@ -149,8 +148,8 @@ export class PayrollCalculationService {
   }
 
   private async getHolidayCount(month: number, year: number): Promise<number> {
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0);
+    const startDate = new Date(Date.UTC(year, month - 1, 1));
+    const endDate = new Date(Date.UTC(year, month, 0));
 
     const holidays = await this.knex('company_holidays')
       .whereBetween('holiday_date', [startDate, endDate])
@@ -161,25 +160,25 @@ export class PayrollCalculationService {
   }
 
   private calculatePaidDays(
-    attendanceData: any,
-    leaveData: any,
-    holidayCount: number
+    attendanceData: { presentDays: number; halfDays: number },
+    leaveData: { paidLeaveDays: number },
+    _holidayCount: number  // Holidays are already excluded from totalWorkingDays; do not add again
   ): number {
     return (
       attendanceData.presentDays +
       attendanceData.halfDays * 0.5 +
-      leaveData.paidLeaveDays +
-      holidayCount
+      leaveData.paidLeaveDays
     );
   }
 
   private getTotalWorkingDays(month: number, year: number): number {
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0);
+    const startDate = new Date(Date.UTC(year, month - 1, 1));
+    const endDate = new Date(Date.UTC(year, month, 0));
 
     let workingDays = 0;
-    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-      const dayOfWeek = d.getDay();
+    // Advance by explicit millisecond addition to avoid setDate() mutation pitfalls
+    for (let d = new Date(startDate); d <= endDate; d = new Date(d.getTime() + 86400000)) {
+      const dayOfWeek = d.getUTCDay();
       if (dayOfWeek !== 0 && dayOfWeek !== 6) {
         workingDays++;
       }
@@ -328,30 +327,26 @@ export class PayrollCalculationService {
     month: number,
     year: number
   ): Promise<number> {
-    const advance = await this.knex('advance_salary_requests')
-      .where({
-        employee_id: employeeId,
-        status: 'approved',
-      })
-      .first();
+    // Fetch ALL approved advances — using .first() previously silently skipped extras
+    const advances = await this.knex('advance_salary_requests')
+      .where({ employee_id: employeeId, status: 'approved' })
+      .select('*');
 
-    if (!advance) {
-      return 0;
+    let totalDeduction = 0;
+
+    for (const advance of advances) {
+      const createdDate = new Date(advance.created_at);
+      const deductionStartMonth = createdDate.getMonth() + 1;
+      const deductionStartYear = createdDate.getFullYear();
+      const monthsDiff =
+        (year - deductionStartYear) * 12 + (month - deductionStartMonth);
+
+      if (monthsDiff >= 0 && monthsDiff < advance.deduction_months) {
+        totalDeduction += advance.amount / advance.deduction_months;
+      }
     }
 
-    // Check if advance should be deducted in this month
-    const createdDate = new Date(advance.created_at);
-    const deductionStartMonth = createdDate.getMonth() + 1;
-    const deductionStartYear = createdDate.getFullYear();
-
-    const monthsDiff =
-      (year - deductionStartYear) * 12 + (month - deductionStartMonth);
-
-    if (monthsDiff >= 0 && monthsDiff < advance.deduction_months) {
-      return advance.amount / advance.deduction_months;
-    }
-
-    return 0;
+    return totalDeduction;
   }
 
   private calculateLeaveDays(fromDate: Date, toDate: Date): number {
