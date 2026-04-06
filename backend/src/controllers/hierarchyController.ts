@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+﻿import { Request, Response } from 'express';
 import { Knex } from 'knex';
 import { HierarchyService } from '../services/hierarchyService';
 import {
@@ -42,7 +42,7 @@ export class HierarchyController {
 
   async getDepartment(req: Request, res: Response): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params['id'] as string;
 
       const department = await this.hierarchyService.getDepartment(id);
 
@@ -73,7 +73,7 @@ export class HierarchyController {
 
   async updateDepartment(req: Request, res: Response): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params['id'] as string;
       const data: UpdateDepartmentDTO = req.body;
 
       const department = await this.hierarchyService.updateDepartment(id, data);
@@ -91,7 +91,7 @@ export class HierarchyController {
 
   async deleteDepartment(req: Request, res: Response): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params['id'] as string;
 
       await this.hierarchyService.deleteDepartment(id);
 
@@ -131,7 +131,7 @@ export class HierarchyController {
 
   async getDesignation(req: Request, res: Response): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params['id'] as string;
 
       const designation = await this.hierarchyService.getDesignation(id);
 
@@ -162,7 +162,7 @@ export class HierarchyController {
 
   async updateDesignation(req: Request, res: Response): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params['id'] as string;
       const data: UpdateDesignationDTO = req.body;
 
       const designation = await this.hierarchyService.updateDesignation(id, data);
@@ -180,7 +180,7 @@ export class HierarchyController {
 
   async deleteDesignation(req: Request, res: Response): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params['id'] as string;
 
       await this.hierarchyService.deleteDesignation(id);
 
@@ -223,7 +223,7 @@ export class HierarchyController {
 
   async getReportingChain(req: Request, res: Response): Promise<void> {
     try {
-      const { employeeId } = req.params;
+      const employeeId = req.params['employeeId'] as string;
 
       const reportingChain = await this.hierarchyService.getReportingChain(employeeId);
 
@@ -240,7 +240,7 @@ export class HierarchyController {
 
   async getDirectReports(req: Request, res: Response): Promise<void> {
     try {
-      const { managerId } = req.params;
+      const managerId = req.params['managerId'] as string;
 
       const directReports = await this.hierarchyService.getDirectReports(managerId);
 
@@ -273,7 +273,7 @@ export class HierarchyController {
 
   async getHierarchyAuditLogs(req: Request, res: Response): Promise<void> {
     try {
-      const { employeeId } = req.params;
+      const employeeId = req.params['employeeId'] as string;
 
       const auditLogs = await this.hierarchyService.getHierarchyAuditLogs(employeeId);
 

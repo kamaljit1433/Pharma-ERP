@@ -14,11 +14,17 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { LeaveApprovalPanel } from '../LeaveApprovalPanel';
 import { useLeaveStore } from '../../../store/leaveStore';
+import { useNotificationStore } from '../../../store/notificationStore';
 import { leaveService } from '../../../services/leaveService';
 
 // Mock the leave store
 vi.mock('../../../store/leaveStore', () => ({
   useLeaveStore: vi.fn(),
+}));
+
+// Mock the notification store
+vi.mock('../../../store/notificationStore', () => ({
+  useNotificationStore: vi.fn(),
 }));
 
 // Mock the leave service
@@ -91,7 +97,8 @@ describe('LeaveApprovalPanel Component', () => {
     },
   ];
 
-  const mockFetchLeaveBalance = vi.fn();
+  const mockFetchPendingLeaves = vi.fn();
+  const mockAddNotification = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -99,7 +106,13 @@ describe('LeaveApprovalPanel Component', () => {
     vi.mocked(useLeaveStore).mockReturnValue({
       leaves: mockPendingLeaves,
       leaveTypes: mockLeaveTypes,
-      fetchLeaveBalance: mockFetchLeaveBalance,
+      loadingLeaves: false,
+      fetchPendingLeaves: mockFetchPendingLeaves,
+      // ... other store methods
+    } as any);
+
+    vi.mocked(useNotificationStore).mockReturnValue({
+      addNotification: mockAddNotification,
       // ... other store methods
     } as any);
 
@@ -117,6 +130,12 @@ describe('LeaveApprovalPanel Component', () => {
 
       expect(screen.getByText('Leave Approvals')).toBeInTheDocument();
       expect(screen.getByText(/Review and approve\/reject pending leave requests/)).toBeInTheDocument();
+    });
+
+    it('should fetch pending leaves on mount', () => {
+      render(<LeaveApprovalPanel />);
+
+      expect(mockFetchPendingLeaves).toHaveBeenCalled();
     });
 
     it('should display pending leave requests in table', () => {
@@ -139,7 +158,7 @@ describe('LeaveApprovalPanel Component', () => {
     it('should display approve and reject buttons for each leave', () => {
       render(<LeaveApprovalPanel />);
 
-      const approveButtons = screen.getAllByRole('button', { name: '' }).filter(
+      const approveButtons = screen.getAllByRole('button').filter(
         (btn) => btn.querySelector('svg') // Buttons with icons
       );
 
@@ -150,12 +169,26 @@ describe('LeaveApprovalPanel Component', () => {
       vi.mocked(useLeaveStore).mockReturnValue({
         leaves: [],
         leaveTypes: mockLeaveTypes,
-        fetchLeaveBalance: mockFetchLeaveBalance,
+        loadingLeaves: false,
+        fetchPendingLeaves: mockFetchPendingLeaves,
       } as any);
 
       render(<LeaveApprovalPanel />);
 
       expect(screen.getByText('No pending leave requests')).toBeInTheDocument();
+    });
+
+    it('should show loading state when fetching leaves', () => {
+      vi.mocked(useLeaveStore).mockReturnValue({
+        leaves: [],
+        leaveTypes: mockLeaveTypes,
+        loadingLeaves: true,
+        fetchPendingLeaves: mockFetchPendingLeaves,
+      } as any);
+
+      render(<LeaveApprovalPanel />);
+
+      expect(screen.getByText('Loading pending leave requests...')).toBeInTheDocument();
     });
   });
 
@@ -184,9 +217,11 @@ describe('LeaveApprovalPanel Component', () => {
       fireEvent.click(approveButtons[0]);
 
       await waitFor(() => {
-        expect(screen.getByText('Casual Leave')).toBeInTheDocument();
+        expect(screen.getByText('Approve Leave Request?')).toBeInTheDocument();
         expect(screen.getByText(/Dec 20, 2024 to Dec 22, 2024/)).toBeInTheDocument();
-        expect(screen.getByText('Family vacation')).toBeInTheDocument();
+        // Check for the reason in the dialog context
+        const reasonElements = screen.getAllByText('Family vacation');
+        expect(reasonElements.length).toBeGreaterThan(0);
       });
     });
 
@@ -208,6 +243,32 @@ describe('LeaveApprovalPanel Component', () => {
 
       await waitFor(() => {
         expect(leaveService.approveLeave).toHaveBeenCalledWith('leave-1');
+      });
+    });
+
+    it('should send notification when leave is approved', async () => {
+      render(<LeaveApprovalPanel />);
+
+      const approveButtons = screen.getAllByRole('button').filter(
+        (btn) => btn.querySelector('svg')?.parentElement?.className.includes('text-green')
+      );
+
+      fireEvent.click(approveButtons[0]);
+
+      await waitFor(() => {
+        expect(screen.getByText('Approve Leave Request?')).toBeInTheDocument();
+      });
+
+      const confirmButton = screen.getByRole('button', { name: /Approve/i });
+      fireEvent.click(confirmButton);
+
+      await waitFor(() => {
+        expect(mockAddNotification).toHaveBeenCalledWith(
+          expect.objectContaining({
+            title: 'Leave Request Approved',
+            type: 'success',
+          })
+        );
       });
     });
 
@@ -285,7 +346,7 @@ describe('LeaveApprovalPanel Component', () => {
       fireEvent.click(rejectButtons[0]);
 
       await waitFor(() => {
-        expect(screen.getByText('Rejection Reason')).toBeInTheDocument();
+        expect(screen.getByText('Reject Leave Request?')).toBeInTheDocument();
         expect(screen.getByPlaceholderText('Enter reason for rejection')).toBeInTheDocument();
       });
     });
@@ -348,6 +409,36 @@ describe('LeaveApprovalPanel Component', () => {
 
       await waitFor(() => {
         expect(leaveService.rejectLeave).toHaveBeenCalledWith('leave-1', 'Insufficient staffing');
+      });
+    });
+
+    it('should send notification when leave is rejected', async () => {
+      render(<LeaveApprovalPanel />);
+
+      const rejectButtons = screen.getAllByRole('button').filter(
+        (btn) => btn.querySelector('svg')?.parentElement?.className.includes('text-red')
+      );
+
+      fireEvent.click(rejectButtons[0]);
+
+      await waitFor(() => {
+        expect(screen.getByText('Reject Leave Request?')).toBeInTheDocument();
+      });
+
+      const reasonInput = screen.getByPlaceholderText('Enter reason for rejection');
+      fireEvent.change(reasonInput, { target: { value: 'Insufficient staffing' } });
+
+      const rejectButton = screen.getByRole('button', { name: /Reject/i });
+      fireEvent.click(rejectButton);
+
+      await waitFor(() => {
+        expect(mockAddNotification).toHaveBeenCalledWith(
+          expect.objectContaining({
+            title: 'Leave Request Rejected',
+            type: 'warning',
+            message: expect.stringContaining('Insufficient staffing'),
+          })
+        );
       });
     });
 

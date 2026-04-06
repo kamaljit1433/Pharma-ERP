@@ -45,30 +45,35 @@ export class PFRepository {
     const employerContribution = (data.basic_salary * data.employer_contribution_rate) / 100;
     const totalContribution = employeeContribution + employerContribution;
 
-    const [contribution] = await this.knex('pf_contributions')
-      .insert({
-        id,
-        employee_id: data.employee_id,
-        month: data.month,
-        year: data.year,
-        basic_salary: data.basic_salary,
-        employee_contribution: employeeContribution,
-        employer_contribution: employerContribution,
-        total_contribution: totalContribution,
-        employee_contribution_rate: data.employee_contribution_rate,
-        employer_contribution_rate: data.employer_contribution_rate,
-      })
-      .returning('*');
+    // Wrap PF increment + update in transaction to prevent out-of-sync balances
+    const contribution = await this.knex.transaction(async (trx) => {
+      const [newContribution] = await trx('pf_contributions')
+        .insert({
+          id,
+          employee_id: data.employee_id,
+          month: data.month,
+          year: data.year,
+          basic_salary: data.basic_salary,
+          employee_contribution: employeeContribution,
+          employer_contribution: employerContribution,
+          total_contribution: totalContribution,
+          employee_contribution_rate: data.employee_contribution_rate,
+          employer_contribution_rate: data.employer_contribution_rate,
+        })
+        .returning('*');
 
-    // Update PF account balance
-    await this.knex('pf_accounts')
-      .where('employee_id', data.employee_id)
-      .increment('current_balance', totalContribution)
-      .increment('total_contributions', totalContribution)
-      .update({
-        last_contribution_date: this.knex.fn.now(),
-        updated_at: this.knex.fn.now(),
-      });
+      // Update PF account balance
+      await trx('pf_accounts')
+        .where('employee_id', data.employee_id)
+        .increment('current_balance', totalContribution)
+        .increment('total_contributions', totalContribution)
+        .update({
+          last_contribution_date: this.knex.fn.now(),
+          updated_at: this.knex.fn.now(),
+        });
+
+      return newContribution;
+    });
 
     return this.mapToPFContribution(contribution);
   }

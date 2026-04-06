@@ -30,6 +30,7 @@ interface Config {
   env: string;
   port: number;
   apiVersion: string;
+  frontendUrl: string;
   database: {
     host: string;
     port: number;
@@ -128,6 +129,7 @@ const config: Config = {
   env: process.env['NODE_ENV'] || 'development',
   port: parseInt(process.env['PORT'] || '3000', 10),
   apiVersion: process.env['API_VERSION'] || 'v1',
+  frontendUrl: process.env['FRONTEND_URL'] || process.env['CORS_ORIGIN'] || 'http://localhost:5173',
   database: {
     host: process.env['DB_HOST'] || 'localhost',
     port: parseInt(process.env['DB_PORT'] || '5432', 10),
@@ -144,12 +146,30 @@ const config: Config = {
     db: parseInt(process.env['REDIS_DB'] || '0', 10),
   },
   session: {
-    secret: process.env['SESSION_SECRET'] || 'default_secret_change_me',
+    secret: (() => {
+      const s = process.env['SESSION_SECRET'];
+      if (!s) {
+        throw new Error('FATAL: SESSION_SECRET environment variable is required');
+      }
+      return s;
+    })(),
     maxAge: parseInt(process.env['SESSION_MAX_AGE'] || '86400000', 10),
   },
   jwt: {
-    secret: process.env['JWT_SECRET'] || 'default_jwt_secret_change_me',
-    refreshSecret: process.env['JWT_REFRESH_SECRET'] || process.env['JWT_SECRET'] || 'default_jwt_refresh_secret_change_me',
+    secret: (() => {
+      const s = process.env['JWT_SECRET'];
+      if (!s) {
+        throw new Error('FATAL: JWT_SECRET environment variable is required');
+      }
+      return s;
+    })(),
+    refreshSecret: (() => {
+      const s = process.env['JWT_REFRESH_SECRET'] || process.env['JWT_SECRET'];
+      if (!s) {
+        throw new Error('FATAL: JWT_REFRESH_SECRET environment variable is required');
+      }
+      return s;
+    })(),
     expiresIn: process.env['JWT_EXPIRES_IN'] || '15m',
     refreshExpiresIn: process.env['JWT_REFRESH_EXPIRES_IN'] || '7d',
   },

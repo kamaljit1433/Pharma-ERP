@@ -32,7 +32,7 @@ export class DashboardService {
 
   private async getEmployeeStatistics(): Promise<EmployeeStatistics> {
     const totalResult = await this.knex('employees').count('* as count').first();
-    const total = totalResult?.count || 0;
+    const total = Number(totalResult?.['count'] ?? 0);
 
     const statusCounts = await this.knex('employees')
       .select('status')
@@ -41,7 +41,7 @@ export class DashboardService {
 
     const statusMap: Record<string, number> = {};
     statusCounts.forEach((row: any) => {
-      statusMap[row.status] = row.count;
+      statusMap[row.status ?? 'unknown'] = Number(row.count ?? 0);
     });
 
     const departmentCounts = await this.knex('employees')
@@ -52,7 +52,7 @@ export class DashboardService {
 
     const byDepartment: Record<string, number> = {};
     departmentCounts.forEach((row: any) => {
-      byDepartment[row.department_id] = row.count;
+      byDepartment[row.department_id] = Number(row.count ?? 0);
     });
 
     const designationCounts = await this.knex('employees')
@@ -63,7 +63,7 @@ export class DashboardService {
 
     const byDesignation: Record<string, number> = {};
     designationCounts.forEach((row: any) => {
-      byDesignation[row.designation_id] = row.count;
+      byDesignation[row.designation_id] = Number(row.count ?? 0);
     });
 
     const currentMonth = new Date();
@@ -72,25 +72,25 @@ export class DashboardService {
 
     const newHiresResult = await this.knex('employees')
       .count('* as count')
-      .where('join_date', '>=', monthStart)
-      .where('join_date', '<=', monthEnd)
+      .where('date_of_joining', '>=', monthStart)
+      .where('date_of_joining', '<=', monthEnd)
       .first();
-    const newHiresThisMonth = newHiresResult?.count || 0;
+    const newHiresThisMonth = Number(newHiresResult?.['count'] ?? 0);
 
     const separationsResult = await this.knex('resignations')
       .count('* as count')
       .where('created_at', '>=', monthStart)
       .where('created_at', '<=', monthEnd)
       .first();
-    const separationsThisMonth = separationsResult?.count || 0;
+    const separationsThisMonth = Number(separationsResult?.['count'] ?? 0);
 
     return {
-      total,
-      active: statusMap['active'] || 0,
-      onLeave: statusMap['on_leave'] || 0,
-      suspended: statusMap['suspended'] || 0,
-      resigned: statusMap['resigned'] || 0,
-      terminated: statusMap['terminated'] || 0,
+      total: Number(total),
+      active: Number(statusMap['active'] ?? 0),
+      onLeave: Number(statusMap['on_leave'] ?? 0),
+      suspended: Number(statusMap['suspended'] ?? 0),
+      resigned: Number(statusMap['resigned'] ?? 0),
+      terminated: Number(statusMap['terminated'] ?? 0),
       byDepartment,
       byDesignation,
       newHiresThisMonth,
@@ -108,7 +108,7 @@ export class DashboardService {
       .where('status', 'active')
       .count('* as count')
       .first();
-    const totalEmployees = totalEmployeesResult?.count || 0;
+    const totalEmployees = Number(totalEmployeesResult?.['count'] ?? 0);
 
     const todayAttendance = await this.knex('attendance')
       .select('status')
@@ -119,13 +119,13 @@ export class DashboardService {
 
     const attendanceMap: Record<string, number> = {};
     todayAttendance.forEach((row: any) => {
-      attendanceMap[row.status] = row.count;
+      attendanceMap[row.status] = Number(row['count'] ?? 0);
     });
 
-    const presentToday = attendanceMap['present'] || 0;
-    const absentToday = attendanceMap['absent'] || 0;
-    const onLeaveToday = attendanceMap['on_leave'] || 0;
-    const halfDayToday = attendanceMap['half_day'] || 0;
+    const presentToday = attendanceMap['present'] ?? 0;
+    const absentToday = attendanceMap['absent'] ?? 0;
+    const onLeaveToday = attendanceMap['on_leave'] ?? 0;
+    const halfDayToday = attendanceMap['half_day'] ?? 0;
 
     const attendanceRate = totalEmployees > 0 ? (presentToday / totalEmployees) * 100 : 0;
 
@@ -138,13 +138,13 @@ export class DashboardService {
       .where('attendance_date', '>=', thirtyDaysAgo)
       .count('* as count')
       .first();
-    const monthlyPresent = monthlyAttendanceResult?.count || 0;
+    const monthlyPresent = Number(monthlyAttendanceResult?.['count'] ?? 0);
 
     const totalMonthlyRecords = await this.knex('attendance')
       .where('attendance_date', '>=', thirtyDaysAgo)
       .count('* as count')
       .first();
-    const monthlyTotal = totalMonthlyRecords?.count || 0;
+    const monthlyTotal = Number(totalMonthlyRecords?.['count'] ?? 0);
 
     const monthlyAttendanceRate = monthlyTotal > 0 ? (monthlyPresent / monthlyTotal) * 100 : 0;
 
@@ -154,7 +154,7 @@ export class DashboardService {
       .where('check_in_time', '>', '09:00:00')
       .count('* as count')
       .first();
-    const lateCheckIns = lateCheckInsResult?.count || 0;
+    const lateCheckIns = Number(lateCheckInsResult?.['count'] ?? 0);
 
     const incompleteCheckOutsResult = await this.knex('attendance')
       .where('attendance_date', '>=', today)
@@ -162,7 +162,7 @@ export class DashboardService {
       .whereNull('check_out_time')
       .count('* as count')
       .first();
-    const incompleteCheckOuts = incompleteCheckOutsResult?.count || 0;
+    const incompleteCheckOuts = Number(incompleteCheckOutsResult?.['count'] ?? 0);
 
     const topAbsentees = await this.knex('attendance')
       .join('employees', 'attendance.employee_id', 'employees.id')
@@ -186,8 +186,8 @@ export class DashboardService {
       incompleteCheckOuts,
       topAbsentees: topAbsentees.map((row: any) => ({
         employeeId: row.employeeId,
-        employeeName: `${row.first_name} ${row.last_name}`,
-        absenceCount: row.absenceCount,
+        employeeName: `${row.first_name ?? ''} ${row.last_name ?? ''}`.trim(),
+        absenceCount: Number(row['absenceCount'] ?? 0),
       })),
     };
   }
@@ -196,13 +196,13 @@ export class DashboardService {
     const totalLeaveRequestsResult = await this.knex('leaves')
       .count('* as count')
       .first();
-    const totalLeaveRequests = totalLeaveRequestsResult?.count || 0;
+    const totalLeaveRequests = Number(totalLeaveRequestsResult?.['count'] ?? 0);
 
     const pendingApprovalsResult = await this.knex('leaves')
       .where('status', 'pending')
       .count('* as count')
       .first();
-    const pendingApprovals = pendingApprovalsResult?.count || 0;
+    const pendingApprovals = Number(pendingApprovalsResult?.['count'] ?? 0);
 
     const currentMonth = new Date();
     const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
@@ -214,7 +214,7 @@ export class DashboardService {
       .where('created_at', '<=', monthEnd)
       .count('* as count')
       .first();
-    const approvedThisMonth = approvedThisMonthResult?.count || 0;
+    const approvedThisMonth = Number(approvedThisMonthResult?.['count'] ?? 0);
 
     const rejectedThisMonthResult = await this.knex('leaves')
       .where('status', 'rejected')
@@ -222,7 +222,7 @@ export class DashboardService {
       .where('created_at', '<=', monthEnd)
       .count('* as count')
       .first();
-    const rejectedThisMonth = rejectedThisMonthResult?.count || 0;
+    const rejectedThisMonth = Number(rejectedThisMonthResult?.['count'] ?? 0);
 
     const cancelledThisMonthResult = await this.knex('leaves')
       .where('status', 'cancelled')
@@ -230,7 +230,7 @@ export class DashboardService {
       .where('created_at', '<=', monthEnd)
       .count('* as count')
       .first();
-    const cancelledThisMonth = cancelledThisMonthResult?.count || 0;
+    const cancelledThisMonth = Number(cancelledThisMonthResult?.['count'] ?? 0);
 
     const leaveTypeStats = await this.knex('leaves')
       .join('leave_types', 'leaves.leave_type_id', 'leave_types.id')
@@ -244,17 +244,15 @@ export class DashboardService {
     const leaveTypeBreakdown: Record<string, any> = {};
     leaveTypeStats.forEach((row: any) => {
       leaveTypeBreakdown[row.name] = {
-        total: row.total || 0,
-        approved: row.approved || 0,
-        pending: row.pending || 0,
-        rejected: row.rejected || 0,
+        total: Number(row['total'] ?? 0),
+        approved: Number(row['approved'] ?? 0),
+        pending: Number(row['pending'] ?? 0),
+        rejected: Number(row['rejected'] ?? 0),
       };
     });
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
 
     const employeesOnLeaveTodayResult = await this.knex('leaves')
       .where('status', 'approved')
@@ -262,7 +260,7 @@ export class DashboardService {
       .where('end_date', '>=', today)
       .count('* as count')
       .first();
-    const employeesOnLeaveToday = employeesOnLeaveTodayResult?.count || 0;
+    const employeesOnLeaveToday = Number(employeesOnLeaveTodayResult?.['count'] ?? 0);
 
     const upcomingLeaves = await this.knex('leaves')
       .join('employees', 'leaves.employee_id', 'employees.id')
@@ -291,7 +289,7 @@ export class DashboardService {
       employeesOnLeaveToday,
       upcomingLeaves: upcomingLeaves.map((row: any) => ({
         employeeId: row.employeeId,
-        employeeName: `${row.first_name} ${row.last_name}`,
+        employeeName: `${row.first_name ?? ''} ${row.last_name ?? ''}`.trim(),
         leaveType: row.leaveType,
         startDate: row.startDate,
         endDate: row.endDate,
@@ -305,7 +303,7 @@ export class DashboardService {
       .where('status', 'active')
       .count('* as count')
       .first();
-    const totalEmployees = totalEmployeesResult?.count || 0;
+    const totalEmployees = Number(totalEmployeesResult?.['count'] ?? 0);
 
     const currentMonth = new Date();
     const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
@@ -317,13 +315,13 @@ export class DashboardService {
       .where('created_at', '<=', monthEnd)
       .count('* as count')
       .first();
-    const processedThisMonth = processedThisMonthResult?.count || 0;
+    const processedThisMonth = Number(processedThisMonthResult?.['count'] ?? 0);
 
     const pendingProcessingResult = await this.knex('payroll')
       .where('status', 'draft')
       .count('* as count')
       .first();
-    const pendingProcessing = pendingProcessingResult?.count || 0;
+    const pendingProcessing = Number(pendingProcessingResult?.['count'] ?? 0);
 
     const payrollAmountResult = await this.knex('payroll')
       .where('status', 'paid')
@@ -331,7 +329,7 @@ export class DashboardService {
       .where('created_at', '<=', monthEnd)
       .sum('net_salary as total')
       .first();
-    const totalPayrollAmount = payrollAmountResult?.total || 0;
+    const totalPayrollAmount = Number(payrollAmountResult?.['total'] ?? 0);
 
     const averageSalaryResult = await this.knex('payroll')
       .where('status', 'paid')
@@ -339,7 +337,7 @@ export class DashboardService {
       .where('created_at', '<=', monthEnd)
       .avg('net_salary as average')
       .first();
-    const averageSalary = averageSalaryResult?.average || 0;
+    const averageSalary = Number(averageSalaryResult?.['average'] ?? 0);
 
     const deductionsResult = await this.knex('payroll')
       .where('status', 'paid')
@@ -347,7 +345,7 @@ export class DashboardService {
       .where('created_at', '<=', monthEnd)
       .sum('total_deductions as total')
       .first();
-    const totalDeductions = deductionsResult?.total || 0;
+    const totalDeductions = Number(deductionsResult?.['total'] ?? 0);
 
     const earningsResult = await this.knex('payroll')
       .where('status', 'paid')
@@ -355,7 +353,7 @@ export class DashboardService {
       .where('created_at', '<=', monthEnd)
       .sum('total_earnings as total')
       .first();
-    const totalEarnings = earningsResult?.total || 0;
+    const totalEarnings = Number(earningsResult?.['total'] ?? 0);
 
     const payrollByStatus = await this.knex('payroll')
       .select('status')
@@ -364,20 +362,20 @@ export class DashboardService {
 
     const statusMap: Record<string, number> = {};
     payrollByStatus.forEach((row: any) => {
-      statusMap[row.status] = row.count;
+      statusMap[row.status] = Number(row['count'] ?? 0);
     });
 
     const advanceSalaryRequestsResult = await this.knex('advance_salary_requests')
       .where('status', 'pending')
       .count('* as count')
       .first();
-    const advanceSalaryRequests = advanceSalaryRequestsResult?.count || 0;
+    const advanceSalaryRequests = Number(advanceSalaryRequestsResult?.['count'] ?? 0);
 
     const reimbursementClaimsResult = await this.knex('reimbursement_claims')
       .where('status', 'pending')
       .count('* as count')
       .first();
-    const reimbursementClaims = reimbursementClaimsResult?.count || 0;
+    const reimbursementClaims = Number(reimbursementClaimsResult?.['count'] ?? 0);
 
     return {
       totalEmployees,
@@ -398,12 +396,12 @@ export class DashboardService {
       .where('status', 'open')
       .count('* as count')
       .first();
-    const openPositions = openPositionsResult?.count || 0;
+    const openPositions = Number(openPositionsResult?.['count'] ?? 0);
 
     const totalApplicantsResult = await this.knex('applicants')
       .count('* as count')
       .first();
-    const totalApplicants = totalApplicantsResult?.count || 0;
+    const totalApplicants = Number(totalApplicantsResult?.['count'] ?? 0);
 
     const applicantsByStage = await this.knex('applicants')
       .select('stage')
@@ -412,33 +410,33 @@ export class DashboardService {
 
     const stageMap: Record<string, number> = {};
     applicantsByStage.forEach((row: any) => {
-      stageMap[row.stage] = row.count;
+      stageMap[row.stage] = Number(row['count'] ?? 0);
     });
 
     const offersExtendedResult = await this.knex('applicants')
       .where('stage', 'offer')
       .count('* as count')
       .first();
-    const offersExtended = offersExtendedResult?.count || 0;
+    const offersExtended = Number(offersExtendedResult?.['count'] ?? 0);
 
     const offersAcceptedResult = await this.knex('applicants')
       .where('stage', 'hired')
       .count('* as count')
       .first();
-    const offersAccepted = offersAcceptedResult?.count || 0;
+    const offersAccepted = Number(offersAcceptedResult?.['count'] ?? 0);
 
     const offersRejectedResult = await this.knex('applicants')
       .where('stage', 'rejected')
       .count('* as count')
       .first();
-    const offersRejected = offersRejectedResult?.count || 0;
+    const offersRejected = Number(offersRejectedResult?.['count'] ?? 0);
 
     // Average time to hire (in days)
     const timeToHireResult = await this.knex('applicants')
       .where('stage', 'hired')
       .select(this.knex.raw('AVG(EXTRACT(DAY FROM (updated_at - created_at))) as avg_days'))
       .first();
-    const averageTimeToHire = Math.round(timeToHireResult?.avg_days || 0);
+    const averageTimeToHire = Math.round(Number(timeToHireResult?.['avg_days'] ?? 0));
 
     const topSourceResult = await this.knex('applicants')
       .select('source')
@@ -449,7 +447,7 @@ export class DashboardService {
 
     const topSourceOfApplicants: Record<string, number> = {};
     topSourceResult.forEach((row: any) => {
-      topSourceOfApplicants[row.source] = row.count;
+      topSourceOfApplicants[row.source] = Number(row['count'] ?? 0);
     });
 
     const currentMonth = new Date();
@@ -461,12 +459,12 @@ export class DashboardService {
         'employees.first_name',
         'employees.last_name',
         'designations.name as designation',
-        'employees.join_date as joinDate'
+        'employees.date_of_joining as joinDate'
       )
       .join('hierarchy_nodes', 'employees.id', 'hierarchy_nodes.employee_id')
       .join('designations', 'hierarchy_nodes.designation_id', 'designations.id')
-      .where('employees.join_date', '>=', monthStart)
-      .orderBy('employees.join_date', 'desc')
+      .where('employees.date_of_joining', '>=', monthStart)
+      .orderBy('employees.date_of_joining', 'desc')
       .limit(10);
 
     return {

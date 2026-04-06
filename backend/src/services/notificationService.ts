@@ -1,5 +1,7 @@
 import logger from '../utils/logger';
 import { NotificationProviderFactory } from './factories/NotificationProviderFactory';
+import { NotificationRepository } from '../repositories/notificationRepository';
+import config from '../config';
 import {
   NotificationType,
   NotificationChannel,
@@ -7,18 +9,44 @@ import {
   SendBulkNotificationDTO,
   SendTopicNotificationDTO,
   PushNotificationPayload,
-  Notification,
   NotificationTemplate,
   NotificationProvider,
 } from '../types/notification';
 
-class NotificationService {
+export class NotificationService {
   private fcmProvider: NotificationProvider | null = null;
   private notificationTemplates: Map<NotificationType, NotificationTemplate> = new Map();
+  private notificationRepository: NotificationRepository | null = null;
 
-  constructor() {
+  constructor(notificationRepository?: NotificationRepository) {
+    this.notificationRepository = notificationRepository || null;
     this.initializeFCM();
     this.initializeTemplates();
+    // Attempt to overlay DB-stored templates on top of defaults.
+    // This is fire-and-forget; if the table doesn't exist we keep the hard-coded defaults.
+    this.loadTemplatesFromDB().catch(() => {
+      logger.debug('notification_templates table not available, using defaults');
+    });
+  }
+
+  /**
+   * Attempt to load notification templates from the database.
+   * Overlays any DB-stored templates on top of the built-in defaults.
+   */
+  private async loadTemplatesFromDB(): Promise<void> {
+    if (!this.notificationRepository) return;
+
+    try {
+      const dbTemplates = await this.notificationRepository.getTemplates();
+      if (dbTemplates && Array.isArray(dbTemplates)) {
+        for (const tpl of dbTemplates) {
+          this.notificationTemplates.set(tpl.type, tpl);
+        }
+        logger.info('Loaded notification templates from database', { count: dbTemplates.length });
+      }
+    } catch {
+      // Table may not exist yet — safe to ignore
+    }
   }
 
   private initializeFCM(): void {
@@ -118,8 +146,12 @@ class NotificationService {
 
       // Send email notification if enabled
       if (channels.includes(NotificationChannel.EMAIL)) {
-        // Email sending would be handled by email service
-        logger.info(`Email notification queued for employee ${data.employeeId}`);
+        await this.sendEmailNotification(
+          data.employeeId,
+          data.title,
+          data.body,
+          data.data?.['email'] as string | undefined
+        );
       }
 
       // Store in-app notification
@@ -154,7 +186,11 @@ class NotificationService {
 
       // Send email notifications if enabled
       if (channels.includes(NotificationChannel.EMAIL)) {
-        logger.info(`Email notifications queued for ${data.employeeIds.length} employees`);
+        await Promise.allSettled(
+          data.employeeIds.map((empId) =>
+            this.sendEmailNotification(empId, data.title, data.body, data.data?.['email'] as string | undefined)
+          )
+        );
       }
 
       // Store in-app notifications
@@ -254,27 +290,81 @@ class NotificationService {
   }
 
   private async storeInAppNotification(data: SendNotificationDTO & { channels: NotificationChannel[] }): Promise<void> {
-    try {
-      // In a real implementation, store in database
-      const notification: Notification = {
-        id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        employeeId: data.employeeId,
-        type: data.type,
-        title: data.title,
-        body: data.body,
-        ...(data.icon && { icon: data.icon }),
-        ...(data.image && { image: data.image }),
-        ...(data.data && { data: data.data }),
-        channels: data.channels,
-        isRead: false,
-        sentAt: new Date(),
-        createdAt: new Date(),
-      };
+    if (!this.notificationRepository) {
+      // Repository not injected — log only (used when service is bootstrapped without DB)
+      logger.warn(`storeInAppNotification called without a NotificationRepository — skipping DB persist for employee ${data.employeeId}`);
+      return;
+    }
 
-      logger.info(`In-app notification stored for employee ${data.employeeId}: ${notification.id}`);
+    try {
+      const record = await this.notificationRepository.create({
+        employee_id: data.employeeId,
+        title: data.title,
+        message: data.body,
+        type: 'info',
+        channel: 'in_app',
+        metadata: {
+          notificationType: data.type,
+          ...(data.icon && { icon: data.icon }),
+          ...(data.image && { image: data.image }),
+          ...(data.data && { data: data.data }),
+        },
+      });
+
+      logger.info(`In-app notification persisted for employee ${data.employeeId}: id=${record.id}`);
     } catch (error: any) {
-      logger.error(`Failed to store in-app notification:`, error.message);
+      logger.error(`Failed to store in-app notification for employee ${data.employeeId}:`, error.message);
       throw error;
+    }
+  }
+
+  /**
+   * Send an email notification via the configured SMTP transport.
+   * Falls back gracefully if email config is absent.
+   */
+  private async sendEmailNotification(
+    employeeId: string,
+    subject: string,
+    body: string,
+    recipientEmail?: string
+  ): Promise<void> {
+    const smtpCfg = config.email?.smtp;
+    if (!smtpCfg?.host || !smtpCfg?.user || !smtpCfg?.password) {
+      logger.warn(`Email notification for employee ${employeeId} skipped — SMTP not configured (EMAIL_HOST / EMAIL_USER / EMAIL_PASSWORD missing)`);
+      return;
+    }
+
+    const to = recipientEmail;
+    if (!to) {
+      logger.warn(`Email notification for employee ${employeeId} skipped — no recipient email address provided`);
+      return;
+    }
+
+    try {
+      // Dynamic import so nodemailer is only loaded when actually needed
+      const nodemailer = await import('nodemailer');
+      const transporter = nodemailer.createTransport({
+        host: smtpCfg.host,
+        port: smtpCfg.port ?? 587,
+        secure: (smtpCfg.port ?? 587) === 465,
+        auth: {
+          user: smtpCfg.user,
+          pass: smtpCfg.password,
+        },
+      });
+
+      await transporter.sendMail({
+        from: smtpCfg.user,
+        to,
+        subject,
+        text: body,
+        html: `<p>${body.replace(/\n/g, '<br>')}</p>`,
+      });
+
+      logger.info(`Email notification sent to ${to} for employee ${employeeId}`);
+    } catch (error: any) {
+      // Log but do not rethrow — email failure should not crash the whole notification pipeline
+      logger.error(`Failed to send email notification for employee ${employeeId}:`, error.message);
     }
   }
 

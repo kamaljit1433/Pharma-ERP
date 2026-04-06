@@ -8,16 +8,16 @@ export class FnFSettlementRepository {
   async createFnFSettlement(employeeId: string, data: CreateFnFSettlementDTO): Promise<FnFSettlement> {
     const id = uuidv4();
 
-    const pendingSalary = data.pending_salary || 0;
-    const leaveEncashment = data.leave_encashment || 0;
-    const gratuity = data.gratuity || 0;
-    const bonus = data.bonus || 0;
-    const otherBenefits = data.other_benefits || 0;
+    const pendingSalary = Number(data.pending_salary || 0);
+    const leaveEncashment = Number(data.leave_encashment || 0);
+    const gratuity = Number(data.gratuity || 0);
+    const bonus = Number(data.bonus || 0);
+    const otherBenefits = Number(data.other_benefits || 0);
     const totalEarnings = pendingSalary + leaveEncashment + gratuity + bonus + otherBenefits;
 
-    const advanceDeduction = data.advance_deduction || 0;
-    const assetDamageDeduction = data.asset_damage_deduction || 0;
-    const otherDeductions = data.other_deductions || 0;
+    const advanceDeduction = Number(data.advance_deduction || 0);
+    const assetDamageDeduction = Number(data.asset_damage_deduction || 0);
+    const otherDeductions = Number(data.other_deductions || 0);
     const totalDeductions = advanceDeduction + assetDamageDeduction + otherDeductions;
 
     const netSettlement = totalEarnings - totalDeductions;
@@ -60,16 +60,16 @@ export class FnFSettlementRepository {
     const current = await this.getFnFSettlement(id);
     if (!current) throw new Error('FnF Settlement not found');
 
-    const pendingSalary = data.pending_salary ?? current.pending_salary;
-    const leaveEncashment = data.leave_encashment ?? current.leave_encashment;
-    const gratuity = data.gratuity ?? current.gratuity;
-    const bonus = data.bonus ?? current.bonus;
-    const otherBenefits = data.other_benefits ?? current.other_benefits;
+    const pendingSalary = Number(data.pending_salary ?? current.pending_salary);
+    const leaveEncashment = Number(data.leave_encashment ?? current.leave_encashment);
+    const gratuity = Number(data.gratuity ?? current.gratuity);
+    const bonus = Number(data.bonus ?? current.bonus);
+    const otherBenefits = Number(data.other_benefits ?? current.other_benefits);
     const totalEarnings = pendingSalary + leaveEncashment + gratuity + bonus + otherBenefits;
 
-    const advanceDeduction = data.advance_deduction ?? current.advance_deduction;
-    const assetDamageDeduction = data.asset_damage_deduction ?? current.asset_damage_deduction;
-    const otherDeductions = data.other_deductions ?? current.other_deductions;
+    const advanceDeduction = Number(data.advance_deduction ?? current.advance_deduction);
+    const assetDamageDeduction = Number(data.asset_damage_deduction ?? current.asset_damage_deduction);
+    const otherDeductions = Number(data.other_deductions ?? current.other_deductions);
     const totalDeductions = advanceDeduction + assetDamageDeduction + otherDeductions;
 
     const netSettlement = totalEarnings - totalDeductions;

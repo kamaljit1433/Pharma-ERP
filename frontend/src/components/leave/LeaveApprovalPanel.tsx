@@ -20,17 +20,24 @@ import {
 } from '../ui/dialog';
 import { Textarea } from '../ui/textarea';
 import { useLeaveStore } from '../../store/leaveStore';
+import { useNotificationStore } from '../../store/notificationStore';
 import { useToast } from '../../hooks/useToast';
 import { leaveService } from '../../services/leaveService';
 import { CheckCircle2, XCircle, Clock } from 'lucide-react';
 
 export const LeaveApprovalPanel: React.FC = () => {
-  const { leaves, leaveTypes, fetchLeaveBalance } = useLeaveStore();
+  const { leaves, leaveTypes, fetchPendingLeaves, loadingLeaves } = useLeaveStore();
+  const { addNotification } = useNotificationStore();
   const { toast } = useToast();
   const [rejectionReason, setRejectionReason] = useState<string>('');
   const [selectedLeaveId, setSelectedLeaveId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null);
+
+  // Fetch pending leaves on mount
+  useEffect(() => {
+    fetchPendingLeaves();
+  }, [fetchPendingLeaves]);
 
   // Filter pending leaves
   const pendingLeaves = leaves.filter((leave) => leave.status === 'pending');
@@ -39,12 +46,29 @@ export const LeaveApprovalPanel: React.FC = () => {
     setIsLoading(true);
     try {
       await leaveService.approveLeave(leaveId);
+      
+      // Send notification
+      addNotification({
+        id: `notif-${Date.now()}`,
+        employee_id: '',
+        title: 'Leave Request Approved',
+        message: 'Your leave request has been approved',
+        type: 'success',
+        channel: 'in_app',
+        is_read: false,
+        created_at: new Date(),
+      });
+
       toast({
         type: 'success',
         message: 'Leave request approved successfully',
       });
+      
       setSelectedLeaveId(null);
       setActionType(null);
+      
+      // Refresh pending leaves
+      await fetchPendingLeaves();
     } catch (error) {
       toast({
         type: 'error',
@@ -67,13 +91,30 @@ export const LeaveApprovalPanel: React.FC = () => {
     setIsLoading(true);
     try {
       await leaveService.rejectLeave(leaveId, rejectionReason);
+      
+      // Send notification
+      addNotification({
+        id: `notif-${Date.now()}`,
+        employee_id: '',
+        title: 'Leave Request Rejected',
+        message: `Your leave request has been rejected. Reason: ${rejectionReason}`,
+        type: 'warning',
+        channel: 'in_app',
+        is_read: false,
+        created_at: new Date(),
+      });
+
       toast({
         type: 'success',
         message: 'Leave request rejected successfully',
       });
+      
       setSelectedLeaveId(null);
       setActionType(null);
       setRejectionReason('');
+      
+      // Refresh pending leaves
+      await fetchPendingLeaves();
     } catch (error) {
       toast({
         type: 'error',
@@ -108,7 +149,11 @@ export const LeaveApprovalPanel: React.FC = () => {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {pendingLeaves.length === 0 ? (
+        {loadingLeaves ? (
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">Loading pending leave requests...</p>
+          </div>
+        ) : pendingLeaves.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-muted-foreground">No pending leave requests</p>
           </div>

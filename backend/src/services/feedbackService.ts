@@ -1,8 +1,14 @@
 import { FeedbackRepository } from '../repositories/feedbackRepository';
 import { Feedback } from '../types/performance';
 
+import { Knex } from 'knex';
+
 export class FeedbackService {
-  constructor(private feedbackRepository: FeedbackRepository) {}
+  private feedbackRepository: FeedbackRepository;
+
+  constructor(private knex: Knex) {
+    this.feedbackRepository = new FeedbackRepository(knex);
+  }
 
   async provideFeedback(
     data: any,

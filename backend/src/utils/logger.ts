@@ -1,10 +1,18 @@
 import config from '../config';
 
-enum LogLevel {
+export enum LogLevel {
   DEBUG = 0,
   INFO = 1,
   WARN = 2,
   ERROR = 3,
+}
+
+export interface LogEntry {
+  timestamp: string;
+  level: string;
+  message: string;
+  service?: string;
+  [key: string]: unknown;
 }
 
 class Logger {
@@ -33,35 +41,78 @@ class Logger {
     return level >= this.level;
   }
 
-  private formatMessage(level: string, message: string, meta?: any): string {
-    const timestamp = new Date().toISOString();
-    const metaStr = meta ? ` ${JSON.stringify(meta)}` : '';
-    return `[${timestamp}] [${level}] ${message}${metaStr}`;
+  private buildEntry(level: string, message: string, meta?: Record<string, unknown>): LogEntry {
+    return {
+      timestamp: new Date().toISOString(),
+      level,
+      message,
+      ...meta,
+    };
   }
 
-  debug(message: string, meta?: any): void {
+  /**
+   * Create a child logger scoped to a specific service/module.
+   * All log entries from the child include a `service` field.
+   */
+  child(service: string): ScopedLogger {
+    return new ScopedLogger(this, service);
+  }
+
+  debug(message: string, meta?: Record<string, unknown>): void {
     if (this.shouldLog(LogLevel.DEBUG)) {
-      console.debug(this.formatMessage('DEBUG', message, meta));
+      const entry = this.buildEntry('DEBUG', message, meta);
+      console.debug(JSON.stringify(entry));
     }
   }
 
-  info(message: string, meta?: any): void {
+  info(message: string, meta?: Record<string, unknown>): void {
     if (this.shouldLog(LogLevel.INFO)) {
-      console.info(this.formatMessage('INFO', message, meta));
+      const entry = this.buildEntry('INFO', message, meta);
+      console.info(JSON.stringify(entry));
     }
   }
 
-  warn(message: string, meta?: any): void {
+  warn(message: string, meta?: Record<string, unknown>): void {
     if (this.shouldLog(LogLevel.WARN)) {
-      console.warn(this.formatMessage('WARN', message, meta));
+      const entry = this.buildEntry('WARN', message, meta);
+      console.warn(JSON.stringify(entry));
     }
   }
 
-  error(message: string, meta?: any): void {
+  error(message: string, meta?: Record<string, unknown>): void {
     if (this.shouldLog(LogLevel.ERROR)) {
-      console.error(this.formatMessage('ERROR', message, meta));
+      const entry = this.buildEntry('ERROR', message, meta);
+      console.error(JSON.stringify(entry));
     }
   }
 }
 
-export default new Logger();
+/**
+ * A logger scoped to a specific service/module.
+ * Automatically includes the service name in every log entry.
+ */
+export class ScopedLogger {
+  constructor(
+    private parent: Logger,
+    private service: string
+  ) {}
+
+  debug(message: string, meta?: Record<string, unknown>): void {
+    this.parent.debug(message, { service: this.service, ...meta });
+  }
+
+  info(message: string, meta?: Record<string, unknown>): void {
+    this.parent.info(message, { service: this.service, ...meta });
+  }
+
+  warn(message: string, meta?: Record<string, unknown>): void {
+    this.parent.warn(message, { service: this.service, ...meta });
+  }
+
+  error(message: string, meta?: Record<string, unknown>): void {
+    this.parent.error(message, { service: this.service, ...meta });
+  }
+}
+
+const logger = new Logger();
+export default logger;

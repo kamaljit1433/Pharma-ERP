@@ -142,7 +142,7 @@ export class PayrollRepository {
   }
 
   private mapToPayroll(row: any): Payroll {
-    return {
+    const payroll: Payroll = {
       id: row.id,
       employee_id: row.employee_id,
       month: row.month,
@@ -152,11 +152,20 @@ export class PayrollRepository {
       total_deductions: parseFloat(row.total_deductions),
       total_earnings: parseFloat(row.total_earnings),
       status: row.status,
-      processed_by: row.processed_by,
-      processed_at: row.processed_at ? new Date(row.processed_at) : undefined,
-      paid_at: row.paid_at ? new Date(row.paid_at) : undefined,
       created_at: new Date(row.created_at),
       updated_at: new Date(row.updated_at),
     };
+
+    if (row.processed_by) {
+      payroll.processed_by = row.processed_by;
+    }
+    if (row.processed_at) {
+      payroll.processed_at = new Date(row.processed_at);
+    }
+    if (row.paid_at) {
+      payroll.paid_at = new Date(row.paid_at);
+    }
+
+    return payroll;
   }
 }

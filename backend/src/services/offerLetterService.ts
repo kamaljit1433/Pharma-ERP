@@ -4,6 +4,7 @@ import { ApplicantRepository } from '../repositories/applicantRepository';
 import { OfferLetter, CreateOfferLetterDTO } from '../types/recruitment';
 import { EmailService } from './emailService';
 import { EmailTemplateType } from '../types/email';
+import config from '../config';
 
 export class OfferLetterService {
   private offerLetterRepository: OfferLetterRepository;
@@ -54,7 +55,7 @@ export class OfferLetterService {
         startDate: new Date(offerLetter.start_date).toLocaleDateString(),
         reportingManager: 'HR Team',
         offerValidTill: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-        acceptanceUrl: 'https://example.com/accept',
+        acceptanceUrl: `${config.frontendUrl}/recruitment/offers/${offerLetterId}/accept`,
       }
     );
 

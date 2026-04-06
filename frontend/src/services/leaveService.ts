@@ -107,4 +107,21 @@ export const leaveService = {
     const response = await apiClient.get('/leaves/leaves/team-calendar');
     return response.data;
   },
+
+  getLeaves: async (filters?: {
+    status?: string;
+    employeeId?: string;
+    fromDate?: string;
+    toDate?: string;
+  }): Promise<Leave[]> => {
+    const response = await apiClient.get('/leaves/leaves', {
+      params: filters,
+    });
+    return response.data;
+  },
+
+  getPendingLeaves: async (): Promise<Leave[]> => {
+    const response = await apiClient.get('/leaves/leaves/pending');
+    return response.data;
+  },
 };

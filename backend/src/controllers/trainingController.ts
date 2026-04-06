@@ -1,6 +1,6 @@
-import { Request, Response } from 'express';
+﻿import { Request, Response } from 'express';
 import { TrainingService } from '../services/trainingService';
-import { knex } from '../config/knex';
+import knex from '../config/knex';
 
 const trainingService = new TrainingService(knex);
 
@@ -33,7 +33,7 @@ export class TrainingController {
 
   static async getTrainingProgram(req: Request, res: Response): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params['id'] as string;
       const program = await trainingService.getTrainingProgram(id);
 
       if (!program) {
@@ -59,7 +59,7 @@ export class TrainingController {
 
   static async updateTrainingProgram(req: Request, res: Response): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params['id'] as string;
       const program = await trainingService.updateTrainingProgram(id, req.body);
       res.json(program);
     } catch (error) {
@@ -69,7 +69,7 @@ export class TrainingController {
 
   static async deleteTrainingProgram(req: Request, res: Response): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params['id'] as string;
       await trainingService.deleteTrainingProgram(id);
       res.status(204).send();
     } catch (error) {
@@ -101,7 +101,7 @@ export class TrainingController {
 
   static async getEmployeeEnrollments(req: Request, res: Response): Promise<void> {
     try {
-      const { employeeId } = req.params;
+      const employeeId = req.params['employeeId'] as string;
       const enrollments = await trainingService.getEmployeeEnrollments(employeeId);
       res.json(enrollments);
     } catch (error) {
@@ -111,7 +111,7 @@ export class TrainingController {
 
   static async markEnrollmentComplete(req: Request, res: Response): Promise<void> {
     try {
-      const { enrollmentId } = req.params;
+      const enrollmentId = req.params['enrollmentId'] as string;
       const enrollment = await trainingService.markEnrollmentComplete(enrollmentId);
       res.json(enrollment);
     } catch (error) {
@@ -148,7 +148,7 @@ export class TrainingController {
 
   static async getEmployeeCertifications(req: Request, res: Response): Promise<void> {
     try {
-      const { employeeId } = req.params;
+      const employeeId = req.params['employeeId'] as string;
       const certifications = await trainingService.getEmployeeCertifications(employeeId);
       res.json(certifications);
     } catch (error) {
@@ -170,7 +170,7 @@ export class TrainingController {
 
   static async updateCertification(req: Request, res: Response): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params['id'] as string;
       const certification = await trainingService.updateCertification(id, req.body);
       res.json(certification);
     } catch (error) {
@@ -211,7 +211,7 @@ export class TrainingController {
 
   static async getSkillsByCategory(req: Request, res: Response): Promise<void> {
     try {
-      const { category } = req.params;
+      const category = req.params['category'] as string;
       const skills = await trainingService.getSkillsByCategory(category);
       res.json(skills);
     } catch (error) {
@@ -244,7 +244,7 @@ export class TrainingController {
 
   static async getEmployeeSkills(req: Request, res: Response): Promise<void> {
     try {
-      const { employeeId } = req.params;
+      const employeeId = req.params['employeeId'] as string;
       const skills = await trainingService.getEmployeeSkills(employeeId);
       res.json(skills);
     } catch (error) {
@@ -254,7 +254,7 @@ export class TrainingController {
 
   static async updateEmployeeSkill(req: Request, res: Response): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params['id'] as string;
       const employeeSkill = await trainingService.updateEmployeeSkill(id, req.body);
       res.json(employeeSkill);
     } catch (error) {
@@ -265,7 +265,7 @@ export class TrainingController {
   // Skill Gap Report
   static async generateSkillGapReport(req: Request, res: Response): Promise<void> {
     try {
-      const { departmentId } = req.params;
+      const departmentId = req.params['departmentId'] as string;
       const report = await trainingService.generateSkillGapReport(departmentId);
       res.json(report);
     } catch (error) {
@@ -320,7 +320,7 @@ export class TrainingController {
   // Issue certificate
   static async issueCertificate(req: Request, res: Response): Promise<void> {
     try {
-      const { enrollmentId } = req.params;
+      const enrollmentId = req.params['enrollmentId'] as string;
       const { name, issuing_organization, certificate_number } = req.body;
 
       if (!name || !issuing_organization) {
@@ -363,7 +363,7 @@ export class TrainingController {
   // Get team skill matrix
   static async getTeamSkillMatrix(req: Request, res: Response): Promise<void> {
     try {
-      const { departmentId } = req.params;
+      const departmentId = req.params['departmentId'] as string;
       const skillMatrix = await trainingService.getTeamSkillMatrix(departmentId);
       res.json(skillMatrix);
     } catch (error) {

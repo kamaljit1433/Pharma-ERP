@@ -1,4 +1,4 @@
-import { Router, RequestHandler } from 'express';
+﻿import { Router, RequestHandler } from 'express';
 import authController from '../controllers/authController';
 import { authenticateToken } from '../middleware/auth';
 import { generateTokenPair } from '../utils/jwt';

@@ -3,7 +3,8 @@
  * Handles all audit log database operations
  */
 
-import { knex } from '../config/knex';
+import knex from '../config/knex';
+import { v4 as uuidv4 } from 'uuid';
 import { Role } from '../types/rbac';
 
 export interface AuditLog {
@@ -39,22 +40,35 @@ export class AuditLogRepository {
    * Create a new audit log entry
    */
   async create(data: CreateAuditLogDTO): Promise<AuditLog> {
-    const [id] = await knex('audit_logs').insert({
-      id: require('uuid').v4(),
+    let changesJson: string | null = null;
+    if (data.changes) {
+      try {
+        changesJson = JSON.stringify(data.changes);
+      } catch {
+        changesJson = null; // Skip un-serializable changes rather than crashing
+      }
+    }
+
+    const [record] = await knex('audit_logs').insert({
+      id: uuidv4(),
       timestamp: new Date(),
       user_id: data.userId,
       user_role: data.userRole,
       action: data.action,
       resource_type: data.resourceType,
       resource_id: data.resourceId,
-      changes: data.changes ? JSON.stringify(data.changes) : null,
+      changes: changesJson,
       ip_address: data.ipAddress,
       user_agent: data.userAgent,
       status: data.status || 'success',
       reason: data.reason
-    });
+    }).returning('*');
 
-    return this.getById(id);
+    if (!record) {
+      throw new Error('Failed to create audit log — insert returned no rows');
+    }
+
+    return this.mapToAuditLog(record);
   }
 
   /**
@@ -80,7 +94,7 @@ export class AuditLogRepository {
       .limit(limit)
       .offset(offset);
 
-    return logs.map(log => this.mapToAuditLog(log));
+    return logs.map((log: any) => this.mapToAuditLog(log));
   }
 
   /**
@@ -98,7 +112,7 @@ export class AuditLogRepository {
       .limit(limit)
       .offset(offset);
 
-    return logs.map(log => this.mapToAuditLog(log));
+    return logs.map((log: any) => this.mapToAuditLog(log));
   }
 
   /**
@@ -116,7 +130,7 @@ export class AuditLogRepository {
       .limit(limit)
       .offset(offset);
 
-    return logs.map(log => this.mapToAuditLog(log));
+    return logs.map((log: any) => this.mapToAuditLog(log));
   }
 
   /**
@@ -166,7 +180,7 @@ export class AuditLogRepository {
 
     // Get total count
     const countResult = await query.clone().count('* as count').first();
-    const total = countResult?.count || 0;
+    const total = Number(countResult?.['count'] ?? 0);
 
     // Get paginated results
     const logs = await query
@@ -175,7 +189,7 @@ export class AuditLogRepository {
       .offset(filters.offset || 0);
 
     return {
-      logs: logs.map(log => this.mapToAuditLog(log)),
+      logs: logs.map((log: any) => this.mapToAuditLog(log)),
       total
     };
   }
@@ -197,7 +211,7 @@ export class AuditLogRepository {
       .orderBy('timestamp', 'desc')
       .limit(limit);
 
-    return logs.map(log => this.mapToAuditLog(log));
+    return logs.map((log: any) => this.mapToAuditLog(log));
   }
 
   /**
@@ -215,7 +229,7 @@ export class AuditLogRepository {
       .limit(limit)
       .offset(offset);
 
-    return logs.map(log => this.mapToAuditLog(log));
+    return logs.map((log: any) => this.mapToAuditLog(log));
   }
 
   /**
@@ -234,6 +248,16 @@ export class AuditLogRepository {
    * Map database row to AuditLog object
    */
   private mapToAuditLog(row: any): AuditLog {
+    let changes: Record<string, any> | undefined;
+    if (row.changes) {
+      try {
+        changes = JSON.parse(row.changes);
+      } catch {
+        // Return undefined rather than crashing on a corrupted row
+      }
+    }
+    // Use conditional spread to satisfy exactOptionalPropertyTypes —
+    // the property must be absent, not set to undefined, when there are no changes.
     return {
       id: row.id,
       timestamp: new Date(row.timestamp),
@@ -242,11 +266,11 @@ export class AuditLogRepository {
       action: row.action,
       resourceType: row.resource_type,
       resourceId: row.resource_id,
-      changes: row.changes ? JSON.parse(row.changes) : undefined,
+      ...(changes !== undefined ? { changes } : {}),
       ipAddress: row.ip_address,
       userAgent: row.user_agent,
       status: row.status,
-      reason: row.reason
+      ...(row.reason !== undefined && row.reason !== null ? { reason: row.reason } : {}),
     };
   }
 }

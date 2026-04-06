@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+import logger from '../utils/logger';
 import { ReimbursementClaimRepository } from '../repositories/reimbursementClaimRepository';
 import { EmployeeRepository } from '../repositories/employeeRepository';
 import {
@@ -299,7 +300,7 @@ export class ReimbursementService {
       });
     } catch (error) {
       // Log error but don't fail the operation
-      console.error('Failed to log audit event:', error);
+      logger.error('Failed to log audit event', { error: error instanceof Error ? error.message : String(error) });
     }
   }
 
@@ -310,9 +311,9 @@ export class ReimbursementService {
     try {
       // This would integrate with the notification service
       // For now, just log it
-      console.log(`Claim ${claim.id} approved for employee ${claim.employee_id}`);
+      logger.info('Claim approved', { claimId: claim.id, employeeId: claim.employee_id });
     } catch (error) {
-      console.error('Failed to send approval notification:', error);
+      logger.error('Failed to send approval notification', { error: error instanceof Error ? error.message : String(error) });
     }
   }
 
@@ -323,9 +324,9 @@ export class ReimbursementService {
     try {
       // This would integrate with the notification service
       // For now, just log it
-      console.log(`Claim ${claim.id} rejected for employee ${claim.employee_id}`);
+      logger.info('Claim rejected', { claimId: claim.id, employeeId: claim.employee_id });
     } catch (error) {
-      console.error('Failed to send rejection notification:', error);
+      logger.error('Failed to send rejection notification', { error: error instanceof Error ? error.message : String(error) });
     }
   }
 }

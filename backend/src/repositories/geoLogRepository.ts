@@ -80,12 +80,21 @@ export class GeoLogRepository {
   }
 
   private mapToGeoLog(row: any): GeoLog {
+    let metadata: Record<string, unknown> | undefined;
+    if (row.metadata) {
+      try {
+        metadata = JSON.parse(row.metadata);
+      } catch {
+        // Return undefined rather than crashing on corrupted metadata
+      }
+    }
+
     return {
       id: row.id,
       employeeId: row.employee_id,
       location: {
-        latitude: row.latitude,
-        longitude: row.longitude,
+        latitude: Number(row.latitude),
+        longitude: Number(row.longitude),
         accuracy: row.accuracy,
         altitude: row.altitude,
         timestamp: row.created_at,
@@ -93,7 +102,7 @@ export class GeoLogRepository {
       },
       action: row.action,
       journeyId: row.journey_id,
-      metadata: row.metadata ? JSON.parse(row.metadata) : undefined,
+      metadata,
       createdAt: row.created_at,
     };
   }

@@ -310,13 +310,13 @@ This implementation plan breaks down the Progressive Web App (PWA) frontend for 
     - Submit leave request to API
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 18.4, 18.6, 18.7_
   
-  - [ ] 11.3 Create LeaveCalendar component
+  - [x] 11.3 Create LeaveCalendar component
     - Display calendar view with approved leaves
     - Color-code leaves by type
     - Show leave details on hover
     - _Requirements: 8.7_
   
-  - [ ] 11.4 Implement leave approval workflow
+  - [x] 11.4 Implement leave approval workflow
     - Display pending leave requests for managers
     - Create approve/reject actions
     - Add rejection reason input

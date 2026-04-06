@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+import logger from '../utils/logger';
 import { LeaveRepository } from '../repositories/leaveRepository';
 import { LeaveBalanceRepository } from '../repositories/leaveBalanceRepository';
 import { ApprovalRoutingService } from './approvalRoutingService';
@@ -22,6 +23,10 @@ export class LeaveService {
 
   async applyLeave(data: LeaveApplicationDTO): Promise<Leave> {
     const year = new Date(data.from_date).getFullYear();
+
+    if (new Date(data.from_date) > new Date(data.to_date)) {
+      throw new Error('From date must be before or equal to To date');
+    }
 
     // Validate balance
     const balance = await this.leaveBalanceRepository.getBalance(
@@ -66,7 +71,7 @@ export class LeaveService {
       });
     } catch (error) {
       // Log error but don't fail the leave creation
-      console.error('Failed to route leave approval:', error);
+      logger.error('Failed to route leave approval', { error: error instanceof Error ? error.message : String(error) });
     }
 
     return leave;
@@ -85,20 +90,36 @@ export class LeaveService {
 
     const year = new Date(leave.from_date).getFullYear();
 
-    // Deduct from balance
-    await this.leaveBalanceRepository.deductBalance(
-      leave.employee_id,
-      leave.leave_type_id,
-      year,
-      leave.days_count
-    );
+    await this.knex.transaction(async (trx) => {
+      const trxLeaveBalanceRepo = new LeaveBalanceRepository(trx);
+      const trxLeaveRepo = new LeaveRepository(trx);
 
-    // Update leave status
-    await this.leaveRepository.updateLeaveStatus(
-      requestId,
-      'approved',
-      approverId
-    );
+      // Re-validate balance at approval time to prevent race conditions
+      const currentBalance = await trxLeaveBalanceRepo.getBalance(
+        leave.employee_id,
+        leave.leave_type_id,
+        year
+      );
+
+      if (!currentBalance || currentBalance.available_balance < leave.days_count) {
+        throw new Error('Insufficient leave balance at time of approval');
+      }
+
+      // Deduct from balance
+      await trxLeaveBalanceRepo.deductBalance(
+        leave.employee_id,
+        leave.leave_type_id,
+        year,
+        leave.days_count
+      );
+
+      // Update leave status
+      await trxLeaveRepo.updateLeaveStatus(
+        requestId,
+        'approved',
+        approverId
+      );
+    });
   }
 
   async rejectLeave(
@@ -148,10 +169,10 @@ export class LeaveService {
 
       entries.push({
         employee_id: leave.employee_id,
-        employee_name: `${employee.first_name} ${employee.last_name}`,
+        employee_name: employee ? `${employee.first_name} ${employee.last_name}` : 'Unknown Employee',
         from_date: leave.from_date,
         to_date: leave.to_date,
-        leave_type: leaveType.name,
+        leave_type: leaveType ? leaveType.name : 'Unknown Leave Type',
         status: leave.status,
       });
     }
@@ -224,9 +245,12 @@ export class LeaveService {
   }
 
   private calculateDays(fromDate: string, toDate: string): number {
+    // Use UTC to prevent timezone-related off-by-one errors
     const from = new Date(fromDate);
     const to = new Date(toDate);
-    const diffTime = Math.abs(to.getTime() - from.getTime());
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    const fromUTC = Date.UTC(from.getFullYear(), from.getMonth(), from.getDate());
+    const toUTC = Date.UTC(to.getFullYear(), to.getMonth(), to.getDate());
+    const diffTime = Math.abs(toUTC - fromUTC);
+    return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
   }
 }

@@ -1,6 +1,6 @@
-import { Request, Response } from 'express';
+﻿import { Request, Response } from 'express';
 import { DashboardService } from '../services/dashboardService';
-import { knex } from '../config/knex';
+import knex from '../config/knex';
 
 const dashboardService = new DashboardService(knex);
 

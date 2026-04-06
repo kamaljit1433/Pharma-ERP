@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Attendance API Routes
  * Handles check-in, check-out, and attendance management endpoints
  */
@@ -6,7 +6,7 @@
 import { Router, Request, Response } from 'express';
 import { attendanceService } from '../services/attendanceService';
 import { shiftService } from '../services/shiftService';
-import { geoTrackingService } from '../services/geoTrackingService';
+
 
 const router = Router();
 
@@ -25,7 +25,7 @@ router.post('/check-in', async (req: Request, res: Response) => {
           code: 'MISSING_EMPLOYEE_ID',
           message: 'Employee ID is required',
           timestamp: new Date().toISOString(),
-          requestId: req.id,
+          requestId: (req as any).id,
         },
       });
     }
@@ -36,7 +36,7 @@ router.post('/check-in', async (req: Request, res: Response) => {
           code: 'MISSING_LOCATION',
           message: 'GPS location is required',
           timestamp: new Date().toISOString(),
-          requestId: req.id,
+          requestId: (req as any).id,
         },
       });
     }
@@ -47,7 +47,7 @@ router.post('/check-in', async (req: Request, res: Response) => {
           code: 'MISSING_FACE_DETECTION',
           message: 'Face detection result is required',
           timestamp: new Date().toISOString(),
-          requestId: req.id,
+          requestId: (req as any).id,
         },
       });
     }
@@ -64,7 +64,7 @@ router.post('/check-in', async (req: Request, res: Response) => {
       success: true,
       data: attendance,
       timestamp: new Date().toISOString(),
-      requestId: req.id,
+      requestId: (req as any).id,
     });
   } catch (error: any) {
     res.status(400).json({
@@ -72,7 +72,7 @@ router.post('/check-in', async (req: Request, res: Response) => {
         code: 'CHECK_IN_FAILED',
         message: error.message,
         timestamp: new Date().toISOString(),
-        requestId: req.id,
+        requestId: (req as any).id,
       },
     });
   }
@@ -93,7 +93,7 @@ router.post('/check-out', async (req: Request, res: Response) => {
           code: 'MISSING_ATTENDANCE_ID',
           message: 'Attendance ID is required',
           timestamp: new Date().toISOString(),
-          requestId: req.id,
+          requestId: (req as any).id,
         },
       });
     }
@@ -104,7 +104,7 @@ router.post('/check-out', async (req: Request, res: Response) => {
           code: 'MISSING_LOCATION',
           message: 'GPS location is required',
           timestamp: new Date().toISOString(),
-          requestId: req.id,
+          requestId: (req as any).id,
         },
       });
     }
@@ -116,7 +116,7 @@ router.post('/check-out', async (req: Request, res: Response) => {
       success: true,
       data: attendance,
       timestamp: new Date().toISOString(),
-      requestId: req.id,
+      requestId: (req as any).id,
     });
   } catch (error: any) {
     res.status(400).json({
@@ -124,7 +124,7 @@ router.post('/check-out', async (req: Request, res: Response) => {
         code: 'CHECK_OUT_FAILED',
         message: error.message,
         timestamp: new Date().toISOString(),
-        requestId: req.id,
+        requestId: (req as any).id,
       },
     });
   }
@@ -146,7 +146,7 @@ router.get('/monthly/:employeeId', async (req: Request, res: Response) => {
           code: 'MISSING_EMPLOYEE_ID',
           message: 'Employee ID is required',
           timestamp: new Date().toISOString(),
-          requestId: req.id,
+          requestId: (req as any).id,
         },
       });
     }
@@ -157,7 +157,7 @@ router.get('/monthly/:employeeId', async (req: Request, res: Response) => {
           code: 'MISSING_PERIOD',
           message: 'Month and year are required',
           timestamp: new Date().toISOString(),
-          requestId: req.id,
+          requestId: (req as any).id,
         },
       });
     }
@@ -172,7 +172,7 @@ router.get('/monthly/:employeeId', async (req: Request, res: Response) => {
           code: 'INVALID_MONTH',
           message: 'Month must be between 1 and 12',
           timestamp: new Date().toISOString(),
-          requestId: req.id,
+          requestId: (req as any).id,
         },
       });
     }
@@ -188,7 +188,7 @@ router.get('/monthly/:employeeId', async (req: Request, res: Response) => {
       success: true,
       data: attendance,
       timestamp: new Date().toISOString(),
-      requestId: req.id,
+      requestId: (req as any).id,
     });
   } catch (error: any) {
     res.status(500).json({
@@ -196,7 +196,7 @@ router.get('/monthly/:employeeId', async (req: Request, res: Response) => {
         code: 'FETCH_FAILED',
         message: error.message,
         timestamp: new Date().toISOString(),
-        requestId: req.id,
+        requestId: (req as any).id,
       },
     });
   }
@@ -217,7 +217,7 @@ router.post('/regularization', async (req: Request, res: Response) => {
           code: 'MISSING_FIELDS',
           message: 'Attendance ID, Employee ID, and reason are required',
           timestamp: new Date().toISOString(),
-          requestId: req.id,
+          requestId: (req as any).id,
         },
       });
     }
@@ -233,7 +233,7 @@ router.post('/regularization', async (req: Request, res: Response) => {
       success: true,
       data: request,
       timestamp: new Date().toISOString(),
-      requestId: req.id,
+      requestId: (req as any).id,
     });
   } catch (error: any) {
     res.status(400).json({
@@ -241,7 +241,7 @@ router.post('/regularization', async (req: Request, res: Response) => {
         code: 'REGULARIZATION_FAILED',
         message: error.message,
         timestamp: new Date().toISOString(),
-        requestId: req.id,
+        requestId: (req as any).id,
       },
     });
   }
@@ -263,7 +263,7 @@ router.put('/regularization/:id/approve', async (req: Request, res: Response) =>
           code: 'MISSING_FIELDS',
           message: 'Request ID and Approver ID are required',
           timestamp: new Date().toISOString(),
-          requestId: req.id,
+          requestId: (req as any).id,
         },
       });
     }
@@ -279,7 +279,7 @@ router.put('/regularization/:id/approve', async (req: Request, res: Response) =>
       success: true,
       data: request,
       timestamp: new Date().toISOString(),
-      requestId: req.id,
+      requestId: (req as any).id,
     });
   } catch (error: any) {
     res.status(400).json({
@@ -287,7 +287,7 @@ router.put('/regularization/:id/approve', async (req: Request, res: Response) =>
         code: 'APPROVAL_FAILED',
         message: error.message,
         timestamp: new Date().toISOString(),
-        requestId: req.id,
+        requestId: (req as any).id,
       },
     });
   }
@@ -305,7 +305,7 @@ router.get('/shifts', async (req: Request, res: Response) => {
       success: true,
       data: shifts,
       timestamp: new Date().toISOString(),
-      requestId: req.id,
+      requestId: (req as any).id,
     });
   } catch (error: any) {
     res.status(500).json({
@@ -313,7 +313,7 @@ router.get('/shifts', async (req: Request, res: Response) => {
         code: 'FETCH_FAILED',
         message: error.message,
         timestamp: new Date().toISOString(),
-        requestId: req.id,
+        requestId: (req as any).id,
       },
     });
   }
@@ -334,7 +334,7 @@ router.post('/shifts', async (req: Request, res: Response) => {
           code: 'MISSING_FIELDS',
           message: 'Name, start time, end time, break duration, and type are required',
           timestamp: new Date().toISOString(),
-          requestId: req.id,
+          requestId: (req as any).id,
         },
       });
     }
@@ -352,7 +352,7 @@ router.post('/shifts', async (req: Request, res: Response) => {
       success: true,
       data: shift,
       timestamp: new Date().toISOString(),
-      requestId: req.id,
+      requestId: (req as any).id,
     });
   } catch (error: any) {
     res.status(400).json({
@@ -360,7 +360,7 @@ router.post('/shifts', async (req: Request, res: Response) => {
         code: 'SHIFT_CREATION_FAILED',
         message: error.message,
         timestamp: new Date().toISOString(),
-        requestId: req.id,
+        requestId: (req as any).id,
       },
     });
   }

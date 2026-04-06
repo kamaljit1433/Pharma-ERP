@@ -102,7 +102,7 @@ describe('SeparationService', () => {
       (ResignationRepository.prototype.createResignation as jest.Mock).mockResolvedValue(mockResignation);
 
       // Mock the triggerOffboardingWorkflow to avoid db calls
-      jest.spyOn(service, 'triggerOffboardingWorkflow' as any).mockResolvedValue(undefined);
+      jest.spyOn(service, 'triggerOffboardingWorkflow' as any).mockResolvedValue({ errors: [] });
 
       const result = await service.submitResignation(employeeId, resignationData);
 
@@ -148,24 +148,72 @@ describe('SeparationService', () => {
   });
 
   describe('calculateNoticePeriod', () => {
-    it('should calculate notice period correctly', () => {
+    it('should calculate notice period correctly with UTC calendar day arithmetic', () => {
       const resignationDate = new Date('2026-03-15');
-      const lastWorkingDay = new Date('2026-04-15');
+      const noticeDays = 31;
 
-      const result = service.calculateNoticePeriod(resignationDate, lastWorkingDay);
+      const result = service.calculateNoticePeriod(resignationDate, noticeDays);
 
-      expect(result.notice_period_days).toBe(31);
-      expect(result.notice_period_end_date).toEqual(lastWorkingDay);
+      // Verify notice period days matches input
+      expect(result.notice_period_days).toBe(noticeDays);
+
+      // Verify notice period end date is resignation date + notice days
+      const expectedEndDate = new Date('2026-03-15');
+      expectedEndDate.setUTCHours(0, 0, 0, 0);
+      expectedEndDate.setUTCDate(expectedEndDate.getUTCDate() + noticeDays);
+      expect(result.notice_period_end_date.toUTCString()).toBe(expectedEndDate.toUTCString());
+
+      // Verify is_notice_period_complete is false for future dates
       expect(result.is_notice_period_complete).toBe(false);
     });
 
-    it('should mark notice period as complete when remaining days is 0', () => {
+    it('should mark notice period as complete when end date is in the past', () => {
       const resignationDate = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000); // 31 days ago
-      const lastWorkingDay = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000); // 1 day ago
+      const noticeDays = 30;
 
-      const result = service.calculateNoticePeriod(resignationDate, lastWorkingDay);
+      const result = service.calculateNoticePeriod(resignationDate, noticeDays);
 
+      // Notice period should be complete since end date is in the past
       expect(result.is_notice_period_complete).toBe(true);
+    });
+
+    it('should handle same-day resignation (0 days notice)', () => {
+      const resignationDate = new Date('2026-03-15');
+      const noticeDays = 0;
+
+      const result = service.calculateNoticePeriod(resignationDate, noticeDays);
+
+      expect(result.notice_period_days).toBe(0);
+      expect(result.notice_period_end_date.toUTCString()).toBe(
+        new Date('2026-03-15').toUTCString()
+      );
+    });
+
+    it('should handle leap year correctly', () => {
+      // Feb 29, 2026 is not a leap year, but Feb 28, 2024 + 1 day = Feb 29, 2024
+      const resignationDate = new Date('2024-02-28');
+      const noticeDays = 1;
+
+      const result = service.calculateNoticePeriod(resignationDate, noticeDays);
+
+      expect(result.notice_period_days).toBe(1);
+      // End date should be Feb 29, 2024
+      const expectedEndDate = new Date('2024-02-29');
+      expectedEndDate.setUTCHours(0, 0, 0, 0);
+      expect(result.notice_period_end_date.toUTCString()).toBe(expectedEndDate.toUTCString());
+    });
+
+    it('should handle month boundary correctly', () => {
+      const resignationDate = new Date('2026-03-31');
+      const noticeDays = 1;
+
+      const result = service.calculateNoticePeriod(resignationDate, noticeDays);
+
+      expect(result.notice_period_days).toBe(1);
+      // End date should be Apr 1, 2026
+      const expectedEndDate = new Date('2026-04-01');
+      expectedEndDate.setUTCHours(0, 0, 0, 0);
+      expect(result.notice_period_end_date.toUTCString()).toBe(expectedEndDate.toUTCString());
     });
   });
 
@@ -182,7 +230,7 @@ describe('SeparationService', () => {
         mockExitInterview
       );
 
-      const result = await service.scheduleExitInterview(employeeId, { scheduled_at: scheduledAt });
+      const result = await service.scheduleExitInterview(employeeId, scheduledAt);
 
       expect(result).toEqual(mockExitInterview);
     });
@@ -194,8 +242,22 @@ describe('SeparationService', () => {
       (EmployeeRepository.prototype.getEmployee as jest.Mock).mockResolvedValue(null);
 
       await expect(
-        service.scheduleExitInterview(employeeId, { scheduled_at: scheduledAt })
+        service.scheduleExitInterview(employeeId, scheduledAt)
       ).rejects.toThrow('Employee not found');
+    });
+
+    it('should throw error if scheduled date is in the past', async () => {
+      const employeeId = 'emp-123';
+      const pastDate = new Date();
+      pastDate.setDate(pastDate.getDate() - 1);
+
+      const mockEmployee = { id: employeeId, first_name: 'John' };
+
+      (EmployeeRepository.prototype.getEmployee as jest.Mock).mockResolvedValue(mockEmployee);
+
+      await expect(
+        service.scheduleExitInterview(employeeId, pastDate)
+      ).rejects.toThrow('Exit interview cannot be scheduled in the past');
     });
   });
 
@@ -403,7 +465,7 @@ describe('SeparationService', () => {
         last_working_day: lastWorkingDay,
       };
 
-      (ResignationRepository.prototype.getResignation as jest.Mock).mockResolvedValue(
+      (ResignationRepository.prototype.getResignationById as jest.Mock).mockResolvedValue(
         mockResignation
       );
 
@@ -417,7 +479,7 @@ describe('SeparationService', () => {
     it('should return null if resignation not found', async () => {
       const resignationId = 'res-123';
 
-      (ResignationRepository.prototype.getResignation as jest.Mock).mockResolvedValue(null);
+      (ResignationRepository.prototype.getResignationById as jest.Mock).mockResolvedValue(null);
 
       const result = await service.getNoticePeriodStatus(resignationId);
 
@@ -439,7 +501,7 @@ describe('SeparationService', () => {
         last_working_day: lastWorkingDate,
       };
 
-      (ResignationRepository.prototype.getResignation as jest.Mock).mockResolvedValue(
+      (ResignationRepository.prototype.getResignationById as jest.Mock).mockResolvedValue(
         mockResignation
       );
 
@@ -451,7 +513,7 @@ describe('SeparationService', () => {
     it('should throw error if resignation not found', async () => {
       const resignationId = 'res-123';
 
-      (ResignationRepository.prototype.getResignation as jest.Mock).mockResolvedValue(null);
+      (ResignationRepository.prototype.getResignationById as jest.Mock).mockResolvedValue(null);
 
       await expect(service.updateNoticePeriodStatus(resignationId)).rejects.toThrow(
         'Resignation not found'
@@ -633,7 +695,7 @@ describe('SeparationService', () => {
           feedback,
         };
 
-        (ExitInterviewRepository.prototype.getExitInterview as jest.Mock).mockResolvedValue(
+        (ExitInterviewRepository.prototype.getExitInterviewById as jest.Mock).mockResolvedValue(
           mockExitInterview
         );
         (ExitInterviewRepository.prototype.completeExitInterview as jest.Mock).mockResolvedValue(
@@ -658,7 +720,7 @@ describe('SeparationService', () => {
       it('should throw error if exit interview not found', async () => {
         const exitInterviewId = 'exit-123';
 
-        (ExitInterviewRepository.prototype.getExitInterview as jest.Mock).mockResolvedValue(null);
+        (ExitInterviewRepository.prototype.getExitInterviewById as jest.Mock).mockResolvedValue(null);
 
         await expect(
           service.completeExitInterviewWithResponses(exitInterviewId, 'hr-emp-123', {}, 'feedback')
@@ -676,7 +738,7 @@ describe('SeparationService', () => {
           status: 'scheduled',
         };
 
-        (ExitInterviewRepository.prototype.getExitInterview as jest.Mock).mockResolvedValue(
+        (ExitInterviewRepository.prototype.getExitInterviewById as jest.Mock).mockResolvedValue(
           mockExitInterview
         );
 
@@ -689,7 +751,7 @@ describe('SeparationService', () => {
       it('should return null if exit interview not found', async () => {
         const exitInterviewId = 'exit-123';
 
-        (ExitInterviewRepository.prototype.getExitInterview as jest.Mock).mockResolvedValue(null);
+        (ExitInterviewRepository.prototype.getExitInterviewById as jest.Mock).mockResolvedValue(null);
 
         const result = await service.getExitInterviewWithTemplate(exitInterviewId);
 
@@ -708,7 +770,7 @@ describe('SeparationService', () => {
       const mockEmployee = { id: employeeId, first_name: 'John', last_name: 'Doe' };
 
       (EmployeeRepository.prototype.getEmployee as jest.Mock).mockResolvedValue(mockEmployee);
-      jest.spyOn(service, 'triggerOffboardingWorkflow' as any).mockResolvedValue(undefined);
+      jest.spyOn(service, 'triggerOffboardingWorkflow' as any).mockResolvedValue({ errors: [] });
 
       const result = await service.initiateTermination(employeeId, terminationDate, reason);
 

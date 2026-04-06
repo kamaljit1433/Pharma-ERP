@@ -1,4 +1,5 @@
 import config from '../../config';
+import logger from '../../utils/logger';
 import { FileStorageProvider } from '../../types/fileStorage';
 import { S3StorageProvider } from '../storage/s3StorageProvider';
 import { LocalStorageProvider } from '../storage/localStorageProvider';
@@ -73,7 +74,7 @@ export class StorageProviderFactory {
    * Create local file storage provider (for development)
    */
   private static createLocalProvider(): FileStorageProvider {
-    console.log('Using local file storage provider (development mode)');
+    logger.info('Using local file storage provider (development mode)');
     return new LocalStorageProvider();
   }
 

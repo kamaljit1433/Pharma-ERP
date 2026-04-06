@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+﻿import { Request, Response } from 'express';
 import { ESignatureService } from '../services/esignatureService';
 import { SignatureRequestDTO, SignatureData } from '../types/esignature';
 import { Knex } from 'knex';
@@ -55,7 +55,7 @@ export class ESignatureController {
 
   async signDocument(req: Request, res: Response): Promise<void> {
     try {
-      const { requestId } = req.params;
+      const requestId = req.params['requestId'] as string;
       const { method, signature_content } = req.body;
 
       if (!requestId || !method || !signature_content) {
@@ -92,7 +92,7 @@ export class ESignatureController {
 
   async getSignatureStatus(req: Request, res: Response): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params['id'] as string;
 
       if (!id) {
         res.status(400).json({ error: 'Signature request ID is required' });
@@ -114,7 +114,7 @@ export class ESignatureController {
 
   async getSignedDocument(req: Request, res: Response): Promise<void> {
     try {
-      const { requestId } = req.params;
+      const requestId = req.params['requestId'] as string;
 
       if (!requestId) {
         res.status(400).json({ error: 'Signature request ID is required' });
@@ -144,7 +144,7 @@ export class ESignatureController {
 
   async getAuditTrail(req: Request, res: Response): Promise<void> {
     try {
-      const { requestId } = req.params;
+      const requestId = req.params['requestId'] as string;
 
       if (!requestId) {
         res.status(400).json({ error: 'Signature request ID is required' });
@@ -166,7 +166,7 @@ export class ESignatureController {
 
   async sendReminder(req: Request, res: Response): Promise<void> {
     try {
-      const { requestId } = req.params;
+      const requestId = req.params['requestId'] as string;
 
       if (!requestId) {
         res.status(400).json({ error: 'Signature request ID is required' });

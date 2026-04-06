@@ -260,7 +260,7 @@ Tasks are organized by implementation phase and module. Each task includes:
 - [x] Create EmploymentHistory repository
 - [x] Implement addEmploymentHistory
 - [x] Implement getEmploymentHistory
-- [x] Write unit tests
+- [-] Write unit tests
 
 **Complexity:** Small
 **Dependencies:** 3.1
@@ -1069,37 +1069,37 @@ Tasks are organized by implementation phase and module. Each task includes:
 ---
 
 ## Phase 11: Separation & Offboarding Module
-- [ ] START PHASE 11
+- [x] START PHASE 11
 
 ### 11.1 Implement Resignation/Termination Service
-- [ ] Create Resignation repository
-- [ ] Implement submitResignation
-- [ ] Implement initiateTermination
-- [ ] Auto-trigger offboarding workflow
-- [ ] Implement notice period calculation
-- [ ] Track notice period serving status
+- [x] Create Resignation repository
+- [x] Implement submitResignation
+- [x] Implement initiateTermination
+- [x] Auto-trigger offboarding workflow
+- [x] Implement notice period calculation
+- [x] Track notice period serving status
 - [ ] Write unit tests
 
 **Complexity:** Medium
 **Dependencies:** 2.9
 
 ### 11.2 Implement Exit Interview Service
-- [ ] Create ExitInterview repository
-- [ ] Implement scheduleExitInterview
-- [ ] Provide configurable questionnaire template
-- [ ] Store exit interview feedback
+- [x] Create ExitInterview repository
+- [x] Implement scheduleExitInterview
+- [x] Provide configurable questionnaire template
+- [x] Store exit interview feedback
 - [ ] Write unit tests
 
 **Complexity:** Small
 **Dependencies:** 2.9
 
 ### 11.3 Implement F&F Settlement Service
-- [ ] Create FnFSettlement repository
-- [ ] Implement calculateFnFSettlement
-- [ ] Include pending salary, leave encashment, gratuity
-- [ ] Deduct advances and unreturned asset costs
-- [ ] Implement approval workflow
-- [ ] Generate F&F statement
+- [x] Create FnFSettlement repository
+- [x] Implement calculateFnFSettlement
+- [x] Include pending salary, leave encashment, gratuity
+- [x] Deduct advances and unreturned asset costs
+- [x] Implement approval workflow
+- [x] Generate F&F statement
 - [ ] Write unit tests
 
 **Complexity:** Large
@@ -1753,7 +1753,7 @@ Tasks are organized by implementation phase and module. Each task includes:
 ---
 
 ## Phase 20: Testing & Quality Assurance
-- [ ] START PHASE 20
+- [x] START PHASE 20
 
 ### 20.1 Complete Unit Test Coverage
 - [ ] Ensure all services have unit tests
@@ -1925,204 +1925,3 @@ Tasks are organized by implementation phase and module. Each task includes:
 **Priority Order:** Follow phase sequence for optimal dependency management
 
 
-
-## Phase 19: PWA Features & Offline Support
-- [x] START PHASE 19
-
-### 19.1 Configure PWA
-- [x] Configure service worker for offline support
-- [x] Configure app manifest for installability
-- [x] Implement offline data caching strategy
-- [x] Implement background sync for attendance
-- [x] Test PWA installation on Android and iOS
-
-**Complexity:** Medium
-**Dependencies:** 1.3
-
-**Acceptance Criteria:**
-- [x] Service worker registered with multi-strategy caching (Cache First, Network First, Stale While Revalidate)
-- [x] App manifest configured with icons, shortcuts, and share target
-- [x] Offline caching strategy implemented for static assets, API calls, and HTML pages
-- [x] Background sync configured for attendance marking
-- [x] PWA installable on Android and iOS devices
-- [x] Installation prompt component created
-- [x] Offline indicator component created
-- [x] Files: `frontend/public/manifest.json`, `frontend/public/service-worker.js`, `frontend/src/utils/pwaRegister.ts`, `frontend/src/components/pwa/InstallPrompt.tsx`, `frontend/src/components/pwa/OfflineIndicator.tsx`
-
-### 19.2 Implement Offline Attendance
-- [x] Cache attendance marking capability offline
-- [x] Store attendance data in IndexedDB when offline
-- [x] Sync attendance data when connection restored
-- [x] Handle conflict resolution for offline data
-- [x] Write tests for offline scenarios
-
-**Complexity:** Large
-**Dependencies:** 19.1, 4.3
-
-**Acceptance Criteria:**
-- [x] IndexedDB initialized with object stores for pending attendance, cache, and sync queue
-- [x] Offline attendance marking with location and face detection data
-- [x] Automatic sync when connection restored
-- [x] Conflict resolution using server-side precedence strategy
-- [x] Pending records panel with sync status display
-- [x] React hook for offline attendance management
-- [x] Event listeners for sync completion and online status changes
-- [x] TypeScript errors fixed in offlineStorage.ts (getAll() filtering)
-- [x] Files: `frontend/src/utils/offlineStorage.ts`, `frontend/src/services/offlineAttendanceService.ts`, `frontend/src/components/attendance/OfflineAttendanceSync.tsx`, `frontend/src/hooks/useOfflineAttendance.ts`
-
-### 19.3 Optimize PWA Performance
-- [x] Implement lazy loading for routes
-- [x] Optimize bundle size with code splitting
-- [x] Implement image optimization
-- [x] Configure caching strategies for static assets
-- [x] Test performance on mid-range mobile devices
-
-**Complexity:** Medium
-**Dependencies:** 19.1
-
-**Acceptance Criteria:**
-- [x] Route-based lazy loading configured in React Router
-- [x] Code splitting for vendor and app bundles
-- [x] Vite PWA plugin configured with Workbox
-- [x] Caching strategies: Cache First for static assets (1 year), Network First for API (5 min), Cache First for fonts (1 year)
-- [x] Image optimization with WebP format and responsive images
-- [x] Bundle size optimized to ~150KB (gzipped)
-- [x] Lighthouse score 90+ achieved
-- [x] Performance tested on 4G network
-- [x] First Contentful Paint <2s, Time to Interactive <3s
-- [x] Files: `frontend/vite.config.ts` (updated), `frontend/src/App.tsx` (updated), `backend/docs/PHASE19_IMPLEMENTATION.md`, `backend/docs/PHASE19_SUMMARY.md`
-
-**Total Phase 19 Tests Passing:** 100% (all acceptance criteria met)
-**Total Phase 19 Files Created:** 11 files
-**Total Phase 19 Files Updated:** 2 files
-
----
-
-## Phase 20: Testing & Quality Assurance
-- [ ] START PHASE 20
-
-### 20.1 Complete Unit Test Coverage
-- [ ] Ensure all services have unit tests
-- [ ] Ensure all repositories have unit tests
-- [ ] Ensure all utilities have unit tests
-- [ ] Achieve minimum 80% code coverage
-- [ ] Fix any failing tests
-
-**Complexity:** Large
-**Dependencies:** All implementation phases
-
-### 20.2 Complete Property-Based Tests
-- [ ] Implement all 65 property tests from design document
-- [ ] Configure each test for minimum 100 iterations
-- [ ] Tag each test with feature and property reference
-- [ ] Verify all properties pass consistently
-- [ ] Document any edge cases discovered
-
-**Complexity:** Large
-**Dependencies:** All implementation phases
-
-### 20.3 Complete Integration Tests
-- [ ] Write integration tests for all API endpoints
-- [ ] Test cross-service workflows
-- [ ] Test database transactions and rollbacks
-- [ ] Test error handling scenarios
-- [ ] Achieve comprehensive integration coverage
-
-**Complexity:** Large
-**Dependencies:** All implementation phases
-
-### 20.4 Complete E2E Tests
-- [ ] Write E2E tests for critical user flows
-- [ ] Test PWA installation and offline functionality
-- [ ] Test cross-browser compatibility
-- [ ] Test mobile responsiveness
-- [ ] Test accessibility compliance
-
-**Complexity:** Large
-**Dependencies:** All implementation phases
-
-### 20.5 Performance Testing
-- [ ] Test payroll processing for 1,000 employees
-- [ ] Test concurrent attendance marking
-- [ ] Test face detection performance
-- [ ] Test API response times under load
-- [ ] Optimize any performance bottlenecks
-
-**Complexity:** Medium
-**Dependencies:** All implementation phases
-
-### 20.6 Security Testing
-- [ ] Test authentication and authorization
-- [ ] Test encryption implementation
-- [ ] Test input validation and sanitization
-- [ ] Run security scans (npm audit, Snyk)
-- [ ] Fix any security vulnerabilities
-
-**Complexity:** Medium
-**Dependencies:** All implementation phases
-
----
-
-## Phase 21: Documentation & Deployment
-- [ ] START PHASE 21
-
-### 21.1 Write API Documentation
-- [ ] Document all API endpoints with OpenAPI/Swagger
-- [ ] Include request/response examples
-- [ ] Document authentication requirements
-- [ ] Document error responses
-- [ ] Generate interactive API documentation
-
-**Complexity:** Medium
-**Dependencies:** All API implementation
-
-### 21.2 Write User Documentation
-- [ ] Write user guide for employees
-- [ ] Write admin guide for HR/Finance
-- [ ] Write manager guide
-- [ ] Create video tutorials for key features
-- [ ] Create FAQ document
-
-**Complexity:** Medium
-**Dependencies:** All UI implementation
-
-### 21.3 Write Developer Documentation
-- [ ] Document architecture and design decisions
-- [ ] Document database schema
-- [ ] Document deployment process
-- [ ] Document environment configuration
-- [ ] Create contribution guidelines
-
-**Complexity:** Medium
-**Dependencies:** All implementation phases
-
-### 21.4 Set Up Production Environment
-- [ ] Configure production database (PostgreSQL)
-- [ ] Configure production Redis
-- [ ] Configure production file storage (S3)
-- [ ] Configure production email service
-- [ ] Configure production monitoring and logging
-- [ ] Set up SSL certificates
-
-**Complexity:** Large
-**Dependencies:** 1.2, 1.5, 1.6
-
-### 21.5 Deploy Application
-- [ ] Deploy backend to production server
-- [ ] Deploy frontend to CDN
-- [ ] Configure domain and DNS
-- [ ] Set up CI/CD pipeline for automated deployments
-- [ ] Perform smoke tests on production
-
-**Complexity:** Large
-**Dependencies:** 21.4
-
-### 21.6 Post-Deployment Monitoring
-- [ ] Set up error tracking (Sentry)
-- [ ] Set up performance monitoring (New Relic)
-- [ ] Set up uptime monitoring
-- [ ] Set up log aggregation (ELK)
-- [ ] Create runbooks for common issues
-
-**Complexity:** Medium
-**Dependencies:** 21.5

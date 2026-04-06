@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
+import logger from '../utils/logger';
 import { FileValidationService, FileValidationOptions } from './fileValidationService';
 import { StorageProviderFactory } from './factories/StorageProviderFactory';
 import {
@@ -61,7 +62,7 @@ export class FileStorageService {
     }
 
     if (errors.length > 0) {
-      console.warn('Some files failed to upload:', errors);
+      logger.warn('Some files failed to upload', { errors });
     }
 
     return results;
@@ -86,7 +87,7 @@ export class FileStorageService {
 
     // Log deletion attempt for audit purposes
     if (userContext) {
-      console.log('File Deletion:', {
+      logger.info('File Deletion:', {
         timestamp: new Date().toISOString(),
         userId: userContext.userId,
         employeeId: userContext.employeeId,
@@ -108,7 +109,7 @@ export class FileStorageService {
   ): Promise<{ deleted: string[]; failed: Array<{ key: string; error: string }> }> {
     // Log bulk deletion attempt
     if (userContext) {
-      console.log('Bulk File Deletion:', {
+      logger.info('Bulk File Deletion:', {
         timestamp: new Date().toISOString(),
         userId: userContext.userId,
         employeeId: userContext.employeeId,
@@ -154,7 +155,7 @@ export class FileStorageService {
 
     // Log results
     if (userContext) {
-      console.log('Bulk File Deletion Completed:', {
+      logger.info('Bulk File Deletion Completed:', {
         timestamp: new Date().toISOString(),
         userId: userContext.userId,
         employeeId: userContext.employeeId,
@@ -198,7 +199,7 @@ export class FileStorageService {
 
     // Log the signed URL generation for audit purposes
     if (userContext) {
-      console.log('Signed URL Generated:', {
+      logger.info('Signed URL Generated:', {
         timestamp: new Date().toISOString(),
         userId: userContext.userId,
         employeeId: userContext.employeeId,
@@ -220,7 +221,7 @@ export class FileStorageService {
     
     if (exists && userContext) {
       // Log file existence check for audit purposes
-      console.log('File Existence Check:', {
+      logger.info('File Existence Check:', {
         timestamp: new Date().toISOString(),
         userId: userContext.userId,
         employeeId: userContext.employeeId,
@@ -333,7 +334,7 @@ export class FileStorageService {
   ): Promise<FileCleanupResult> {
     // Log cleanup attempt
     if (userContext) {
-      console.log('File Cleanup Started:', {
+      logger.info('File Cleanup Started:', {
         timestamp: new Date().toISOString(),
         userId: userContext.userId,
         employeeId: userContext.employeeId,
@@ -377,7 +378,7 @@ export class FileStorageService {
       
       // Log dry run results
       if (userContext) {
-        console.log('File Cleanup Dry Run:', {
+        logger.info('File Cleanup Dry Run:', {
           timestamp: new Date().toISOString(),
           userId: userContext.userId,
           employeeId: userContext.employeeId,
@@ -405,7 +406,7 @@ export class FileStorageService {
 
     // Log cleanup completion
     if (userContext) {
-      console.log('File Cleanup Completed:', {
+      logger.info('File Cleanup Completed:', {
         timestamp: new Date().toISOString(),
         userId: userContext.userId,
         employeeId: userContext.employeeId,
@@ -428,7 +429,7 @@ export class FileStorageService {
   ): Promise<{ abortedCount: number; errors: Array<{ uploadId: string; error: string }> }> {
     // Log multipart cleanup attempt
     if (userContext) {
-      console.log('Multipart Cleanup Started:', {
+      logger.info('Multipart Cleanup Started:', {
         timestamp: new Date().toISOString(),
         userId: userContext.userId,
         employeeId: userContext.employeeId,
@@ -453,7 +454,7 @@ export class FileStorageService {
 
     // Log multipart cleanup completion
     if (userContext) {
-      console.log('Multipart Cleanup Completed:', {
+      logger.info('Multipart Cleanup Completed:', {
         timestamp: new Date().toISOString(),
         userId: userContext.userId,
         employeeId: userContext.employeeId,
@@ -476,7 +477,7 @@ export class FileStorageService {
   ): Promise<{ orphanedCount: number; deletedCount: number; errors: Array<{ key: string; error: string }> }> {
     // Log orphaned file cleanup attempt
     if (userContext) {
-      console.log('Orphaned File Cleanup Started:', {
+      logger.info('Orphaned File Cleanup Started:', {
         timestamp: new Date().toISOString(),
         userId: userContext.userId,
         employeeId: userContext.employeeId,
@@ -522,7 +523,7 @@ export class FileStorageService {
 
     // Log orphaned file cleanup completion
     if (userContext) {
-      console.log('Orphaned File Cleanup Completed:', {
+      logger.info('Orphaned File Cleanup Completed:', {
         timestamp: new Date().toISOString(),
         userId: userContext.userId,
         employeeId: userContext.employeeId,
@@ -566,12 +567,19 @@ export class FileStorageService {
   private generateFileKey(originalName: string, options: FileUploadOptions): string {
     const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
     const uuid = uuidv4();
-    const sanitizedName = originalName.replace(/[^a-zA-Z0-9.-]/g, '_');
+    // Sanitize filename: strip path separators and directory traversal patterns
+    const baseName = originalName.split(/[\\/]/).pop() || 'unnamed';
+    const sanitizedName = baseName
+      .replace(/\.\./g, '')  // Remove directory traversal
+      .replace(/[^a-zA-Z0-9.\-_]/g, '_')  // Only allow safe characters
+      .replace(/^\.+/, '');  // Remove leading dots
 
     let basePath = '';
 
     if (options.employeeId) {
-      basePath = `employees/${options.employeeId}/${options.category}`;
+      // Also sanitize employeeId to prevent injection
+      const safeEmployeeId = String(options.employeeId).replace(/[^a-zA-Z0-9\-_]/g, '');
+      basePath = `employees/${safeEmployeeId}/${options.category}`;
     } else {
       basePath = `system/${options.category}`;
     }

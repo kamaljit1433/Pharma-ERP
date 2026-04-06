@@ -1,10 +1,14 @@
 import { PerformanceReviewRepository } from '../repositories/performanceReviewRepository';
 import { PerformanceReview, PerformanceReviewDTO } from '../types/performance';
 
+import { Knex } from 'knex';
+
 export class PerformanceReviewService {
-  constructor(
-    private performanceReviewRepository: PerformanceReviewRepository
-  ) {}
+  private performanceReviewRepository: PerformanceReviewRepository;
+
+  constructor(private knex: Knex) {
+    this.performanceReviewRepository = new PerformanceReviewRepository(knex);
+  }
 
   async submitReview(
     data: PerformanceReviewDTO,

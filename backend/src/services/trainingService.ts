@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+import logger from '../utils/logger';
 import { TrainingProgramRepository } from '../repositories/trainingProgramRepository';
 import { TrainingEnrollmentRepository } from '../repositories/trainingEnrollmentRepository';
 import { CertificationRepository } from '../repositories/certificationRepository';
@@ -60,19 +61,43 @@ export class TrainingService {
   }
 
   async deleteTrainingProgram(id: string): Promise<void> {
+    const program = await this.trainingProgramRepository.getTrainingProgramById(id);
+    if (!program) {
+      throw new Error('Training program not found');
+    }
+
+    // Prevent deleting programs with active enrollments
+    const enrollments = await this.trainingEnrollmentRepository.getProgramEnrollments(id);
+    const activeEnrollments = enrollments.filter(e => e.status !== 'cancelled' && e.status !== 'completed');
+    if (activeEnrollments.length > 0) {
+      throw new Error('Cannot delete training program with active enrollments');
+    }
+
     return this.trainingProgramRepository.deleteTrainingProgram(id);
   }
 
   // Training Enrollment Methods
   async enrollEmployee(data: CreateTrainingEnrollmentDTO): Promise<TrainingEnrollment> {
-    // Check if already enrolled
-    const exists = await this.trainingEnrollmentRepository.checkEnrollmentExists(
-      data.employee_id,
-      data.training_program_id
-    );
+    // Check if already enrolled (ignoring cancelled enrollments)
+    const enrollments = await this.trainingEnrollmentRepository.getEmployeeEnrollments(data.employee_id);
+    const existingActiveEnrollment = enrollments.find(e => e.training_program_id === data.training_program_id && e.status !== 'cancelled');
 
-    if (exists) {
+    if (existingActiveEnrollment) {
       throw new Error('Employee is already enrolled in this training program');
+    }
+
+    // Check max participants
+    const program = await this.trainingProgramRepository.getTrainingProgramById(data.training_program_id);
+    if (!program) {
+      throw new Error('Training program not found');
+    }
+
+    if (program.max_participants) {
+      const allEnrollments = await this.trainingEnrollmentRepository.getProgramEnrollments(data.training_program_id);
+      const activeEnrollmentsCount = allEnrollments.filter(e => e.status !== 'cancelled').length;
+      if (activeEnrollmentsCount >= program.max_participants) {
+        throw new Error('Training program has reached maximum participants');
+      }
     }
 
     return this.trainingEnrollmentRepository.createTrainingEnrollment(data);
@@ -244,10 +269,35 @@ export class TrainingService {
   }
 
   // Helper method to auto-update skills on training completion
-  private async autoUpdateSkillsOnCompletion(_employeeId: string, _trainingProgramId: string): Promise<void> {
-    // This is a placeholder for linking training programs to skills
-    // In a real implementation, you would have a training_program_skills junction table
-    // For now, this method can be extended when that relationship is defined
+  private async autoUpdateSkillsOnCompletion(employeeId: string, trainingProgramId: string): Promise<void> {
+    try {
+      // Look up skills associated with this training program
+      const associatedSkills = await this.db('training_program_skills')
+        .where('training_program_id', trainingProgramId)
+        .select('skill_id', 'proficiency_level');
+        
+      if (!associatedSkills || associatedSkills.length === 0) return;
+
+      const employeeSkills = await this.employeeSkillRepository.getEmployeeSkills(employeeId);
+
+      for (const skill of associatedSkills) {
+        const existingSkill = employeeSkills.find(s => s.skill_id === skill.skill_id);
+
+        if (existingSkill) {
+          await this.employeeSkillRepository.updateEmployeeSkill(existingSkill.id, {
+            last_used_date: new Date()
+          });
+        } else {
+          await this.employeeSkillRepository.createEmployeeSkill({
+            employee_id: employeeId,
+            skill_id: skill.skill_id,
+            proficiency_level: skill.proficiency_level || 'beginner',
+          });
+        }
+      }
+    } catch (error) {
+      logger.error('Failed to auto-update skills for employee', { employeeId, error: error instanceof Error ? error.message : String(error) });
+    }
   }
 
   // Bulk enrollment
@@ -257,12 +307,20 @@ export class TrainingService {
 
     for (const employeeId of employeeIds) {
       try {
-        const exists = await this.trainingEnrollmentRepository.checkEnrollmentExists(
-          employeeId,
-          trainingProgramId
-        );
+        const enrollments = await this.trainingEnrollmentRepository.getEmployeeEnrollments(employeeId);
+        const existingActiveEnrollment = enrollments.find(e => e.training_program_id === trainingProgramId && e.status !== 'cancelled');
 
-        if (!exists) {
+        if (!existingActiveEnrollment) {
+          // Check max participants program limit inside the bulk enrollment loop
+          const program = await this.trainingProgramRepository.getTrainingProgramById(trainingProgramId);
+          if (program && program.max_participants) {
+            const allEnrollments = await this.trainingEnrollmentRepository.getProgramEnrollments(trainingProgramId);
+            const activeEnrollmentsCount = allEnrollments.filter(e => e.status !== 'cancelled').length;
+            if (activeEnrollmentsCount >= program.max_participants) {
+               throw new Error('Training program has reached maximum participants');
+            }
+          }
+
           const enrollment = await this.trainingEnrollmentRepository.createTrainingEnrollment({
             employee_id: employeeId,
             training_program_id: trainingProgramId,
@@ -272,7 +330,7 @@ export class TrainingService {
         }
       } catch (error) {
         // Continue with next employee if one fails
-        console.error(`Failed to enroll employee ${employeeId}:`, error);
+        logger.error('Failed to enroll employee', { employeeId, error: error instanceof Error ? error.message : String(error) });
       }
     }
 
@@ -282,13 +340,25 @@ export class TrainingService {
   // Self-enrollment with approval
   async requestSelfEnrollment(employeeId: string, trainingProgramId: string): Promise<TrainingEnrollment> {
     // Check if already enrolled
-    const exists = await this.trainingEnrollmentRepository.checkEnrollmentExists(
-      employeeId,
-      trainingProgramId
-    );
+    const enrollments = await this.trainingEnrollmentRepository.getEmployeeEnrollments(employeeId);
+    const existingActiveEnrollment = enrollments.find(e => e.training_program_id === trainingProgramId && e.status !== 'cancelled');
 
-    if (exists) {
+    if (existingActiveEnrollment) {
       throw new Error('Employee is already enrolled in this training program');
+    }
+
+    // Check max participants
+    const program = await this.trainingProgramRepository.getTrainingProgramById(trainingProgramId);
+    if (!program) {
+      throw new Error('Training program not found');
+    }
+
+    if (program.max_participants) {
+      const allEnrollments = await this.trainingEnrollmentRepository.getProgramEnrollments(trainingProgramId);
+      const activeEnrollmentsCount = allEnrollments.filter(e => e.status !== 'cancelled').length;
+      if (activeEnrollmentsCount >= program.max_participants) {
+        throw new Error('Training program has reached maximum participants');
+      }
     }
 
     // Create enrollment with pending status (requires approval)
@@ -316,7 +386,7 @@ export class TrainingService {
 
       for (const enrollment of enrollments) {
         // Send reminder notification (integrate with notification service)
-        console.log(`Reminder: Training ${program.name} starts in 3 days for employee ${enrollment.employee_id}`);
+        logger.info('Training reminder', { program: program.name, employeeId: enrollment.employee_id, startsIn: '3 days' });
       }
     }
   }
@@ -358,7 +428,7 @@ export class TrainingService {
 
     for (const cert of expiringCerts) {
       // Send alert notification (integrate with notification service)
-      console.log(`Alert: Certification ${cert.name} expires on ${cert.expiry_date} for employee ${cert.employee_id}`);
+      logger.warn('Certification expiring soon', { certName: cert.name, expiryDate: cert.expiry_date, employeeId: cert.employee_id });
     }
   }
 
@@ -395,7 +465,7 @@ export class TrainingService {
   async linkCertificationToRole(certificationId: string, roleId: string): Promise<void> {
     // This would require a certifications_role_competencies junction table
     // For now, this is a placeholder
-    console.log(`Linking certification ${certificationId} to role ${roleId}`);
+    logger.info('Linking certification to role', { certificationId, roleId });
   }
 
   // Team skill matrix view

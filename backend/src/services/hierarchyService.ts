@@ -179,6 +179,15 @@ export class HierarchyService {
       if (!manager) {
         throw new Error('Manager not found');
       }
+
+      // Check for cycles: ensure the employee would not become their own ancestor
+      if (data.manager_id === data.employee_id) {
+        throw new Error('An employee cannot be their own manager');
+      }
+      const managerChain = await this.hierarchyNodeRepository.getReportingChain(data.manager_id);
+      if (managerChain.includes(data.employee_id)) {
+        throw new Error('Circular hierarchy detected: the selected manager already reports to this employee');
+      }
     }
 
     // Validate dotted-line manager exists if provided
@@ -189,30 +198,37 @@ export class HierarchyService {
       }
     }
 
-    // Check if employee already has a position
-    const existingNode = await this.hierarchyNodeRepository.getHierarchyNodeByEmployeeId(data.employee_id);
-    if (existingNode) {
-      // Log the change
-      await this.logHierarchyChange(
-        data.employee_id,
-        'update',
-        existingNode,
-        data,
-        changedBy
-      );
-      return this.hierarchyNodeRepository.updateHierarchyNode(data.employee_id, data);
-    }
+    // Wrap position assignment + audit log in transaction
+    return await this.db.transaction(async (trx) => {
+      const txHierarchyRepo = new HierarchyNodeRepository(trx);
 
-    // Log the new assignment
-    await this.logHierarchyChange(
-      data.employee_id,
-      'assign',
-      null,
-      data,
-      changedBy
-    );
+      // Check if employee already has a position
+      const existingNode = await txHierarchyRepo.getHierarchyNodeByEmployeeId(data.employee_id);
+      if (existingNode) {
+        // Log the change
+        await trx('hierarchy_audit_logs').insert({
+          employee_id: data.employee_id,
+          action: 'update',
+          old_value: JSON.stringify(existingNode),
+          new_value: JSON.stringify(data),
+          changed_by: changedBy,
+          created_at: new Date(),
+        });
+        return txHierarchyRepo.updateHierarchyNode(data.employee_id, data);
+      }
 
-    return this.hierarchyNodeRepository.createHierarchyNode(data);
+      // Log the new assignment
+      await trx('hierarchy_audit_logs').insert({
+        employee_id: data.employee_id,
+        action: 'assign',
+        old_value: null,
+        new_value: JSON.stringify(data),
+        changed_by: changedBy,
+        created_at: new Date(),
+      });
+
+      return txHierarchyRepo.createHierarchyNode(data);
+    });
   }
 
   // Get reporting chain (all managers up the hierarchy)
@@ -331,7 +347,20 @@ export class HierarchyService {
     return root;
   }
 
-  private async buildOrgChartNode(employeeId: string): Promise<OrgChartNode> {
+  private async buildOrgChartNode(
+    employeeId: string,
+    visited: Set<string> = new Set(),
+    depth: number = 0,
+    maxDepth: number = 50
+  ): Promise<OrgChartNode> {
+    if (depth > maxDepth) {
+      throw new Error(`Org chart depth limit (${maxDepth}) exceeded at employee ${employeeId} — possible circular hierarchy`);
+    }
+    if (visited.has(employeeId)) {
+      throw new Error(`Circular hierarchy detected at employee ${employeeId} while building org chart`);
+    }
+    visited.add(employeeId);
+
     const employee = await this.employeeRepository.getEmployee(employeeId);
     if (!employee) {
       throw new Error('Employee not found');
@@ -344,7 +373,7 @@ export class HierarchyService {
     const children: OrgChartNode[] = [];
 
     for (const report of directReports) {
-      const child = await this.buildOrgChartNode(report.employee_id);
+      const child = await this.buildOrgChartNode(report.employee_id, visited, depth + 1, maxDepth);
       children.push(child);
     }
 
@@ -382,14 +411,28 @@ export class HierarchyService {
       .where('employee_id', employeeId)
       .orderBy('created_at', 'desc');
 
-    return logs.map((log: any) => ({
-      id: log.id,
-      employee_id: log.employee_id,
-      action: log.action,
-      old_value: log.old_value ? JSON.parse(log.old_value) : undefined,
-      new_value: JSON.parse(log.new_value),
-      changed_by: log.changed_by,
-      created_at: log.created_at,
-    }));
+    return logs.map((log: any) => {
+      let oldValue: any;
+      let newValue: any;
+      try {
+        oldValue = log.old_value ? JSON.parse(log.old_value) : undefined;
+      } catch {
+        oldValue = log.old_value; // Return raw string if parse fails
+      }
+      try {
+        newValue = JSON.parse(log.new_value);
+      } catch {
+        newValue = log.new_value;
+      }
+      return {
+        id: log.id,
+        employee_id: log.employee_id,
+        action: log.action,
+        old_value: oldValue,
+        new_value: newValue,
+        changed_by: log.changed_by,
+        created_at: log.created_at,
+      };
+    });
   }
 }

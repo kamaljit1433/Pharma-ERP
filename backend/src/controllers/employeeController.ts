@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+﻿import { Request, Response, NextFunction } from 'express';
 import { EmployeeService } from '../services/employeeService';
 import { EmployeeFilters } from '../types/employee';
 import { getKnexInstance } from '../config/knex';
@@ -15,26 +15,26 @@ export const createEmployee = async (req: Request, res: Response, next: NextFunc
       message: 'Employee created successfully',
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
 export const getEmployee = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { id } = req.params;
+    const id = req.params['id'] as string;
     const employee = await employeeService.getEmployee(id as string);
     res.status(200).json({
       success: true,
       data: employee,
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
 export const updateEmployee = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { id } = req.params;
+    const id = req.params['id'] as string;
     const employee = await employeeService.updateEmployee(id as string, req.body);
     res.status(200).json({
       success: true,
@@ -42,13 +42,13 @@ export const updateEmployee = async (req: Request, res: Response, next: NextFunc
       message: 'Employee updated successfully',
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
 export const updateEmployeeStatus = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { id } = req.params;
+    const id = req.params['id'] as string;
     const { status } = req.body;
 
     if (!status) {
@@ -63,7 +63,7 @@ export const updateEmployeeStatus = async (req: Request, res: Response, next: Ne
       message: 'Employee status updated successfully',
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -130,7 +130,7 @@ export const searchEmployees = async (req: Request, res: Response, next: NextFun
       },
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -165,14 +165,14 @@ export const getAllEmployees = async (req: Request, res: Response, next: NextFun
       },
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
 // Emergency Contact endpoints
 export const addEmergencyContact = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { employeeId } = req.params;
+    const employeeId = req.params['employeeId'] as string;
     const contact = await employeeService.addEmergencyContact(employeeId as string, req.body);
     res.status(201).json({
       success: true,
@@ -180,20 +180,20 @@ export const addEmergencyContact = async (req: Request, res: Response, next: Nex
       message: 'Emergency contact added successfully',
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
 export const getEmergencyContacts = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { employeeId } = req.params;
+    const employeeId = req.params['employeeId'] as string;
     const contacts = await employeeService.getEmergencyContacts(employeeId as string);
     res.status(200).json({
       success: true,
       data: contacts,
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -211,7 +211,7 @@ export const updateEmergencyContact = async (req: Request, res: Response, next: 
       message: 'Emergency contact updated successfully',
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -224,14 +224,14 @@ export const deleteEmergencyContact = async (req: Request, res: Response, next: 
       message: 'Emergency contact deleted successfully',
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
 // Employment History endpoints
 export const addEmploymentHistory = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { employeeId } = req.params;
+    const employeeId = req.params['employeeId'] as string;
     const history = await employeeService.addEmploymentHistory(employeeId as string, req.body);
     res.status(201).json({
       success: true,
@@ -239,19 +239,19 @@ export const addEmploymentHistory = async (req: Request, res: Response, next: Ne
       message: 'Employment history added successfully',
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
 export const getEmploymentHistory = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { employeeId } = req.params;
+    const employeeId = req.params['employeeId'] as string;
     const history = await employeeService.getEmploymentHistory(employeeId as string);
     res.status(200).json({
       success: true,
       data: history,
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };

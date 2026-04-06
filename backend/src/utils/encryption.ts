@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Encryption Utilities
  * AES-256 encryption for sensitive data
  */
@@ -62,9 +62,9 @@ export function decrypt(encryptedData: string): string {
       throw new Error('Invalid encrypted data format');
     }
 
-    const iv = Buffer.from(parts[0], ENCODING);
-    const authTag = Buffer.from(parts[1], ENCODING);
-    const encrypted = parts[2];
+    const iv = Buffer.from(parts[0] as string, ENCODING as import('crypto').Encoding);
+    const authTag = Buffer.from(parts[1] as string, ENCODING as import('crypto').Encoding);
+    const encrypted = parts[2] as string;
 
     const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
     decipher.setAuthTag(authTag);

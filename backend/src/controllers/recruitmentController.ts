@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { knex } from '../config/knex';
+import knex from '../config/knex';
 import { JobPostingRepository } from '../repositories/jobPostingRepository';
 import { ApplicantTrackingService } from '../services/applicantTrackingService';
 import { InterviewManagementService } from '../services/interviewManagementService';
@@ -24,19 +24,16 @@ export class RecruitmentController {
   // Job Posting endpoints
   async createJobPosting(req: Request, res: Response): Promise<void> {
     try {
-      const { title, department_id, location, description, required_skills, experience_min, experience_max, application_deadline } = req.body;
+      const { title, department_id, designation_id, description, positions_count, application_deadline, closing_date } = req.body;
       const userId = (req as any).user?.id;
 
       const jobPosting = await this.jobPostingRepository.createJobPosting({
         title,
         department_id,
-        location,
+        designation_id,
         description,
-        required_skills,
-        experience_min,
-        experience_max,
-        application_deadline: new Date(application_deadline),
-        created_by: userId,
+        positions_count,
+        closing_date: closing_date ? new Date(closing_date) : application_deadline ? new Date(application_deadline) : undefined,
       });
 
       res.status(201).json({ success: true, data: jobPosting });
@@ -51,7 +48,7 @@ export class RecruitmentController {
 
       const jobPostings = await this.jobPostingRepository.searchJobPostings({
         department_id: department_id as string,
-        status: status as string,
+        status: status as 'draft' | 'open' | 'closed' | 'on_hold' | undefined,
         search: search as string,
         limit: parseInt(limit as string),
         offset: parseInt(offset as string),
@@ -65,7 +62,7 @@ export class RecruitmentController {
 
   async getJobPosting(req: Request, res: Response): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params['id'] as string;
       const jobPosting = await this.jobPostingRepository.getJobPostingById(id);
 
       if (!jobPosting) {
@@ -82,7 +79,7 @@ export class RecruitmentController {
   // Applicant endpoints
   async addApplicant(req: Request, res: Response): Promise<void> {
     try {
-      const { job_posting_id } = req.params;
+      const job_posting_id = req.params['job_posting_id'] as string;
       const { name, email, contact_number, resume_url } = req.body;
 
       const applicant = await this.applicantTrackingService.addApplicant(job_posting_id, {
@@ -116,7 +113,7 @@ export class RecruitmentController {
 
   async moveApplicantStage(req: Request, res: Response): Promise<void> {
     try {
-      const { applicant_id } = req.params;
+      const applicant_id = req.params['applicant_id'] as string;
       const { stage } = req.body;
 
       const applicant = await this.applicantTrackingService.moveApplicantStage(applicant_id, stage);
@@ -147,7 +144,7 @@ export class RecruitmentController {
 
   async submitInterviewFeedback(req: Request, res: Response): Promise<void> {
     try {
-      const { interview_id } = req.params;
+      const interview_id = req.params['interview_id'] as string;
       const { interviewer_id, rating, comments, recommendation } = req.body;
 
       const feedback = await this.interviewManagementService.submitFeedback({
@@ -166,7 +163,7 @@ export class RecruitmentController {
 
   async getInterviewFeedback(req: Request, res: Response): Promise<void> {
     try {
-      const { interview_id } = req.params;
+      const interview_id = req.params['interview_id'] as string;
 
       const feedback = await this.interviewManagementService.getFeedback(interview_id);
 
@@ -198,7 +195,7 @@ export class RecruitmentController {
 
   async sendOfferLetter(req: Request, res: Response): Promise<void> {
     try {
-      const { offer_letter_id } = req.params;
+      const offer_letter_id = req.params['offer_letter_id'] as string;
 
       const offerLetter = await this.offerLetterService.sendOfferLetter(offer_letter_id);
 
@@ -210,7 +207,7 @@ export class RecruitmentController {
 
   async acceptOfferLetter(req: Request, res: Response): Promise<void> {
     try {
-      const { offer_letter_id } = req.params;
+      const offer_letter_id = req.params['offer_letter_id'] as string;
 
       const offerLetter = await this.offerLetterService.acceptOfferLetter(offer_letter_id);
 
@@ -238,7 +235,7 @@ export class RecruitmentController {
 
   async completeChecklistItem(req: Request, res: Response): Promise<void> {
     try {
-      const { item_id } = req.params;
+      const item_id = req.params['item_id'] as string;
       const userId = (req as any).user?.id;
 
       const item = await this.onboardingService.completeChecklistItem(item_id, userId);
@@ -251,7 +248,7 @@ export class RecruitmentController {
 
   async getOnboardingChecklist(req: Request, res: Response): Promise<void> {
     try {
-      const { employee_id } = req.params;
+      const employee_id = req.params['employee_id'] as string;
 
       const checklist = await this.onboardingService.getOnboardingChecklistByEmployee(employee_id);
 

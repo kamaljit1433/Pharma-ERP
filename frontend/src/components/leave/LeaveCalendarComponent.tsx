@@ -4,6 +4,12 @@ import { Badge } from '../ui/badge';
 import { useLeaveStore } from '../../store/leaveStore';
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { Button } from '../ui/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '../ui/tooltip';
 
 interface LeaveCalendarComponentProps {
   employeeId: string;
@@ -96,110 +102,172 @@ export const LeaveCalendarComponent: React.FC<LeaveCalendarComponentProps> = ({
 
   const monthName = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
 
+  const formatDateRange = (fromDate: string, toDate: string): string => {
+    const from = new Date(fromDate).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    });
+    const to = new Date(toDate).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    });
+    return `${from} - ${to}`;
+  };
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Calendar className="h-5 w-5" />
-          Leave Calendar
-        </CardTitle>
-        <CardDescription>View your approved leaves on the calendar</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Month Navigation */}
-        <div className="flex items-center justify-between">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handlePrevMonth}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <h3 className="text-lg font-semibold">{monthName}</h3>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleNextMonth}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-
-        {/* Calendar Grid */}
-        <div className="space-y-2">
-          {/* Day Headers */}
-          <div className="grid grid-cols-7 gap-1">
-            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-              <div key={day} className="text-center font-semibold text-sm text-muted-foreground">
-                {day}
-              </div>
-            ))}
+    <TooltipProvider>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Leave Calendar
+          </CardTitle>
+          <CardDescription>View your approved leaves on the calendar</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Month Navigation */}
+          <div className="flex items-center justify-between">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePrevMonth}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <h3 className="text-lg font-semibold">{monthName}</h3>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleNextMonth}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
           </div>
 
-          {/* Calendar Days */}
-          <div className="grid grid-cols-7 gap-1">
-            {calendarDays.map((day, index) => {
-              const dateLeaves = day ? getDateLeaves(day) : [];
-              const isToday =
-                day &&
-                new Date(currentDate.getFullYear(), currentDate.getMonth(), day).toDateString() ===
-                new Date().toDateString();
-
-              return (
-                <div
-                  key={index}
-                  className={`min-h-20 p-1 border rounded-md ${
-                    day ? 'bg-background' : 'bg-muted'
-                  } ${isToday ? 'border-primary border-2' : 'border-border'}`}
-                >
-                  {day && (
-                    <div className="space-y-1">
-                      <div className={`text-sm font-semibold ${isToday ? 'text-primary' : ''}`}>
-                        {day}
-                      </div>
-                      <div className="space-y-0.5">
-                        {dateLeaves.slice(0, 2).map((leave) => {
-                          const leaveType = leaveTypes.find((lt) => lt.id === leave.leave_type_id);
-                          return (
-                            <Badge
-                              key={leave.id}
-                              variant="outline"
-                              className={`text-xs w-full justify-center ${getLeaveTypeColor(
-                                leave.leave_type_id
-                              )}`}
-                              title={leaveType?.name}
-                            >
-                              {leaveType?.code || 'Leave'}
-                            </Badge>
-                          );
-                        })}
-                        {dateLeaves.length > 2 && (
-                          <div className="text-xs text-muted-foreground text-center">
-                            +{dateLeaves.length - 2} more
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
+          {/* Calendar Grid */}
+          <div className="space-y-2">
+            {/* Day Headers */}
+            <div className="grid grid-cols-7 gap-1">
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                <div key={day} className="text-center font-semibold text-sm text-muted-foreground">
+                  {day}
                 </div>
-              );
-            })}
-          </div>
-        </div>
+              ))}
+            </div>
 
-        {/* Legend */}
-        <div className="pt-4 border-t space-y-2">
-          <p className="text-sm font-semibold">Leave Types:</p>
-          <div className="grid grid-cols-2 gap-2">
-            {Object.entries(LEAVE_TYPE_COLORS).map(([name, color]) => (
-              <div key={name} className="flex items-center gap-2">
-                <div className={`w-3 h-3 rounded ${color.split(' ')[0]}`} />
-                <span className="text-xs">{name}</span>
-              </div>
-            ))}
+            {/* Calendar Days */}
+            <div className="grid grid-cols-7 gap-1">
+              {calendarDays.map((day, index) => {
+                const dateLeaves = day ? getDateLeaves(day) : [];
+                const isToday =
+                  day &&
+                  new Date(currentDate.getFullYear(), currentDate.getMonth(), day).toDateString() ===
+                  new Date().toDateString();
+
+                return (
+                  <div
+                    key={index}
+                    className={`min-h-20 p-1 border rounded-md ${
+                      day ? 'bg-background' : 'bg-muted'
+                    } ${isToday ? 'border-primary border-2' : 'border-border'}`}
+                  >
+                    {day && (
+                      <div className="space-y-1">
+                        <div className={`text-sm font-semibold ${isToday ? 'text-primary' : ''}`}>
+                          {day}
+                        </div>
+                        <div className="space-y-0.5">
+                          {dateLeaves.slice(0, 2).map((leave) => {
+                            const leaveType = leaveTypes.find((lt) => lt.id === leave.leave_type_id);
+                            const tooltipContent = (
+                              <div className="space-y-1">
+                                <p className="font-semibold">{leaveType?.name || 'Leave'}</p>
+                                <p className="text-xs">
+                                  {formatDateRange(leave.from_date, leave.to_date)}
+                                </p>
+                                {leave.reason && (
+                                  <p className="text-xs text-muted-foreground">{leave.reason}</p>
+                                )}
+                                <p className="text-xs">
+                                  Days: {leave.days_count}
+                                </p>
+                              </div>
+                            );
+
+                            return (
+                              <Tooltip key={leave.id}>
+                                <TooltipTrigger asChild>
+                                  <Badge
+                                    variant="outline"
+                                    className={`text-xs w-full justify-center cursor-pointer hover:opacity-80 transition-opacity ${getLeaveTypeColor(
+                                      leave.leave_type_id
+                                    )}`}
+                                  >
+                                    {leaveType?.code || 'Leave'}
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-xs">
+                                  {tooltipContent}
+                                </TooltipContent>
+                              </Tooltip>
+                            );
+                          })}
+                          {dateLeaves.length > 2 && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="text-xs text-muted-foreground text-center cursor-pointer hover:text-foreground transition-colors">
+                                  +{dateLeaves.length - 2} more
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-xs">
+                                <div className="space-y-2">
+                                  {dateLeaves.slice(2).map((leave) => {
+                                    const leaveType = leaveTypes.find(
+                                      (lt) => lt.id === leave.leave_type_id
+                                    );
+                                    return (
+                                      <div key={leave.id} className="space-y-1">
+                                        <p className="font-semibold text-sm">
+                                          {leaveType?.name || 'Leave'}
+                                        </p>
+                                        <p className="text-xs">
+                                          {formatDateRange(leave.from_date, leave.to_date)}
+                                        </p>
+                                        {leave.reason && (
+                                          <p className="text-xs text-muted-foreground">
+                                            {leave.reason}
+                                          </p>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+
+          {/* Legend */}
+          <div className="pt-4 border-t space-y-2">
+            <p className="text-sm font-semibold">Leave Types:</p>
+            <div className="grid grid-cols-2 gap-2">
+              {Object.entries(LEAVE_TYPE_COLORS).map(([name, color]) => (
+                <div key={name} className="flex items-center gap-2">
+                  <div className={`w-3 h-3 rounded ${color.split(' ')[0]}`} />
+                  <span className="text-xs">{name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </TooltipProvider>
   );
 };

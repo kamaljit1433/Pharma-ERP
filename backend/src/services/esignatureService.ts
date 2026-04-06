@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+import logger from '../utils/logger';
 import { SignatureRequest, SignatureRequestDTO, SignatureData, SignatureStatus, SignatureEvent } from '../types/esignature';
 import { SignatureRequestRepository } from '../repositories/signatureRequestRepository';
 import { SignatureEventRepository } from '../repositories/signatureEventRepository';
@@ -280,7 +281,7 @@ export class ESignatureService {
           await this.sendReminder(request.id);
         }
       } catch (error) {
-        console.error(`Failed to send reminder for signature request ${request.id}:`, error);
+        logger.error('Failed to send reminder for signature request', { requestId: request.id, error: error instanceof Error ? error.message : String(error) });
       }
     }
   }
@@ -305,6 +306,6 @@ export class ESignatureService {
     // Mark document as locked by updating metadata or creating a lock record
     // For now, we'll just log this action
     // In a full implementation, you might add a 'locked' field to documents table
-    console.log(`Document ${documentId} locked after signature completion`);
+    logger.info('Document locked after signature completion', { documentId });
   }
 }

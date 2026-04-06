@@ -1,4 +1,4 @@
-import { Response, NextFunction } from 'express';
+﻿import { Response, NextFunction } from 'express';
 import { Knex } from 'knex';
 import { NotificationRepository } from '../repositories/notificationRepository';
 import {
@@ -23,7 +23,7 @@ export class NotificationController {
    */
   async getNotifications(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const employeeId = req.user?.id;
+      const employeeId = (req.user as any)?.id;
       if (!employeeId) {
         res.status(401).json({
           error: {
@@ -55,7 +55,7 @@ export class NotificationController {
         },
       });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -65,8 +65,8 @@ export class NotificationController {
    */
   async markAsRead(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const { id } = req.params;
-      const employeeId = req.user?.id;
+      const id = req.params['id'] as string;
+      const employeeId = (req.user as any)?.id;
 
       if (!employeeId) {
         res.status(401).json({
@@ -107,7 +107,7 @@ export class NotificationController {
       const updated = await this.notificationRepository.markAsRead(id);
       res.json(updated);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -156,7 +156,7 @@ export class NotificationController {
       const template = await this.templateRepository.create(templateData);
       res.status(201).json(template);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -174,7 +174,7 @@ export class NotificationController {
         count: templates.length,
       });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -184,7 +184,7 @@ export class NotificationController {
    */
   async getTemplate(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const { id } = req.params;
+      const id = req.params['id'] as string;
       const template = await this.templateRepository.getById(id);
 
       if (!template) {
@@ -200,7 +200,7 @@ export class NotificationController {
 
       res.json(template);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -210,7 +210,7 @@ export class NotificationController {
    */
   async updateTemplate(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const { id } = req.params;
+      const id = req.params['id'] as string;
       const { name, subject, body, channel, variables, is_active } = req.body;
 
       const template = await this.templateRepository.getById(id);
@@ -251,7 +251,7 @@ export class NotificationController {
       const updated = await this.templateRepository.update(id, updateData);
       res.json(updated);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -261,7 +261,7 @@ export class NotificationController {
    */
   async deleteTemplate(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const { id } = req.params;
+      const id = req.params['id'] as string;
 
       const template = await this.templateRepository.getById(id);
       if (!template) {
@@ -278,7 +278,7 @@ export class NotificationController {
       await this.templateRepository.delete(id);
       res.status(204).send();
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 }

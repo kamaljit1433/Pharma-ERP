@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+﻿import { Router, Request, Response } from 'express';
 import { Knex } from 'knex';
 import { BenefitsController } from '../controllers/benefitsController';
 import { authenticateToken } from '../middleware/auth';

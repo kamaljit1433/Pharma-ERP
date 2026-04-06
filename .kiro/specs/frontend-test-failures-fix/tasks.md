@@ -156,7 +156,7 @@ This task list implements fixes for 27 failing frontend tests across 7 files. Th
     - _Preservation: Test behavior and assertions remain unchanged_
     - _Requirements: 2.2, 3.1_
 
-  - [ ] 3.8 Verify bug condition exploration test now passes
+  - [x] 3.8 Verify bug condition exploration test now passes
     - **Property 1: Expected Behavior** - All Test Failures Resolved
     - **IMPORTANT**: Re-run the SAME test from task 1 - do NOT write a new test
     - The test from task 1 encodes the expected behavior

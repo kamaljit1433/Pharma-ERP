@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Security Middleware
  * Implements security headers, CORS, rate limiting, and request validation
  */

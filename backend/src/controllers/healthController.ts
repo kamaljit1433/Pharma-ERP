@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Health Check Controller
  * 
  * Provides endpoints for monitoring system health and resilience metrics
@@ -57,7 +57,7 @@ export class HealthController {
    */
   static async getServiceResilienceMetrics(req: Request, res: Response): Promise<void> {
     try {
-      const { serviceName } = req.params;
+      const serviceName = req.params['serviceName'] as string;
       const metrics = getAllResilienceMetrics();
 
       if (!metrics[serviceName]) {

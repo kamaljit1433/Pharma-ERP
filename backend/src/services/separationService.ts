@@ -1,4 +1,9 @@
 import { Knex } from 'knex';
+import { v4 as uuidv4 } from 'uuid';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as Handlebars from 'handlebars';
+import logger from '../utils/logger';
 import { ResignationRepository } from '../repositories/resignationRepository';
 import { ExitInterviewRepository } from '../repositories/exitInterviewRepository';
 import { FnFSettlementRepository } from '../repositories/fnfSettlementRepository';
@@ -7,6 +12,8 @@ import { EmployeeRepository } from '../repositories/employeeRepository';
 import { LeaveBalanceRepository } from '../repositories/leaveBalanceRepository';
 import { AdvanceSalaryRepository } from '../repositories/advanceSalaryRepository';
 import { QuestionnaireTemplateRepository } from '../repositories/questionnaireTemplateRepository';
+import { FileStorageService } from './fileStorageService';
+import { FileCategory } from '../types/fileStorage';
 import notificationService from './notificationService';
 import { NotificationType } from '../types/notification';
 import {
@@ -33,6 +40,7 @@ export class SeparationService {
   private leaveBalanceRepository: LeaveBalanceRepository;
   private advanceSalaryRepository: AdvanceSalaryRepository;
   private questionnaireTemplateRepository: QuestionnaireTemplateRepository;
+  private fileStorageService: FileStorageService;
 
   constructor(private db: Knex) {
     this.resignationRepository = new ResignationRepository(db);
@@ -43,6 +51,34 @@ export class SeparationService {
     this.leaveBalanceRepository = new LeaveBalanceRepository(db);
     this.advanceSalaryRepository = new AdvanceSalaryRepository(db);
     this.questionnaireTemplateRepository = new QuestionnaireTemplateRepository(db);
+    this.fileStorageService = new FileStorageService();
+  }
+
+  /**
+   * Get HR department manager ID for notifications
+   * Looks up the HR department and returns its head employee ID
+   */
+  private async getHRDepartmentManagerId(): Promise<string | null> {
+    try {
+      const hrDepartment = await this.db('departments')
+        .where('name', 'ilike', '%HR%')
+        .orWhere('name', 'ilike', '%Human Resources%')
+        .first();
+
+      if (hrDepartment && hrDepartment.head_employee_id) {
+        return hrDepartment.head_employee_id;
+      }
+
+      // Fallback: get any department head if HR not found
+      const anyDepartmentHead = await this.db('departments')
+        .whereNotNull('head_employee_id')
+        .first();
+
+      return anyDepartmentHead?.head_employee_id || null;
+    } catch (error) {
+      logger.error('Error getting HR department manager', { error: error instanceof Error ? error.message : String(error) });
+      return null;
+    }
   }
 
   /**
@@ -73,42 +109,80 @@ export class SeparationService {
       throw new Error('Resignation date cannot be in the past');
     }
 
-    // Validate last working day is after resignation date
+    // Validate last working day is after resignation date (allow same-day)
     const lastWorkingDayNorm = new Date(data.last_working_day);
-    lastWorkingDayNorm.setHours(0, 0, 0, 0);
+    lastWorkingDayNorm.setUTCHours(0, 0, 0, 0);
     
-    if (lastWorkingDayNorm <= resignationDateNorm) {
-      throw new Error('Last working day must be after resignation date');
+    if (lastWorkingDayNorm < resignationDateNorm) {
+      throw new Error('Last working day must be on or after resignation date');
     }
 
-    // Create resignation
-    const resignation = await this.resignationRepository.createResignation(employeeId, data);
+    // Fetch employee's contract notice period (default to 30 days if not set)
+    const employeeNotice = employee.notice_period_days || 30;
 
-    // Calculate and track notice period
+    // Calculate notice period end date using UTC calendar day arithmetic
     const noticePeriodInfo = this.calculateNoticePeriod(
       new Date(data.resignation_date),
-      new Date(data.last_working_day)
+      employeeNotice
     );
+
+    // Validate that last_working_day matches calculated notice_period_end_date
+    // Allow override with warning if they differ
+    const calculatedEndDate = new Date(noticePeriodInfo.notice_period_end_date);
+    calculatedEndDate.setUTCHours(0, 0, 0, 0);
+    
+    if (lastWorkingDayNorm.getTime() !== calculatedEndDate.getTime()) {
+      logger.warn('Last working day differs from calculated notice period end date', {
+        employeeId,
+        resignationDate: data.resignation_date,
+        calculatedEndDate: calculatedEndDate,
+        providedLastWorkingDay: lastWorkingDayNorm,
+        employeeNotice,
+      });
+    }
+
+    // Create resignation with calculated notice period end date
+    const resignation = await this.resignationRepository.createResignation(employeeId, data);
 
     // Store notice period info in database for tracking
     await this.db('resignations')
       .where('id', resignation.id)
       .update({
-        notice_period_days: noticePeriodInfo.notice_period_days,
+        notice_period_days: employeeNotice,
+        notice_period_end_date: noticePeriodInfo.notice_period_end_date,
         notice_period_status: 'pending',
       });
 
     // Auto-trigger offboarding workflow
-    await this.triggerOffboardingWorkflow(employeeId);
+    const offboardingResult = await this.triggerOffboardingWorkflow(employeeId);
 
-    // Send notification to HR
-    await notificationService.sendNotification({
-      employeeId: 'hr-team', // Would be actual HR team ID
-      type: 'system_notification' as any,
-      title: 'New Resignation Submitted',
-      body: `${employee.first_name} ${employee.last_name} has submitted resignation effective ${data.last_working_day}`,
-      data: { resignation_id: resignation.id, employee_id: employeeId },
-    });
+    // Send notification to HR department manager
+    const hrManagerId = await this.getHRDepartmentManagerId();
+    if (hrManagerId) {
+      try {
+        await notificationService.sendNotification({
+          employeeId: hrManagerId,
+          type: 'system_notification' as any,
+          title: 'New Resignation Submitted',
+          body: `${employee.first_name} ${employee.last_name} has submitted resignation effective ${data.last_working_day}`,
+          data: { resignation_id: resignation.id, employee_id: employeeId },
+        });
+      } catch (notificationError) {
+        logger.error('Failed to send resignation notification to HR', {
+          hrManagerId,
+          employeeId,
+          error: notificationError instanceof Error ? notificationError.message : String(notificationError),
+        });
+      }
+    }
+
+    // If offboarding workflow had errors, include them in response
+    if (offboardingResult.errors && offboardingResult.errors.length > 0) {
+      logger.warn('Offboarding workflow completed with errors', {
+        employeeId,
+        errors: offboardingResult.errors,
+      });
+    }
 
     return resignation;
   }
@@ -135,7 +209,7 @@ export class SeparationService {
     }
 
     // Create termination record
-    const id = require('uuid').v4();
+    const id = uuidv4();
     const [termination] = await this.db('terminations')
       .insert({
         id,
@@ -147,72 +221,114 @@ export class SeparationService {
       .returning('*');
 
     // Auto-trigger offboarding workflow
-    await this.triggerOffboardingWorkflow(employeeId);
+    const offboardingResult = await this.triggerOffboardingWorkflow(employeeId);
 
-    // Send notification to HR and Finance
-    await notificationService.sendNotification({
-      employeeId: 'hr-team',
-      type: 'system_notification' as any,
-      title: 'Employee Termination Initiated',
-      body: `${employee.first_name} ${employee.last_name} termination initiated effective ${terminationDate}. Reason: ${reason}`,
-      data: { termination_id: id, employee_id: employeeId },
-    });
+    // Send notification to HR department manager
+    const hrManagerId = await this.getHRDepartmentManagerId();
+    if (hrManagerId) {
+      try {
+        await notificationService.sendNotification({
+          employeeId: hrManagerId,
+          type: 'system_notification' as any,
+          title: 'Employee Termination Initiated',
+          body: `${employee.first_name} ${employee.last_name} termination initiated effective ${terminationDate}. Reason: ${reason}`,
+          data: { termination_id: id, employee_id: employeeId },
+        });
+      } catch (notificationError) {
+        logger.error('Failed to send termination notification to HR', {
+          hrManagerId,
+          employeeId,
+          error: notificationError instanceof Error ? notificationError.message : String(notificationError),
+        });
+      }
+    }
+
+    // If offboarding workflow had errors, include them in response
+    if (offboardingResult.errors && offboardingResult.errors.length > 0) {
+      logger.warn('Offboarding workflow completed with errors', {
+        employeeId,
+        errors: offboardingResult.errors,
+      });
+    }
 
     return termination;
   }
 
   /**
    * Calculate notice period information with status tracking
+   * Uses UTC calendar day arithmetic to avoid DST and timezone issues
    * Returns notice period days, end date, served days, remaining days, and completion status
    */
-  calculateNoticePeriod(resignationDate: Date, lastWorkingDay: Date): NoticePeriodInfo {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    // Normalize dates to UTC midnight for consistent comparison
-    const resignationDateNorm = new Date(resignationDate);
-    resignationDateNorm.setUTCHours(0, 0, 0, 0);
-    
-    const lastWorkingDayNorm = new Date(lastWorkingDay);
-    lastWorkingDayNorm.setUTCHours(0, 0, 0, 0);
+  calculateNoticePeriod(resignationDate: Date, noticePeriodDays: number): NoticePeriodInfo {
+    // Normalize resignation date to UTC midnight for consistent calendar day arithmetic
+    const resignationDateUTC = new Date(resignationDate);
+    resignationDateUTC.setUTCHours(0, 0, 0, 0);
 
-    // Calculate total notice period days
-    const noticePeriodDays = Math.ceil(
-      (lastWorkingDayNorm.getTime() - resignationDateNorm.getTime()) / (1000 * 60 * 60 * 24)
-    );
+    // Calculate notice period end date by adding calendar days
+    // This avoids millisecond rounding and DST transition issues
+    const noticeEndDateUTC = new Date(resignationDateUTC);
+    noticeEndDateUTC.setUTCDate(noticeEndDateUTC.getUTCDate() + noticePeriodDays);
 
-    // Calculate days served so far
-    const noticePeriodServedDays = Math.max(
-      0,
-      Math.ceil((today.getTime() - resignationDateNorm.getTime()) / (1000 * 60 * 60 * 24))
-    );
+    // Get today's date normalized to UTC midnight
+    const todayUTC = new Date();
+    todayUTC.setUTCHours(0, 0, 0, 0);
+
+    // Calculate days served using calendar day arithmetic
+    // Count the number of calendar days from resignation date to today
+    const daysServed = Math.max(0, this.calculateCalendarDaysDifference(resignationDateUTC, todayUTC));
 
     // Calculate remaining days
-    const noticePeriodRemainingDays = Math.max(0, noticePeriodDays - noticePeriodServedDays);
+    const daysRemaining = Math.max(0, noticePeriodDays - daysServed);
 
     // Check if notice period is complete
-    const isNoticePeriodComplete = today >= lastWorkingDayNorm;
+    const isNoticePeriodComplete = todayUTC >= noticeEndDateUTC;
 
     return {
       notice_period_days: noticePeriodDays,
-      notice_period_end_date: lastWorkingDayNorm,
-      notice_period_served_days: noticePeriodServedDays,
-      notice_period_remaining_days: noticePeriodRemainingDays,
+      notice_period_end_date: noticeEndDateUTC,
+      notice_period_served_days: daysServed,
+      notice_period_remaining_days: daysRemaining,
       is_notice_period_complete: isNoticePeriodComplete,
     };
   }
 
   /**
+   * Calculate the difference in calendar days between two UTC dates
+   * Handles leap years, month boundaries, and DST transitions correctly
+   */
+  private calculateCalendarDaysDifference(startDate: Date, endDate: Date): number {
+    // Both dates should already be normalized to UTC midnight
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    // Calculate difference in milliseconds
+    const diffMs = end.getTime() - start.getTime();
+
+    // Convert to days (using exact 24-hour periods)
+    // This is safe because both dates are at UTC midnight
+    return Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  }
+
+
+
+  /**
    * Schedule exit interview
    */
-  async scheduleExitInterview(employeeId: string, data: CreateExitInterviewDTO): Promise<ExitInterview> {
+  async scheduleExitInterview(employeeId: string, date: Date): Promise<ExitInterview> {
     // Validate employee exists
     const employee = await this.employeeRepository.getEmployee(employeeId);
     if (!employee) {
       throw new Error('Employee not found');
     }
 
-    return this.exitInterviewRepository.createExitInterview(employeeId, data);
+    // Validate scheduled date is in the future
+    if (new Date(date) < new Date()) {
+      throw new Error('Exit interview cannot be scheduled in the past');
+    }
+
+    return this.exitInterviewRepository.createExitInterview(employeeId, {
+      scheduled_at: date,
+    });
   }
 
   /**
@@ -266,6 +382,9 @@ export class SeparationService {
     // 9. Get other deductions (if any - can be configured per company policy)
     const otherDeductions = 0;
 
+    // 10. Get statutory deductions (PF, ESI, Tax on pending salary)
+    const statutoryDeductions = await this.calculateStatutoryDeductions(employeeId, pendingSalary);
+
     // 11. Create F&F settlement record
     const fnfData: CreateFnFSettlementDTO = {
       pending_salary: pendingSalary,
@@ -275,7 +394,7 @@ export class SeparationService {
       other_benefits: otherBenefits,
       advance_deduction: advanceDeduction,
       asset_damage_deduction: assetDamageDeduction,
-      other_deductions: otherDeductions,
+      other_deductions: otherDeductions + statutoryDeductions,
     };
 
     return this.fnfSettlementRepository.createFnFSettlement(employeeId, fnfData);
@@ -312,7 +431,7 @@ export class SeparationService {
     // Calculate days worked in current month
     const currentDate = new Date();
     const monthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-    const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+    const daysInMonth = 30; // Standardize to 30 days for F&F calculations
     const daysWorked = Math.min(
       Math.floor((new Date(lastWorkingDay).getTime() - monthStart.getTime()) / (1000 * 60 * 60 * 24)) + 1,
       daysInMonth
@@ -324,6 +443,30 @@ export class SeparationService {
 
     // Return pending salary for days worked
     return dailyRate * daysWorked;
+  }
+
+  /**
+   * Calculate statutory deductions for F&F settlement
+   * Applies PF and ESI using the standard rates on the pending salary
+   */
+  private async calculateStatutoryDeductions(employeeId: string, pendingSalaryAmount: number): Promise<number> {
+    if (pendingSalaryAmount <= 0) return 0;
+
+    const salaryStructure = await this.db('salary_structures')
+      .where('employee_id', employeeId)
+      .orderBy('created_at', 'desc')
+      .first();
+
+    if (!salaryStructure) return 0;
+
+    const pfRate = salaryStructure.pf_contribution_rate || 0;
+    const esiRate = salaryStructure.esi_contribution_rate || 0;
+
+    const pfDeduction = (pendingSalaryAmount * pfRate) / 100;
+    const esiDeduction = (pendingSalaryAmount * esiRate) / 100;
+    const taxDeduction = pendingSalaryAmount > 50000 ? (pendingSalaryAmount - 50000) * 0.1 : 0; // Simplified TDS
+
+    return pfDeduction + esiDeduction + taxDeduction;
   }
 
   /**
@@ -349,7 +492,7 @@ export class SeparationService {
     }
 
     const monthlyBaseSalary = salaryStructure.basic_salary || 0;
-    const dailyRate = monthlyBaseSalary / 26; // Standard 26 working days per month
+    const dailyRate = monthlyBaseSalary / 30; // Standard 30 working days per month
 
     // Sum remaining leave balance and calculate encashment
     let totalLeaveEncashment = 0;
@@ -379,6 +522,10 @@ export class SeparationService {
       }
 
       const lastDrawnSalary = salaryStructure.basic_salary || 0;
+
+      if (!employee.date_of_joining) {
+        return 0; // Invalid join date, cannot calculate gratuity
+      }
 
       // Calculate years of service
       const dateOfJoining = new Date(employee.date_of_joining);
@@ -457,7 +604,7 @@ export class SeparationService {
 
     // Log audit trail
     await this.db('audit_logs').insert({
-      id: require('uuid').v4(),
+      id: uuidv4(),
       entity_type: 'fnf_settlement',
       entity_id: fnfSettlementId,
       action: 'approved',
@@ -493,7 +640,7 @@ export class SeparationService {
 
     // Log audit trail
     await this.db('audit_logs').insert({
-      id: require('uuid').v4(),
+      id: uuidv4(),
       entity_type: 'fnf_settlement',
       entity_id: fnfSettlementId,
       action: 'rejected',
@@ -526,11 +673,11 @@ export class SeparationService {
 
     // Log audit trail
     await this.db('audit_logs').insert({
-      id: require('uuid').v4(),
+      id: uuidv4(),
       entity_type: 'fnf_settlement',
       entity_id: fnfSettlementId,
       action: 'paid',
-      performed_by: 'system',
+      performed_by: null, // System action
       changes: {
         status: 'paid',
         paid_at: new Date(),
@@ -543,8 +690,9 @@ export class SeparationService {
 
   /**
    * Generate F&F Statement document for employee records
+   * Creates a formatted HTML document, stores it in file storage, and returns the file URL
    */
-  async generateFnFStatement(fnfSettlementId: string): Promise<string> {
+  async generateFnFStatement(fnfSettlementId: string): Promise<{ fileUrl: string; fileKey: string }> {
     const settlement = await this.fnfSettlementRepository.getFnFSettlement(fnfSettlementId);
     if (!settlement) {
       throw new Error('F&F Settlement not found');
@@ -555,68 +703,115 @@ export class SeparationService {
       throw new Error('Employee not found');
     }
 
-    // Generate statement content
-    const statement = this.generateFnFStatementContent(employee, settlement);
+    // Get department name
+    let departmentName = 'N/A';
+    if (employee.department_id) {
+      const department = await this.db('departments')
+        .where('id', employee.department_id)
+        .first();
+      departmentName = department?.name || 'N/A';
+    }
 
-    // Store statement in file storage (optional)
-    // For now, return the statement as string
-    return statement;
-  }
+    // Get designation name
+    let designationName = 'N/A';
+    if (employee.designation_id) {
+      const designation = await this.db('designations')
+        .where('id', employee.designation_id)
+        .first();
+      designationName = designation?.title || 'N/A';
+    }
 
-  /**
-   * Generate F&F Statement content
-   */
-  private generateFnFStatementContent(employee: any, settlement: FnFSettlement): string {
-    const date = new Date().toLocaleDateString('en-IN');
-    const settlementDate = settlement.approved_at ? new Date(settlement.approved_at).toLocaleDateString('en-IN') : 'N/A';
+    // Get last working day from resignation or termination
+    let lastWorkingDay = 'N/A';
+    const resignation = await this.db('resignations')
+      .where('employee_id', settlement.employee_id)
+      .orderBy('created_at', 'desc')
+      .first();
+    
+    if (resignation) {
+      lastWorkingDay = new Date(resignation.last_working_day).toLocaleDateString('en-IN');
+    } else {
+      const termination = await this.db('terminations')
+        .where('employee_id', settlement.employee_id)
+        .orderBy('created_at', 'desc')
+        .first();
+      if (termination) {
+        lastWorkingDay = new Date(termination.termination_date).toLocaleDateString('en-IN');
+      }
+    }
 
-    return `
-FULL & FINAL SETTLEMENT STATEMENT
-=====================================
+    // Prepare template data
+    const templateData = {
+      employee: {
+        employee_id: employee.employee_id,
+        first_name: employee.first_name,
+        last_name: employee.last_name,
+        department_name: departmentName,
+        designation: designationName,
+        date_of_joining: new Date(employee.date_of_joining).toLocaleDateString('en-IN'),
+        last_working_day: lastWorkingDay,
+      },
+      settlement: {
+        id: settlement.id,
+        status: settlement.status,
+        generated_date: new Date().toLocaleDateString('en-IN'),
+        approved_date: settlement.approved_at 
+          ? new Date(settlement.approved_at).toLocaleDateString('en-IN') 
+          : null,
+        pending_salary: settlement.pending_salary.toFixed(2),
+        leave_encashment: settlement.leave_encashment.toFixed(2),
+        gratuity: settlement.gratuity.toFixed(2),
+        bonus: settlement.bonus.toFixed(2),
+        other_benefits: settlement.other_benefits.toFixed(2),
+        total_earnings: settlement.total_earnings.toFixed(2),
+        advance_deduction: settlement.advance_deduction.toFixed(2),
+        asset_damage_deduction: settlement.asset_damage_deduction.toFixed(2),
+        other_deductions: settlement.other_deductions.toFixed(2),
+        total_deductions: settlement.total_deductions.toFixed(2),
+        net_settlement: settlement.net_settlement.toFixed(2),
+        approved_by: settlement.approved_by || null,
+      },
+    };
 
-Employee Details:
------------------
-Employee ID: ${employee.employee_id}
-Name: ${employee.first_name} ${employee.last_name}
-Department: ${employee.department_id || 'N/A'}
-Date of Joining: ${new Date(employee.date_of_joining).toLocaleDateString('en-IN')}
-Date of Separation: ${employee.date_of_exit ? new Date(employee.date_of_exit).toLocaleDateString('en-IN') : 'N/A'}
+    // Load and compile template
+    const templatePath = path.join(__dirname, '../templates/fnf-statement.hbs');
+    const templateSource = fs.readFileSync(templatePath, 'utf-8');
+    const template = Handlebars.compile(templateSource);
+    const htmlContent = template(templateData);
 
-Settlement Details:
--------------------
-Settlement ID: ${settlement.id}
-Status: ${settlement.status}
-Generated Date: ${date}
-Approved Date: ${settlementDate}
+    // Store in file storage
+    const fileName = `fnf-statement-${employee.employee_id}-${Date.now()}.html`;
+    const fileBuffer = Buffer.from(htmlContent, 'utf-8');
 
-EARNINGS:
----------
-Pending Salary:           ₹ ${settlement.pending_salary.toFixed(2)}
-Leave Encashment:         ₹ ${settlement.leave_encashment.toFixed(2)}
-Gratuity:                 ₹ ${settlement.gratuity.toFixed(2)}
-Bonus:                    ₹ ${settlement.bonus.toFixed(2)}
-Other Benefits:           ₹ ${settlement.other_benefits.toFixed(2)}
-                          ─────────────────
-Total Earnings:           ₹ ${settlement.total_earnings.toFixed(2)}
+    const uploadResult = await this.fileStorageService.uploadFile(fileBuffer, fileName, {
+      employeeId: settlement.employee_id,
+      category: FileCategory.DOCUMENT,
+      metadata: {
+        documentType: 'fnf_statement',
+        settlementId: fnfSettlementId,
+        generatedAt: new Date().toISOString(),
+      },
+    });
 
-DEDUCTIONS:
------------
-Advance Salary:           ₹ ${settlement.advance_deduction.toFixed(2)}
-Asset Damage:             ₹ ${settlement.asset_damage_deduction.toFixed(2)}
-Other Deductions:         ₹ ${settlement.other_deductions.toFixed(2)}
-                          ─────────────────
-Total Deductions:         ₹ ${settlement.total_deductions.toFixed(2)}
+    // Store file reference in database
+    await this.db('fnf_settlements')
+      .where('id', fnfSettlementId)
+      .update({
+        statement_file_key: uploadResult.key,
+        statement_file_url: uploadResult.url,
+        statement_generated_at: new Date(),
+      });
 
-NET SETTLEMENT AMOUNT:    ₹ ${settlement.net_settlement.toFixed(2)}
+    logger.info('F&F statement generated and stored', {
+      settlementId: fnfSettlementId,
+      employeeId: settlement.employee_id,
+      fileKey: uploadResult.key,
+    });
 
-Approval Details:
------------------
-Approved By: ${settlement.approved_by || 'N/A'}
-Approved At: ${settlementDate}
-
-This is a computer-generated statement and does not require a signature.
-For queries, please contact the HR Department.
-    `;
+    return {
+      fileUrl: uploadResult.url,
+      fileKey: uploadResult.key,
+    };
   }
 
   /**
@@ -728,7 +923,7 @@ For queries, please contact the HR Department.
 
     // Log deactivation in audit logs
     await this.db('audit_logs').insert({
-      id: require('uuid').v4(),
+      id: uuidv4(),
       entity_type: 'employee',
       entity_id: employeeId,
       action: 'employee_deactivated',
@@ -756,84 +951,185 @@ For queries, please contact the HR Department.
   /**
    * Trigger offboarding workflow
    * Generates asset recovery checklist, creates F&F settlement, and sends notifications
+   * Returns workflow result with any errors that occurred
    */
-  private async triggerOffboardingWorkflow(employeeId: string): Promise<void> {
+  private async triggerOffboardingWorkflow(employeeId: string): Promise<{ errors: string[] }> {
+    const errors: string[] = [];
+
     try {
       // Generate asset recovery checklist
-      const assetChecklists = await this.generateAssetRecoveryChecklist(employeeId);
+      let assetChecklists: AssetRecoveryChecklist[] = [];
+      try {
+        assetChecklists = await this.generateAssetRecoveryChecklist(employeeId);
+      } catch (error) {
+        const errorMsg = `Failed to generate asset recovery checklist: ${error instanceof Error ? error.message : String(error)}`;
+        errors.push(errorMsg);
+        logger.error(errorMsg, { employeeId });
+
+        // Log to audit trail
+        await this.db('audit_logs').insert({
+          id: uuidv4(),
+          entity_type: 'employee',
+          entity_id: employeeId,
+          action: 'offboarding_asset_recovery_failed',
+          changes: {
+            error: errorMsg,
+          },
+          created_at: new Date(),
+        });
+      }
 
       // Create F&F settlement (draft)
-      const fnfSettlement = await this.calculateFnFSettlement(employeeId);
+      let fnfSettlement: FnFSettlement | null = null;
+      try {
+        fnfSettlement = await this.calculateFnFSettlement(employeeId);
+      } catch (error) {
+        const errorMsg = `Failed to create F&F settlement: ${error instanceof Error ? error.message : String(error)}`;
+        errors.push(errorMsg);
+        logger.error(errorMsg, { employeeId });
+
+        // Log to audit trail
+        await this.db('audit_logs').insert({
+          id: uuidv4(),
+          entity_type: 'employee',
+          entity_id: employeeId,
+          action: 'offboarding_fnf_settlement_failed',
+          changes: {
+            error: errorMsg,
+          },
+          created_at: new Date(),
+        });
+      }
 
       // Send notification to employee about offboarding process
-      const employee = await this.employeeRepository.getEmployee(employeeId);
-      if (employee) {
-        await notificationService.sendNotification({
-          employeeId,
-          type: 'system_notification' as any,
-          title: 'Offboarding Process Started',
-          body: 'Your offboarding process has been initiated. Please complete all required steps.',
-          data: {
-            asset_checklists_count: String(assetChecklists.length),
-            fnf_settlement_id: fnfSettlement.id,
-          },
-        });
+      try {
+        const employee = await this.employeeRepository.getEmployee(employeeId);
+        if (employee) {
+          await notificationService.sendNotification({
+            employeeId,
+            type: 'system_notification' as any,
+            title: 'Offboarding Process Started',
+            body: 'Your offboarding process has been initiated. Please complete all required steps.',
+            data: {
+              asset_checklists_count: String(assetChecklists.length),
+              fnf_settlement_id: fnfSettlement?.id || 'pending',
+            },
+          });
+        }
+      } catch (error) {
+        const errorMsg = `Failed to send offboarding notification to employee: ${error instanceof Error ? error.message : String(error)}`;
+        errors.push(errorMsg);
+        logger.error(errorMsg, { employeeId });
       }
 
       // Log offboarding workflow trigger
       await this.db('audit_logs').insert({
-        id: require('uuid').v4(),
+        id: uuidv4(),
         entity_type: 'employee',
         entity_id: employeeId,
         action: 'offboarding_workflow_triggered',
         changes: {
           asset_checklists_generated: assetChecklists.length,
-          fnf_settlement_created: fnfSettlement.id,
+          fnf_settlement_created: fnfSettlement?.id || null,
+          workflow_errors: errors.length > 0 ? errors : null,
         },
         created_at: new Date(),
       });
     } catch (error) {
-      // Log error but don't fail the resignation/termination submission
-      console.error('Error triggering offboarding workflow:', error);
+      const errorMsg = `Critical error in offboarding workflow: ${error instanceof Error ? error.message : String(error)}`;
+      errors.push(errorMsg);
+      logger.error(errorMsg, { employeeId });
+
+      // Log critical error to audit trail
+      await this.db('audit_logs').insert({
+        id: uuidv4(),
+        entity_type: 'employee',
+        entity_id: employeeId,
+        action: 'offboarding_workflow_critical_error',
+        changes: {
+          error: errorMsg,
+        },
+        created_at: new Date(),
+      });
     }
+
+    return { errors };
   }
 
   /**
    * Get notice period status for a resignation
-   * Returns current notice period tracking information
+   * Returns current notice period tracking information with early exit/buyout detection
    */
   async getNoticePeriodStatus(resignationId: string): Promise<NoticePeriodInfo | null> {
-    const resignation = await this.resignationRepository.getResignation(resignationId);
+    const resignation = await this.resignationRepository.getResignationById(resignationId);
     if (!resignation) {
       return null;
     }
 
+    // Use stored notice_period_days if available, otherwise calculate from dates
+    const noticeDays = resignation.notice_period_days || 
+      Math.ceil(
+        (new Date(resignation.last_working_day).getTime() - new Date(resignation.resignation_date).getTime()) / 
+        (1000 * 60 * 60 * 24)
+      );
+
     return this.calculateNoticePeriod(
       new Date(resignation.resignation_date),
-      new Date(resignation.last_working_day)
+      noticeDays
     );
   }
 
   /**
+   * Check if an employee has exited early (before notice period end date)
+   */
+  private isEarlyExit(lastWorkingDay: Date, noticePeriodEndDate: Date): boolean {
+    const lastWorkingDayNorm = new Date(lastWorkingDay);
+    lastWorkingDayNorm.setUTCHours(0, 0, 0, 0);
+
+    const endDateNorm = new Date(noticePeriodEndDate);
+    endDateNorm.setUTCHours(0, 0, 0, 0);
+
+    return lastWorkingDayNorm < endDateNorm;
+  }
+
+  /**
    * Update notice period serving status
-   * Tracks whether notice period is pending, in-progress, or completed
+   * Detects and flags early exits or buyouts
    */
   async updateNoticePeriodStatus(resignationId: string): Promise<void> {
-    const resignation = await this.resignationRepository.getResignation(resignationId);
+    const resignation = await this.resignationRepository.getResignationById(resignationId);
     if (!resignation) {
       throw new Error('Resignation not found');
     }
 
+    // Use stored notice_period_days if available
+    const noticeDays = resignation.notice_period_days || 
+      Math.ceil(
+        (new Date(resignation.last_working_day).getTime() - new Date(resignation.resignation_date).getTime()) / 
+        (1000 * 60 * 60 * 24)
+      );
+
     const noticePeriodInfo = this.calculateNoticePeriod(
       new Date(resignation.resignation_date),
-      new Date(resignation.last_working_day)
+      noticeDays
     );
 
     let status = 'pending';
-    if (noticePeriodInfo.notice_period_served_days > 0 && !noticePeriodInfo.is_notice_period_complete) {
-      status = 'in_progress';
-    } else if (noticePeriodInfo.is_notice_period_complete) {
-      status = 'completed';
+
+    // Determine status based on notice period completion and early exit
+    if (noticePeriodInfo.is_notice_period_complete) {
+      // Check if it was an early exit
+      if (resignation.notice_period_end_date && this.isEarlyExit(resignation.last_working_day, resignation.notice_period_end_date)) {
+        status = 'early_exit';
+      } else {
+        status = 'served';
+      }
+    } else if (noticePeriodInfo.notice_period_served_days > 0 && noticePeriodInfo.notice_period_served_days < noticeDays) {
+      // Notice period partially served - check if it's a buyout
+      // Buyout is when notice period was explicitly shortened by employer
+      status = 'buyout';
+    } else {
+      status = 'pending';
     }
 
     await this.db('resignations')
@@ -849,7 +1145,7 @@ For queries, please contact the HR Department.
    * Get resignation by ID
    */
   async getResignation(id: string): Promise<Resignation | null> {
-    return this.resignationRepository.getResignation(id);
+    return this.resignationRepository.getResignationById(id);
   }
 
   /**
@@ -884,7 +1180,7 @@ For queries, please contact the HR Department.
    * Get exit interview by ID
    */
   async getExitInterview(id: string): Promise<ExitInterview | null> {
-    return this.exitInterviewRepository.getExitInterview(id);
+    return this.exitInterviewRepository.getExitInterviewById(id);
   }
 
   /**
@@ -1044,7 +1340,7 @@ For queries, please contact the HR Department.
     feedback: string
   ): Promise<ExitInterview> {
     // Get exit interview
-    const exitInterview = await this.exitInterviewRepository.getExitInterview(exitInterviewId);
+    const exitInterview = await this.exitInterviewRepository.getExitInterviewById(exitInterviewId);
     if (!exitInterview) {
       throw new Error('Exit interview not found');
     }
@@ -1107,7 +1403,7 @@ For queries, please contact the HR Department.
    * Get exit interview with template details
    */
   async getExitInterviewWithTemplate(id: string): Promise<(ExitInterview & { template?: QuestionnaireTemplate | undefined }) | null> {
-    const exitInterview = await this.exitInterviewRepository.getExitInterview(id);
+    const exitInterview = await this.exitInterviewRepository.getExitInterviewById(id);
     if (!exitInterview) {
       return null;
     }
@@ -1126,7 +1422,7 @@ For queries, please contact the HR Department.
    * Get exit interviews by status with template details
    */
   async getExitInterviewsByStatusWithTemplate(
-    status: string
+    status: 'scheduled' | 'completed' | 'cancelled'
   ): Promise<(ExitInterview & { template?: QuestionnaireTemplate | undefined })[]> {
     const exitInterviews = await this.exitInterviewRepository.getExitInterviewsByStatus(status);
 

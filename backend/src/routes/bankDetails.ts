@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+﻿import { Router, Request, Response } from 'express';
 import { BankDetailsController } from '../controllers/bankDetailsController';
 import { authenticateToken } from '../middleware/auth';
 import { authorize } from '../middleware/authorize';

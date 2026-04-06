@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+﻿import { Request, Response } from 'express';
 import { Knex } from 'knex';
 import { SupplierBuyerService } from '../services/supplierBuyerService';
 import { SupplierBuyerRepository } from '../repositories/supplierBuyerRepository';
@@ -51,7 +51,7 @@ export class SupplierBuyerController {
 
   async getSupplierBuyer(req: Request, res: Response): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params['id'] as string;
 
       const supplierBuyer = await this.supplierBuyerService.getSupplierBuyer(id);
 
@@ -89,7 +89,7 @@ export class SupplierBuyerController {
 
   async updateSupplierBuyer(req: Request, res: Response): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params['id'] as string;
       const data: UpdateSupplierBuyerDTO = req.body;
       const employeeId = (req as any).user?.id;
 
@@ -115,7 +115,7 @@ export class SupplierBuyerController {
 
   async deleteSupplierBuyer(req: Request, res: Response): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params['id'] as string;
       const employeeId = (req as any).user?.id;
 
       const supplierBuyer = await this.supplierBuyerService.getSupplierBuyer(id);
@@ -167,7 +167,7 @@ export class SupplierBuyerController {
 
   async logVisit(req: Request, res: Response): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params['id'] as string;
       const data: CreateVisitDTO = req.body;
       const employeeId = (req as any).user?.id;
 
@@ -196,7 +196,7 @@ export class SupplierBuyerController {
 
   async getVisitHistory(req: Request, res: Response): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params['id'] as string;
 
       const visitHistory = await this.supplierBuyerService.getVisitHistory(id);
 
@@ -213,7 +213,7 @@ export class SupplierBuyerController {
 
   async getRecentVisits(req: Request, res: Response): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params['id'] as string;
       const { limit } = req.query;
 
       const visits = await this.supplierBuyerService.getRecentVisits(id, limit ? parseInt(limit as string) : 10);
@@ -231,7 +231,7 @@ export class SupplierBuyerController {
 
   async getVisitsByDateRange(req: Request, res: Response): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params['id'] as string;
       const { startDate, endDate } = req.query;
 
       if (!startDate || !endDate) {
@@ -258,7 +258,7 @@ export class SupplierBuyerController {
 
   async getVisitCount(req: Request, res: Response): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params['id'] as string;
 
       const count = await this.supplierBuyerService.getVisitCount(id);
 

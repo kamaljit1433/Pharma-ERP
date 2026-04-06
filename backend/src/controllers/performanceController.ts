@@ -9,15 +9,6 @@ import { PerformanceReviewRepository } from '../repositories/performanceReviewRe
 import { FeedbackRepository } from '../repositories/feedbackRepository';
 import { PIPRepository } from '../repositories/pipRepository';
 import { ReviewCycleRepository } from '../repositories/reviewCycleRepository';
-import {
-  CreateGoalDTO,
-  UpdateGoalProgressDTO,
-  CreateReviewCycleDTO,
-  PerformanceReviewDTO,
-  CreateFeedbackDTO,
-  CreatePIPDTO,
-  RecordPIPOutcomeDTO,
-} from '../types/performance';
 
 export class PerformanceController {
   private goalService: GoalService;
@@ -26,17 +17,13 @@ export class PerformanceController {
   private pipService: PIPService;
   private reviewCycleRepository: ReviewCycleRepository;
 
-  constructor(private knex: Knex) {
-    const goalRepository = new GoalRepository(knex);
-    const reviewRepository = new PerformanceReviewRepository(knex);
-    const feedbackRepository = new FeedbackRepository(knex);
-    const pipRepository = new PIPRepository(knex);
+  constructor(knex: Knex) {
     this.reviewCycleRepository = new ReviewCycleRepository(knex);
 
-    this.goalService = new GoalService(goalRepository);
-    this.reviewService = new PerformanceReviewService(reviewRepository, goalRepository);
-    this.feedbackService = new FeedbackService(feedbackRepository);
-    this.pipService = new PIPService(pipRepository, goalRepository);
+    this.goalService = new GoalService(knex);
+    this.reviewService = new PerformanceReviewService(knex);
+    this.feedbackService = new FeedbackService(knex);
+    this.pipService = new PIPService(knex);
   }
 
   // ============ Goals ============
@@ -79,33 +66,45 @@ export class PerformanceController {
 
       res.status(201).json(goal);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
   async getGoal(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params['id'] as string;
+      if (!id) {
+        res.status(400).json({ error: 'Goal ID is required' });
+        return;
+      }
       const goal = await this.goalService.getGoal(id);
       res.json(goal);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
   async getEmployeeGoals(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { employeeId } = req.params;
+      const employeeId = req.params['employeeId'] as string;
+      if (!employeeId) {
+        res.status(400).json({ error: 'Employee ID is required' });
+        return;
+      }
       const goals = await this.goalService.getEmployeeGoals(employeeId);
       res.json(goals);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
   async updateGoalProgress(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params['id'] as string;
+      if (!id) {
+        res.status(400).json({ error: 'Goal ID is required' });
+        return;
+      }
       const { currentValue, comment } = req.body;
 
       if (currentValue === undefined) {
@@ -126,7 +125,7 @@ export class PerformanceController {
 
       res.json(goal);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -168,13 +167,13 @@ export class PerformanceController {
           selfReviewDeadline: selfDeadline,
           managerReviewDeadline: managerDeadline,
           peerReviewDeadline: peerDeadline,
-        },
-        (req as any).user.id
+          createdBy: (req as any).user.id,
+        }
       );
 
       res.status(201).json(cycle);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -209,27 +208,35 @@ export class PerformanceController {
 
       res.status(201).json(review);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
   async getReview(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params['id'] as string;
+      if (!id) {
+        res.status(400).json({ error: 'Review ID is required' });
+        return;
+      }
       const review = await this.reviewService.getReview(id);
       res.json(review);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
   async getEmployeeReviews(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { employeeId } = req.params;
+      const employeeId = req.params['employeeId'] as string;
+      if (!employeeId) {
+        res.status(400).json({ error: 'Employee ID is required' });
+        return;
+      }
       const reviews = await this.reviewService.getEmployeeReviews(employeeId);
       res.json(reviews);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -269,17 +276,21 @@ export class PerformanceController {
 
       res.status(201).json(feedback);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
   async getFeedback(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { employeeId } = req.params;
+      const employeeId = req.params['employeeId'] as string;
+      if (!employeeId) {
+        res.status(400).json({ error: 'Employee ID is required' });
+        return;
+      }
       const feedback = await this.feedbackService.getEmployeeFeedback(employeeId);
       res.json(feedback);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -315,33 +326,45 @@ export class PerformanceController {
 
       res.status(201).json(pip);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
   async getPIP(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params['id'] as string;
+      if (!id) {
+        res.status(400).json({ error: 'PIP ID is required' });
+        return;
+      }
       const pip = await this.pipService.getPIP(id);
       res.json(pip);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
   async getEmployeePIPs(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { employeeId } = req.params;
+      const employeeId = req.params['employeeId'] as string;
+      if (!employeeId) {
+        res.status(400).json({ error: 'Employee ID is required' });
+        return;
+      }
       const pips = await this.pipService.getEmployeePIPs(employeeId);
       res.json(pips);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
   async recordPIPCheckIn(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params['id'] as string;
+      if (!id) {
+        res.status(400).json({ error: 'PIP ID is required' });
+        return;
+      }
       const { checkInDate, progress, notes, status } = req.body;
 
       if (!checkInDate || !progress || !notes || !status) {
@@ -363,13 +386,17 @@ export class PerformanceController {
 
       res.json(checkIn);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
   async recordPIPOutcome(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params['id'] as string;
+      if (!id) {
+        res.status(400).json({ error: 'PIP ID is required' });
+        return;
+      }
       const { outcome } = req.body;
 
       if (!outcome) {
@@ -380,7 +407,7 @@ export class PerformanceController {
       const pip = await this.pipService.recordOutcome(id, outcome, (req as any).user.id);
       res.json(pip);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -398,7 +425,7 @@ export class PerformanceController {
 
       res.json(report);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 }

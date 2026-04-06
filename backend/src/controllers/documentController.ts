@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+﻿import { Request, Response } from 'express';
 import { Knex } from 'knex';
 import { DocumentService } from '../services/documentService';
 import { FileStorageService } from '../services/fileStorageService';
@@ -90,7 +90,7 @@ export class DocumentController {
    */
   async getDocument(req: Request, res: Response): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params['id'] as string;
       const requestedBy = (req as any).user?.id;
       const userRole = (req as any).user?.role;
 

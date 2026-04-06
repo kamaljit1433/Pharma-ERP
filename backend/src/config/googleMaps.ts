@@ -10,17 +10,17 @@ dotenv.config();
 
 export const googleMapsConfig = {
   // API Keys
-  apiKey: process.env.GOOGLE_MAPS_API_KEY || '',
-  distanceMatrixApiKey: process.env.GOOGLE_MAPS_DISTANCE_MATRIX_API_KEY || '',
+  apiKey: process.env['GOOGLE_MAPS_API_KEY'] || '',
+  distanceMatrixApiKey: process.env['GOOGLE_MAPS_DISTANCE_MATRIX_API_KEY'] || '',
 
   // Feature Flags
-  enabled: process.env.GOOGLE_MAPS_ENABLED === 'true',
-  geoTrackingEnabled: process.env.GEO_TRACKING_ENABLED === 'true',
+  enabled: process.env['GOOGLE_MAPS_ENABLED'] === 'true',
+  geoTrackingEnabled: process.env['GEO_TRACKING_ENABLED'] === 'true',
 
   // Travel Allowance Configuration
   travelAllowance: {
-    rate: parseFloat(process.env.TRAVEL_ALLOWANCE_RATE || '5'),
-    unit: process.env.TRAVEL_ALLOWANCE_UNIT || 'per_km', // per_km or per_mile
+    rate: parseFloat(process.env['TRAVEL_ALLOWANCE_RATE'] || '5'),
+    unit: process.env['TRAVEL_ALLOWANCE_UNIT'] || 'per_km', // per_km or per_mile
   },
 
   // API Endpoints

@@ -1,16 +1,19 @@
 import { Knex } from 'knex';
-import { Resignation, CreateResignationDTO, UpdateResignationDTO } from '../types/separation';
-import { v4 as uuidv4 } from 'uuid';
+import {
+  Resignation,
+  CreateResignationDTO,
+  UpdateResignationDTO,
+} from '../types/separation';
 
 export class ResignationRepository {
-  constructor(private db: Knex) {}
+  constructor(private knex: Knex) {}
 
-  async createResignation(employeeId: string, data: CreateResignationDTO): Promise<Resignation> {
-    const id = uuidv4();
-
-    const [resignation] = await this.db('resignations')
+  async createResignation(
+    employeeId: string,
+    data: CreateResignationDTO
+  ): Promise<Resignation> {
+    const [resignation] = await this.knex('resignations')
       .insert({
-        id,
         employee_id: employeeId,
         resignation_date: data.resignation_date,
         last_working_day: data.last_working_day,
@@ -19,87 +22,145 @@ export class ResignationRepository {
       })
       .returning('*');
 
-    return resignation;
+    return this.mapToResignation(resignation);
   }
 
-  async getResignation(id: string): Promise<Resignation | null> {
-    return this.db('resignations').where('id', id).first();
+  async getResignationById(id: string): Promise<Resignation | null> {
+    const resignation = await this.knex('resignations')
+      .where({ id })
+      .first();
+
+    return resignation ? this.mapToResignation(resignation) : null;
   }
 
-  async getResignationByEmployeeId(employeeId: string): Promise<Resignation | null> {
-    return this.db('resignations')
-      .where('employee_id', employeeId)
+  async getResignationByEmployeeId(
+    employeeId: string
+  ): Promise<Resignation | null> {
+    const resignation = await this.knex('resignations')
+      .where({ employee_id: employeeId })
       .orderBy('created_at', 'desc')
       .first();
+
+    return resignation ? this.mapToResignation(resignation) : null;
   }
 
-  async updateResignation(id: string, data: UpdateResignationDTO): Promise<Resignation> {
-    const [resignation] = await this.db('resignations')
-      .where('id', id)
-      .update({
-        ...data,
-        updated_at: this.db.fn.now(),
-      })
+  async getResignationsByStatus(
+    status: 'pending' | 'accepted' | 'rejected' | 'withdrawn'
+  ): Promise<Resignation[]> {
+    const resignations = await this.knex('resignations')
+      .where({ status })
+      .orderBy('created_at', 'desc');
+
+    return resignations.map((r) => this.mapToResignation(r));
+  }
+
+  async getPendingResignations(): Promise<Resignation[]> {
+    const resignations = await this.knex('resignations')
+      .where({ status: 'pending' })
+      .orderBy('resignation_date', 'asc');
+
+    return resignations.map((r) => this.mapToResignation(r));
+  }
+
+  async updateResignation(
+    id: string,
+    data: UpdateResignationDTO
+  ): Promise<Resignation> {
+    const updateData: any = {
+      updated_at: this.knex.fn.now(),
+    };
+
+    if (data.status !== undefined) {
+      updateData.status = data.status;
+    }
+    if (data.last_working_day !== undefined) {
+      updateData.last_working_day = data.last_working_day;
+    }
+    if (data.reason !== undefined) {
+      updateData.reason = data.reason;
+    }
+
+    const [updated] = await this.knex('resignations')
+      .where({ id })
+      .update(updateData)
       .returning('*');
 
-    return resignation;
+    return this.mapToResignation(updated);
   }
 
-  async acceptResignation(id: string, acceptedBy: string): Promise<Resignation> {
-    const [resignation] = await this.db('resignations')
-      .where('id', id)
+  async acceptResignation(
+    id: string,
+    acceptedBy: string
+  ): Promise<Resignation> {
+    const [updated] = await this.knex('resignations')
+      .where({ id })
       .update({
         status: 'accepted',
         accepted_by: acceptedBy,
-        accepted_at: this.db.fn.now(),
-        updated_at: this.db.fn.now(),
+        accepted_at: this.knex.fn.now(),
+        updated_at: this.knex.fn.now(),
       })
       .returning('*');
 
-    return resignation;
+    return this.mapToResignation(updated);
   }
 
   async rejectResignation(id: string): Promise<Resignation> {
-    const [resignation] = await this.db('resignations')
-      .where('id', id)
+    const [updated] = await this.knex('resignations')
+      .where({ id })
       .update({
         status: 'rejected',
-        updated_at: this.db.fn.now(),
+        updated_at: this.knex.fn.now(),
       })
       .returning('*');
 
-    return resignation;
+    return this.mapToResignation(updated);
   }
 
   async withdrawResignation(id: string): Promise<Resignation> {
-    const [resignation] = await this.db('resignations')
-      .where('id', id)
+    const [updated] = await this.knex('resignations')
+      .where({ id })
       .update({
         status: 'withdrawn',
-        updated_at: this.db.fn.now(),
+        updated_at: this.knex.fn.now(),
       })
       .returning('*');
 
-    return resignation;
+    return this.mapToResignation(updated);
   }
 
-  async getResignationsByStatus(status: string): Promise<Resignation[]> {
-    return this.db('resignations')
-      .where('status', status)
-      .orderBy('created_at', 'desc');
+  async getResignationsWithinNoticePeriod(
+    noticePeriodDays: number
+  ): Promise<Resignation[]> {
+    const today = new Date();
+    const cutoffDate = new Date(today.getTime() + noticePeriodDays * 24 * 60 * 60 * 1000);
+
+    const resignations = await this.knex('resignations')
+      .where({ status: 'accepted' })
+      .whereBetween('last_working_day', [today, cutoffDate])
+      .orderBy('last_working_day', 'asc');
+
+    return resignations.map((r) => this.mapToResignation(r));
   }
 
-  async getAllResignations(limit: number = 50, offset: number = 0): Promise<Resignation[]> {
-    return this.db('resignations')
-      .limit(limit)
-      .offset(offset)
-      .orderBy('created_at', 'desc');
-  }
+  private mapToResignation(row: any): Resignation {
+    const result: Resignation = {
+      id: row.id,
+      employee_id: row.employee_id,
+      resignation_date: new Date(row.resignation_date),
+      last_working_day: new Date(row.last_working_day),
+      status: row.status,
+      created_at: new Date(row.created_at),
+      updated_at: new Date(row.updated_at),
+    };
 
-  async getResignationCount(): Promise<number> {
-    const result = await this.db('resignations')
-      .count('id as count')
-      .first();
-    return Number(result?.['count'] || 0);
+    if (row.reason) result.reason = row.reason;
+    if (row.accepted_by) result.accepted_by = row.accepted_by;
+    if (row.accepted_at) result.accepted_at = new Date(row.accepted_at);
+    if (row.notice_period_days) result.notice_period_days = row.notice_period_days;
+    if (row.notice_period_end_date) result.notice_period_end_date = new Date(row.notice_period_end_date);
+    if (row.notice_period_status) result.notice_period_status = row.notice_period_status;
+
+    return result;
   }
 }

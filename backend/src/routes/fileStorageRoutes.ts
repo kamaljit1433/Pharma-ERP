@@ -1,7 +1,7 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import fileStorageController from '../controllers/fileStorageController';
 import { uploadSingle, uploadMultiple, uploadNone } from '../middleware/fileUpload';
-import { authenticateToken } from '../middleware/auth';
+import { authenticateToken, requireRole } from '../middleware/auth';
 import { 
   canAccessFile, 
   canUploadFile, 
@@ -165,7 +165,7 @@ router.post('/multipart/abort', uploadNone(), fileStorageController.abortMultipa
  *   dryRun?: boolean
  * }
  */
-router.post('/cleanup', uploadNone(), fileStorageController.cleanupFiles);
+router.post('/cleanup', uploadNone(), requireRole(['super_admin', 'hr_manager']) as any, fileStorageController.cleanupFiles);
 
 /**
  * @route DELETE /api/v1/files/bulk
@@ -175,7 +175,7 @@ router.post('/cleanup', uploadNone(), fileStorageController.cleanupFiles);
  *   keys: string[] (array of file keys)
  * }
  */
-router.delete('/bulk', uploadNone(), fileStorageController.deleteFiles);
+router.delete('/bulk', uploadNone(), requireRole(['super_admin']) as any, fileStorageController.deleteFiles);
 
 /**
  * @route POST /api/v1/files/cleanup/multipart
@@ -185,7 +185,7 @@ router.delete('/bulk', uploadNone(), fileStorageController.deleteFiles);
  *   olderThanHours?: number (default 24, max 168)
  * }
  */
-router.post('/cleanup/multipart', uploadNone(), fileStorageController.cleanupMultipartUploads);
+router.post('/cleanup/multipart', uploadNone(), requireRole(['super_admin']) as any, fileStorageController.cleanupMultipartUploads);
 
 /**
  * @route POST /api/v1/files/cleanup/orphaned
@@ -195,6 +195,6 @@ router.post('/cleanup/multipart', uploadNone(), fileStorageController.cleanupMul
  *   dryRun?: boolean (default true)
  * }
  */
-router.post('/cleanup/orphaned', uploadNone(), fileStorageController.cleanupOrphanedFiles);
+router.post('/cleanup/orphaned', uploadNone(), requireRole(['super_admin']) as any, fileStorageController.cleanupOrphanedFiles);
 
 export default router;

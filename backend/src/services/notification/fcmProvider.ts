@@ -44,7 +44,7 @@ export class FCMProvider implements NotificationProvider {
         if (resp.success) {
           messageIds.push(resp.messageId || '');
         } else {
-          logger.warn(`Failed to send notification to device ${deviceTokens[index]}:`, resp.error?.message);
+          logger.warn(`Failed to send notification to device ${deviceTokens[index]}: ${resp.error?.message || 'Unknown error'}`);
         }
       });
 

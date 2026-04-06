@@ -2,11 +2,16 @@ import { PIPRepository } from '../repositories/pipRepository';
 import { GoalRepository } from '../repositories/goalRepository';
 import { PIP, CreatePIPDTO, CreatePIPCheckInDTO } from '../types/performance';
 
+import { Knex } from 'knex';
+
 export class PIPService {
-  constructor(
-    private pipRepository: PIPRepository,
-    private goalRepository: GoalRepository
-  ) {}
+  private pipRepository: PIPRepository;
+  private goalRepository: GoalRepository;
+
+  constructor(private knex: Knex) {
+    this.pipRepository = new PIPRepository(knex);
+    this.goalRepository = new GoalRepository(knex);
+  }
 
   async initiatePIP(
     data: CreatePIPDTO,
@@ -84,7 +89,8 @@ export class PIPService {
 
   async recordOutcome(
     pipId: string,
-    outcome: 'Completed' | 'Extended' | 'Escalated'
+    outcome: 'Completed' | 'Extended' | 'Escalated',
+    userId: string
   ): Promise<PIP> {
     const pip = await this.getPIP(pipId);
 
@@ -92,7 +98,7 @@ export class PIPService {
       throw new Error('Can only record outcome for active PIPs');
     }
 
-    const newStatus = outcome === 'Completed' ? 'Completed' : 'Active';
+    const newStatus = outcome === 'Extended' ? 'Active' : 'Completed';
     await this.pipRepository.updatePIPStatus(pipId, newStatus, outcome);
     
     return this.getPIP(pipId);

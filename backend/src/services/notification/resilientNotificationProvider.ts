@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Resilient Notification Provider
  * 
  * Wraps notification provider calls with retry and circuit breaker patterns
@@ -12,7 +12,7 @@ import logger from '../../utils/logger';
 export class ResilientNotificationProvider implements NotificationProvider {
   constructor(private provider: NotificationProvider) {}
 
-  async sendToDevice(deviceToken: string, payload: PushNotificationPayload): Promise<void> {
+  async sendToDevice(deviceToken: string, payload: PushNotificationPayload): Promise<any> {
     const resilience = getResilienceWrapper('notification-service');
 
     try {
@@ -31,7 +31,7 @@ export class ResilientNotificationProvider implements NotificationProvider {
   async sendToMultipleDevices(
     deviceTokens: string[],
     payload: PushNotificationPayload
-  ): Promise<void> {
+  ): Promise<any> {
     const resilience = getResilienceWrapper('notification-service');
 
     try {
@@ -47,7 +47,7 @@ export class ResilientNotificationProvider implements NotificationProvider {
     }
   }
 
-  async sendToTopic(topic: string, payload: PushNotificationPayload): Promise<void> {
+  async sendToTopic(topic: string, payload: PushNotificationPayload): Promise<any> {
     const resilience = getResilienceWrapper('notification-service');
 
     try {
@@ -60,7 +60,7 @@ export class ResilientNotificationProvider implements NotificationProvider {
     }
   }
 
-  async subscribeToTopic(deviceTokens: string[], topic: string): Promise<void> {
+  async subscribeToTopic(deviceTokens: string[], topic: string): Promise<any> {
     const resilience = getResilienceWrapper('notification-service');
 
     try {
@@ -76,7 +76,7 @@ export class ResilientNotificationProvider implements NotificationProvider {
     }
   }
 
-  async unsubscribeFromTopic(deviceTokens: string[], topic: string): Promise<void> {
+  async unsubscribeFromTopic(deviceTokens: string[], topic: string): Promise<any> {
     const resilience = getResilienceWrapper('notification-service');
 
     try {

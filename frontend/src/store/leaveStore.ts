@@ -39,6 +39,8 @@ interface LeaveState {
   // Leave Requests
   leaves: Leave[];
   loadingLeaves: boolean;
+  fetchLeaves: (filters?: any) => Promise<void>;
+  fetchPendingLeaves: () => Promise<void>;
   applyLeave: (data: any) => Promise<void>;
   approveLeave: (id: string) => Promise<void>;
   rejectLeave: (id: string, reason: string) => Promise<void>;
@@ -176,6 +178,28 @@ export const useLeaveStore = create<LeaveState>()(
       // Leave Requests
       leaves: [],
       loadingLeaves: false,
+      fetchLeaves: async (filters) => {
+        set({ loadingLeaves: true, error: null });
+        try {
+          const data = await leaveService.getLeaves(filters);
+          set({ leaves: data });
+        } catch (error) {
+          set({ error: (error as Error).message });
+        } finally {
+          set({ loadingLeaves: false });
+        }
+      },
+      fetchPendingLeaves: async () => {
+        set({ loadingLeaves: true, error: null });
+        try {
+          const data = await leaveService.getPendingLeaves();
+          set({ leaves: data });
+        } catch (error) {
+          set({ error: (error as Error).message });
+        } finally {
+          set({ loadingLeaves: false });
+        }
+      },
       applyLeave: async (data) => {
         set({ error: null });
         try {
@@ -188,6 +212,9 @@ export const useLeaveStore = create<LeaveState>()(
         set({ error: null });
         try {
           await leaveService.approveLeave(id);
+          // Refresh leaves after approval
+          const data = await leaveService.getLeaves();
+          set({ leaves: data });
         } catch (error) {
           set({ error: (error as Error).message });
         }
@@ -196,6 +223,9 @@ export const useLeaveStore = create<LeaveState>()(
         set({ error: null });
         try {
           await leaveService.rejectLeave(id, reason);
+          // Refresh leaves after rejection
+          const data = await leaveService.getLeaves();
+          set({ leaves: data });
         } catch (error) {
           set({ error: (error as Error).message });
         }

@@ -8,7 +8,7 @@ export class TrainingProgramRepository {
   async createTrainingProgram(data: CreateTrainingProgramDTO): Promise<TrainingProgram> {
     const id = uuidv4();
 
-    const [program] = await this.db('training_programs')
+    const result = await this.db('training_programs')
       .insert({
         id,
         name: data.name,
@@ -22,7 +22,11 @@ export class TrainingProgramRepository {
       })
       .returning('*');
 
-    return this.mapToTrainingProgram(program);
+    if (!result[0]) {
+      throw new Error('Failed to create training program');
+    }
+
+    return this.mapToTrainingProgram(result[0]);
   }
 
   async getTrainingProgramById(id: string): Promise<TrainingProgram | null> {
@@ -50,7 +54,7 @@ export class TrainingProgramRepository {
   }
 
   async updateTrainingProgram(id: string, data: UpdateTrainingProgramDTO): Promise<TrainingProgram> {
-    const [program] = await this.db('training_programs')
+    const result = await this.db('training_programs')
       .where('id', id)
       .update({
         ...data,
@@ -58,7 +62,11 @@ export class TrainingProgramRepository {
       })
       .returning('*');
 
-    return this.mapToTrainingProgram(program);
+    if (!result[0]) {
+      throw new Error('Training program not found or update failed');
+    }
+
+    return this.mapToTrainingProgram(result[0]);
   }
 
   async deleteTrainingProgram(id: string): Promise<void> {

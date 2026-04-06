@@ -219,7 +219,7 @@ export class InsuranceService {
         if (!enrollmentEffectiveTo || enrollmentEffectiveTo >= targetDate) {
           const plan = await this.insurancePlanRepository.getInsurancePlanById(enrollment.insurance_plan_id);
           if (plan) {
-            totalPremium += plan.premium_amount;
+            totalPremium += plan.premium_amount || 0;
           }
         }
       }

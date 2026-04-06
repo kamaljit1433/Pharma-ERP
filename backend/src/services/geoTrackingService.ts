@@ -34,42 +34,28 @@ interface GeoFence {
   radiusMeters: number;
 }
 
-class GeoTrackingService {
-  private googleMapsApiKey: string;
+export class GeoTrackingService {
+  // googleMapsApiKey will be added as a method param when Google Maps distance-matrix
+  // or routing APIs are integrated. It is not used yet so it is not stored as a field.
 
-  constructor(googleMapsApiKey?: string) {
-    this.googleMapsApiKey = googleMapsApiKey || process.env.GOOGLE_MAPS_API_KEY || '';
+  constructor(_googleMapsApiKey?: string) {
+    // key reserved for future use
   }
 
   /**
-   * Capture current GPS location
+   * captureLocation() — NOT available on the backend.
+   *
+   * navigator.geolocation is a browser-only Web API. It does not exist in Node.js
+   * and will always throw a ReferenceError at runtime.
+   *
+   * Location capture MUST happen on the client (frontend / mobile app).
+   * The client should send the coordinates to the backend via the request body.
    */
-  async captureLocation(): Promise<GeoLocation> {
-    return new Promise((resolve, reject) => {
-      if (!navigator.geolocation) {
-        reject(new Error('Geolocation is not supported by this browser'));
-        return;
-      }
-
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          resolve({
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-            accuracy: position.coords.accuracy,
-            timestamp: new Date(),
-          });
-        },
-        (error) => {
-          reject(new Error(`Geolocation error: ${error.message}`));
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0,
-        }
-      );
-    });
+  captureLocation(): never {
+    throw new Error(
+      'captureLocation() is not supported on the backend. ' +
+      'Capture GPS coordinates on the client and send them in the request body.'
+    );
   }
 
   /**
@@ -108,7 +94,8 @@ class GeoTrackingService {
 
     let totalDistance = 0;
     for (let i = 1; i < waypoints.length; i++) {
-      totalDistance += this.calculateDistance(waypoints[i - 1], waypoints[i]);
+      // Loop bounds guarantee both indices are in range; non-null assertions are safe
+      totalDistance += this.calculateDistance(waypoints[i - 1]!, waypoints[i]!);
     }
 
     return totalDistance;
@@ -136,8 +123,9 @@ class GeoTrackingService {
 
     // Check for unusual distances and impossible speeds
     for (let i = 1; i < waypoints.length; i++) {
-      const prevPoint = waypoints[i - 1];
-      const currentPoint = waypoints[i];
+      // Loop bounds guarantee both indices are in range; assertions are safe
+      const prevPoint = waypoints[i - 1] as GeoLocation;
+      const currentPoint = waypoints[i] as GeoLocation;
 
       const distance = this.calculateDistance(prevPoint, currentPoint);
       const timeDiffSeconds =

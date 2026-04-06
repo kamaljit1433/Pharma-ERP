@@ -13,6 +13,11 @@ export interface Resignation {
   status: 'pending' | 'accepted' | 'rejected' | 'withdrawn';
   accepted_by?: string;
   accepted_at?: Date;
+  notice_period_days?: number;
+  notice_period_end_date?: Date;
+  notice_period_status?: 'pending' | 'served' | 'early_exit' | 'buyout';
+  notice_period_served_days?: number;
+  notice_period_remaining_days?: number;
   created_at: Date;
   updated_at: Date;
 }

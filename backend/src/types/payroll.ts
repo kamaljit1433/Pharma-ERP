@@ -118,6 +118,9 @@ export interface AdvanceSalaryRequest {
   approved_by?: string;
   approval_notes?: string;
   approved_at?: Date;
+  rejected_by?: string;
+  rejection_notes?: string;
+  rejected_at?: Date;
   deduction_months: number;
   created_at: Date;
   updated_at: Date;

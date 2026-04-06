@@ -14,7 +14,7 @@ import { CalendarDays, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export const Leave: React.FC = () => {
   const { user } = useAuth();
-  const { error, clearError, leaves, leaveBalances, loadingBalances, fetchLeaveBalance } = useLeaveStore();
+  const { error, clearError, leaves, leaveBalances, loadingBalances, fetchLeaveBalance, fetchLeaves } = useLeaveStore();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -27,12 +27,13 @@ export const Leave: React.FC = () => {
     }
   }, [error, toast, clearError]);
 
-  // Fetch leave balance on mount
+  // Fetch leave balance and leaves on mount
   useEffect(() => {
     if (user?.employeeId) {
       fetchLeaveBalance(user.employeeId, new Date().getFullYear());
+      fetchLeaves({ employeeId: user.employeeId });
     }
-  }, [user?.employeeId, fetchLeaveBalance]);
+  }, [user?.employeeId, fetchLeaveBalance, fetchLeaves]);
 
   if (!user) {
     return null;

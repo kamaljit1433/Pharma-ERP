@@ -3,6 +3,7 @@ import { AuthRepository } from '../repositories/authRepository';
 import { hashPassword, comparePassword, validatePasswordStrength } from '../utils/password';
 import { generateTokenPair, verifyRefreshToken } from '../utils/jwt';
 import { generateMFASecret, verifyMFAToken, hashBackupCode } from '../utils/mfa';
+import { isValidEmail } from '../utils/validation';
 import {
   User,
   AuthTokens,
@@ -28,6 +29,11 @@ export class AuthService {
     const passwordValidation = validatePasswordStrength(data.password);
     if (!passwordValidation.valid) {
       throw new Error(`Password validation failed: ${passwordValidation.errors.join(', ')}`);
+    }
+
+    // Validate email format
+    if (!isValidEmail(data.email)) {
+      throw new Error('Invalid email format');
     }
 
     // Check if user already exists

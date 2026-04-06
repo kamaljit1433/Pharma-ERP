@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+﻿import { Router, Request, Response } from 'express';
 import { Knex } from 'knex';
 import { DocumentController } from '../controllers/documentController';
 import { authenticateToken } from '../middleware/auth';

@@ -23,7 +23,7 @@ export class PFService {
     }
 
     // Generate PF account number (format: PF + timestamp + random)
-    const pfAccountNumber = `PF${Date.now()}${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+    const pfAccountNumber = `PF${Date.now()}${Math.random().toString(36).substring(2, 11).toUpperCase()}`;
 
     return this.pfRepository.createPFAccount(employeeId, pfAccountNumber);
   }
@@ -41,6 +41,10 @@ export class PFService {
     employeeContributionRate: number = 12,
     employerContributionRate: number = 12
   ): Promise<PFContribution> {
+    if (!basicSalary || basicSalary <= 0) {
+      throw new Error('Valid basic_salary is required to calculate PF contribution');
+    }
+
     // Check if contribution already exists for this month
     const existingContribution = await this.pfRepository.getPFContribution(employeeId, month, year);
     if (existingContribution) {

@@ -82,6 +82,6 @@ export class InterviewRepository {
     return this.knex('interviews')
       .where('scheduled_at', '>=', startDate)
       .where('scheduled_at', '<=', endDate)
-      .where({ status: 'Scheduled' });
+      .where({ status: 'scheduled' });
   }
 }

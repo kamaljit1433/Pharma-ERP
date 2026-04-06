@@ -99,18 +99,24 @@ export class AdvanceSalaryRepository {
   }
 
   private mapToAdvanceRequest(row: any): AdvanceSalaryRequest {
-    return {
+    const result: AdvanceSalaryRequest = {
       id: row.id,
       employee_id: row.employee_id,
       amount: parseFloat(row.amount),
-      reason: row.reason,
       status: row.status,
-      approved_by: row.approved_by,
-      approval_notes: row.approval_notes,
-      approved_at: row.approved_at ? new Date(row.approved_at) : undefined,
       deduction_months: row.deduction_months,
       created_at: new Date(row.created_at),
       updated_at: new Date(row.updated_at),
     };
+
+    if (row.reason) result.reason = row.reason;
+    if (row.approved_by) result.approved_by = row.approved_by;
+    if (row.approval_notes) result.approval_notes = row.approval_notes;
+    if (row.approved_at) result.approved_at = new Date(row.approved_at);
+    if (row.rejected_by) result.rejected_by = row.rejected_by;
+    if (row.rejection_notes) result.rejection_notes = row.rejection_notes;
+    if (row.rejected_at) result.rejected_at = new Date(row.rejected_at);
+
+    return result;
   }
 }

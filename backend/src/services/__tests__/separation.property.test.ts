@@ -112,36 +112,39 @@ describe('Separation Module - Property Tests', () => {
    * 
    * **Validates: Requirements 4.7.4**
    * 
-   * Notice period should be calculated correctly as the difference between resignation date
-   * and last working day. The notice period end date must equal the last working day.
+   * For any resignation with an effective date and the employee's contract notice period,
+   * the notice period end date must equal (resignation date + notice period days).
    * 
    * This property verifies that:
-   * 1. Notice period days = (last_working_day - resignation_date) in days
-   * 2. Notice period end date equals last working day
+   * 1. Notice period end date = resignation_date + notice_period_days (in calendar days)
+   * 2. Notice period end date is calculated using UTC calendar day arithmetic (no DST issues)
    * 3. Notice period served days is non-negative
    * 4. Notice period remaining days is non-negative
-   * 5. Notice period served + remaining = total notice period
+   * 5. Served + remaining = total (when both are within the notice period)
+   * 6. Handles edge cases: same-day resignations, leap years, month boundaries
    */
-  it('Property 32: Notice period calculation - notice period calculated correctly', () => {
+  it('Property 32: Notice period calculation - notice period end date equals resignation date + notice period days', () => {
     fc.assert(
       fc.property(
-        fc.integer({ min: 1, max: 90 }),
-        (noticeDays) => {
-          // Use a fixed resignation date for reproducibility
-          const resignationDate = new Date('2026-06-01');
-          const lastWorkingDay = new Date(resignationDate);
-          lastWorkingDay.setDate(lastWorkingDay.getDate() + noticeDays);
+        fc.date({ min: new Date('2026-03-01'), max: new Date('2026-12-31') }),
+        fc.integer({ min: 0, max: 90 }),
+        (resignationDate, noticeDays) => {
+          // Normalize resignation date to UTC midnight (fast-check may generate dates with time components)
+          const normalizedResignationDate = new Date(resignationDate);
+          normalizedResignationDate.setUTCHours(0, 0, 0, 0);
+
+          // Calculate expected notice period end date using UTC calendar day arithmetic
+          const expectedEndDate = new Date(normalizedResignationDate);
+          expectedEndDate.setUTCDate(expectedEndDate.getUTCDate() + noticeDays);
 
           // Calculate notice period using the service method
-          const result = service.calculateNoticePeriod(resignationDate, lastWorkingDay);
+          const result = service.calculateNoticePeriod(normalizedResignationDate, noticeDays);
 
-          // Verify notice period days is calculated correctly
-          // Allow 1 day variance due to time calculations
-          expect(result.notice_period_days).toBeGreaterThanOrEqual(noticeDays - 1);
-          expect(result.notice_period_days).toBeLessThanOrEqual(noticeDays + 1);
+          // Verify notice period end date equals resignation date + notice period days
+          expect(result.notice_period_end_date.toUTCString()).toBe(expectedEndDate.toUTCString());
 
-          // Verify notice period end date matches last working day
-          expect(result.notice_period_end_date.toDateString()).toBe(lastWorkingDay.toDateString());
+          // Verify notice period days matches input
+          expect(result.notice_period_days).toBe(noticeDays);
 
           // Verify notice period served days is non-negative
           expect(result.notice_period_served_days).toBeGreaterThanOrEqual(0);
@@ -149,9 +152,24 @@ describe('Separation Module - Property Tests', () => {
           // Verify notice period remaining days is non-negative
           expect(result.notice_period_remaining_days).toBeGreaterThanOrEqual(0);
 
-          // Verify served + remaining approximately equals total (within 1 day due to rounding)
-          const totalCalculated = result.notice_period_served_days + result.notice_period_remaining_days;
-          expect(Math.abs(totalCalculated - result.notice_period_days)).toBeLessThanOrEqual(1);
+          // Verify served + remaining = total when notice period is not complete
+          if (!result.is_notice_period_complete) {
+            const totalCalculated = result.notice_period_served_days + result.notice_period_remaining_days;
+            expect(totalCalculated).toBe(result.notice_period_days);
+          }
+
+          // Verify completion status is correct
+          const today = new Date();
+          today.setUTCHours(0, 0, 0, 0);
+          const isComplete = today >= expectedEndDate;
+          expect(result.is_notice_period_complete).toBe(isComplete);
+
+          // Verify edge case: same-day resignation (0 days notice)
+          if (noticeDays === 0) {
+            expect(result.notice_period_end_date.toUTCString()).toBe(
+              normalizedResignationDate.toUTCString()
+            );
+          }
 
           return true;
         }

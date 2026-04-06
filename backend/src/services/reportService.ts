@@ -15,6 +15,7 @@ export class ReportService {
 
   async generateEmployeeReport(filter: ReportFilter, userId: string): Promise<ReportData> {
     let query = this.knex('employees')
+      .distinct()
       .select(
         'employees.id as employeeId',
         'employees.first_name as firstName',
@@ -57,7 +58,7 @@ export class ReportService {
     const offset = filter.offset || 0;
 
     const totalResult = await query.clone().count('* as count').first();
-    const totalRows = totalResult?.count || 0;
+    const totalRows = Number(totalResult?.['count'] || 0);
 
     const rows = await query
       .orderBy('employees.created_at', 'desc')
@@ -109,7 +110,7 @@ export class ReportService {
     const offset = filter.offset || 0;
 
     const totalResult = await query.clone().count('* as count').first();
-    const totalRows = totalResult?.count || 0;
+    const totalRows = Number(totalResult?.['count'] || 0);
 
     const rows = await query
       .orderBy('attendance.attendance_date', 'desc')
@@ -168,7 +169,7 @@ export class ReportService {
     const offset = filter.offset || 0;
 
     const totalResult = await query.clone().count('* as count').first();
-    const totalRows = totalResult?.count || 0;
+    const totalRows = Number(totalResult?.['count'] || 0);
 
     const rows = await query
       .orderBy('leaves.created_at', 'desc')
@@ -226,7 +227,7 @@ export class ReportService {
     const offset = filter.offset || 0;
 
     const totalResult = await query.clone().count('* as count').first();
-    const totalRows = totalResult?.count || 0;
+    const totalRows = Number(totalResult?.['count'] || 0);
 
     const rows = await query
       .orderBy('payroll.year', 'desc')
@@ -284,7 +285,7 @@ export class ReportService {
     const offset = filter.offset || 0;
 
     const totalResult = await query.clone().count('* as count').first();
-    const totalRows = totalResult?.count || 0;
+    const totalRows = Number(totalResult?.['count'] || 0);
 
     const rows = await query
       .orderBy('performance_reviews.created_at', 'desc')
@@ -340,7 +341,7 @@ export class ReportService {
     const offset = filter.offset || 0;
 
     const totalResult = await query.clone().count('* as count').first();
-    const totalRows = totalResult?.count || 0;
+    const totalRows = Number(totalResult?.['count'] || 0);
 
     const rows = await query
       .orderBy('training_enrollments.enrollment_date', 'desc')
@@ -361,7 +362,7 @@ export class ReportService {
       return '';
     }
 
-    const headers = Object.keys(reportData.rows[0]);
+    const headers = Object.keys(reportData.rows[0] as object);
     const csvHeaders = headers.join(',');
 
     const csvRows = reportData.rows.map((row: any) => {
@@ -371,10 +372,16 @@ export class ReportService {
           if (value === null || value === undefined) {
             return '';
           }
-          if (typeof value === 'string' && value.includes(',')) {
-            return `"${value}"`;
+          let strValue = String(value);
+          // Prevent CSV injection: prefix formula-triggering chars with a single quote
+          if (/^[=+\-@\t\r]/.test(strValue)) {
+            strValue = `'${strValue}`;
           }
-          return value;
+          // Escape quotes and wrap in quotes if value contains commas, quotes, or newlines
+          if (strValue.includes(',') || strValue.includes('"') || strValue.includes('\n') || strValue.includes('\r')) {
+            strValue = `"${strValue.replace(/"/g, '""').replace(/\r?\n/g, ' ')}"`;
+          }
+          return strValue;
         })
         .join(',');
     });

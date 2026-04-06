@@ -57,6 +57,24 @@ export class FileStorageController {
         return;
       }
 
+      // Parse metadata safely
+      let parsedMetadata = metadata;
+      if (typeof metadata === 'string') {
+        try {
+          parsedMetadata = JSON.parse(metadata);
+        } catch {
+          res.status(400).json({
+            error: {
+              code: 'INVALID_METADATA',
+              message: 'metadata must be valid JSON',
+              timestamp: new Date().toISOString(),
+              requestId: req.headers['x-request-id'] || 'unknown',
+            },
+          });
+          return;
+        }
+      }
+
       // Upload file
       const result = await fileStorageService.uploadFile(
         req.file.buffer,
@@ -65,7 +83,7 @@ export class FileStorageController {
           employeeId,
           category,
           isPublic: Boolean(isPublic),
-          metadata: typeof metadata === 'string' ? JSON.parse(metadata) : metadata,
+          metadata: parsedMetadata,
         }
       );
 
@@ -75,7 +93,7 @@ export class FileStorageController {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -138,12 +156,30 @@ export class FileStorageController {
         originalName: file.originalname,
       }));
 
+      // Parse metadata safely
+      let parsedMetadata = metadata;
+      if (typeof metadata === 'string') {
+        try {
+          parsedMetadata = JSON.parse(metadata);
+        } catch {
+          res.status(400).json({
+            error: {
+              code: 'INVALID_METADATA',
+              message: 'metadata must be valid JSON',
+              timestamp: new Date().toISOString(),
+              requestId: req.headers['x-request-id'] || 'unknown',
+            },
+          });
+          return;
+        }
+      }
+
       // Upload files
       const results = await fileStorageService.uploadFiles(files, {
         employeeId,
         category,
         isPublic: Boolean(isPublic),
-        metadata: typeof metadata === 'string' ? JSON.parse(metadata) : metadata,
+        metadata: parsedMetadata,
       });
 
       res.status(201).json({
@@ -152,7 +188,7 @@ export class FileStorageController {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -161,7 +197,7 @@ export class FileStorageController {
    */
   async downloadFile(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { key } = req.params;
+      const key = req.params['key'] as string;
       const user = (req as any).user;
 
       if (!key) {
@@ -201,7 +237,7 @@ export class FileStorageController {
 
       res.send(fileBuffer);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -210,7 +246,7 @@ export class FileStorageController {
    */
   async deleteFile(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { key } = req.params;
+      const key = req.params['key'] as string;
       const user = (req as any).user;
 
       if (!key) {
@@ -248,7 +284,7 @@ export class FileStorageController {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -257,7 +293,7 @@ export class FileStorageController {
    */
   async getSignedUrl(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { key } = req.params;
+      const key = req.params['key'] as string;
       const { operation = 'getObject', expiresIn } = req.query;
       const user = (req as any).user;
 
@@ -322,7 +358,7 @@ export class FileStorageController {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -360,7 +396,7 @@ export class FileStorageController {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -416,7 +452,7 @@ export class FileStorageController {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -463,7 +499,7 @@ export class FileStorageController {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -495,7 +531,7 @@ export class FileStorageController {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -537,7 +573,7 @@ export class FileStorageController {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -583,7 +619,7 @@ export class FileStorageController {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -617,7 +653,7 @@ export class FileStorageController {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -638,7 +674,7 @@ export class FileStorageController {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 }

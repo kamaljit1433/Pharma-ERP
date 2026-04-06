@@ -1,7 +1,7 @@
-import { Request, Response } from 'express';
+﻿import { Request, Response } from 'express';
 import { ReportService } from '../services/reportService';
 import { ReportFilter } from '../types/dashboard';
-import { knex } from '../config/knex';
+import knex from '../config/knex';
 
 const reportService = new ReportService(knex);
 
@@ -9,18 +9,18 @@ export class ReportController {
   static async generateEmployeeReport(req: Request, res: Response): Promise<void> {
     try {
       const filter: ReportFilter = {
-        departmentId: req.query.departmentId as string,
-        designationId: req.query.designationId as string,
-        status: req.query.status as string,
-        startDate: req.query.startDate ? new Date(req.query.startDate as string) : undefined,
-        endDate: req.query.endDate ? new Date(req.query.endDate as string) : undefined,
-        limit: req.query.limit ? parseInt(req.query.limit as string) : 1000,
-        offset: req.query.offset ? parseInt(req.query.offset as string) : 0,
+        departmentId: req.query['departmentId'] as string,
+        designationId: req.query['designationId'] as string,
+        status: req.query['status'] as string,
+        startDate: req.query['startDate'] ? new Date(req.query['startDate'] as string) : undefined,
+        endDate: req.query['endDate'] ? new Date(req.query['endDate'] as string) : undefined,
+        limit: req.query['limit'] ? parseInt(req.query['limit'] as string) : 1000,
+        offset: req.query['offset'] ? parseInt(req.query['offset'] as string) : 0,
       };
 
-      const report = await reportService.generateEmployeeReport(filter, req.user?.id || 'system');
+      const report = await reportService.generateEmployeeReport(filter, (req.user as any)?.id || 'system');
 
-      const format = req.query.format as string || 'json';
+      const format = req.query['format'] as string || 'json';
       if (format === 'csv') {
         const csv = reportService.exportToCSV(report);
         res.setHeader('Content-Type', 'text/csv');
@@ -43,17 +43,17 @@ export class ReportController {
   static async generateAttendanceReport(req: Request, res: Response): Promise<void> {
     try {
       const filter: ReportFilter = {
-        employeeId: req.query.employeeId as string,
-        departmentId: req.query.departmentId as string,
-        startDate: req.query.startDate ? new Date(req.query.startDate as string) : undefined,
-        endDate: req.query.endDate ? new Date(req.query.endDate as string) : undefined,
-        limit: req.query.limit ? parseInt(req.query.limit as string) : 10000,
-        offset: req.query.offset ? parseInt(req.query.offset as string) : 0,
+        employeeId: req.query['employeeId'] as string,
+        departmentId: req.query['departmentId'] as string,
+        startDate: req.query['startDate'] ? new Date(req.query['startDate'] as string) : undefined,
+        endDate: req.query['endDate'] ? new Date(req.query['endDate'] as string) : undefined,
+        limit: req.query['limit'] ? parseInt(req.query['limit'] as string) : 10000,
+        offset: req.query['offset'] ? parseInt(req.query['offset'] as string) : 0,
       };
 
-      const report = await reportService.generateAttendanceReport(filter, req.user?.id || 'system');
+      const report = await reportService.generateAttendanceReport(filter, (req.user as any)?.id || 'system');
 
-      const format = req.query.format as string || 'json';
+      const format = req.query['format'] as string || 'json';
       if (format === 'csv') {
         const csv = reportService.exportToCSV(report);
         res.setHeader('Content-Type', 'text/csv');
@@ -76,18 +76,18 @@ export class ReportController {
   static async generateLeaveReport(req: Request, res: Response): Promise<void> {
     try {
       const filter: ReportFilter = {
-        employeeId: req.query.employeeId as string,
-        departmentId: req.query.departmentId as string,
-        status: req.query.status as string,
-        startDate: req.query.startDate ? new Date(req.query.startDate as string) : undefined,
-        endDate: req.query.endDate ? new Date(req.query.endDate as string) : undefined,
-        limit: req.query.limit ? parseInt(req.query.limit as string) : 10000,
-        offset: req.query.offset ? parseInt(req.query.offset as string) : 0,
+        employeeId: req.query['employeeId'] as string,
+        departmentId: req.query['departmentId'] as string,
+        status: req.query['status'] as string,
+        startDate: req.query['startDate'] ? new Date(req.query['startDate'] as string) : undefined,
+        endDate: req.query['endDate'] ? new Date(req.query['endDate'] as string) : undefined,
+        limit: req.query['limit'] ? parseInt(req.query['limit'] as string) : 10000,
+        offset: req.query['offset'] ? parseInt(req.query['offset'] as string) : 0,
       };
 
-      const report = await reportService.generateLeaveReport(filter, req.user?.id || 'system');
+      const report = await reportService.generateLeaveReport(filter, (req.user as any)?.id || 'system');
 
-      const format = req.query.format as string || 'json';
+      const format = req.query['format'] as string || 'json';
       if (format === 'csv') {
         const csv = reportService.exportToCSV(report);
         res.setHeader('Content-Type', 'text/csv');
@@ -110,18 +110,18 @@ export class ReportController {
   static async generatePayrollReport(req: Request, res: Response): Promise<void> {
     try {
       const filter: ReportFilter = {
-        employeeId: req.query.employeeId as string,
-        departmentId: req.query.departmentId as string,
-        status: req.query.status as string,
-        startDate: req.query.startDate ? new Date(req.query.startDate as string) : undefined,
-        endDate: req.query.endDate ? new Date(req.query.endDate as string) : undefined,
-        limit: req.query.limit ? parseInt(req.query.limit as string) : 10000,
-        offset: req.query.offset ? parseInt(req.query.offset as string) : 0,
+        employeeId: req.query['employeeId'] as string,
+        departmentId: req.query['departmentId'] as string,
+        status: req.query['status'] as string,
+        startDate: req.query['startDate'] ? new Date(req.query['startDate'] as string) : undefined,
+        endDate: req.query['endDate'] ? new Date(req.query['endDate'] as string) : undefined,
+        limit: req.query['limit'] ? parseInt(req.query['limit'] as string) : 10000,
+        offset: req.query['offset'] ? parseInt(req.query['offset'] as string) : 0,
       };
 
-      const report = await reportService.generatePayrollReport(filter, req.user?.id || 'system');
+      const report = await reportService.generatePayrollReport(filter, (req.user as any)?.id || 'system');
 
-      const format = req.query.format as string || 'json';
+      const format = req.query['format'] as string || 'json';
       if (format === 'csv') {
         const csv = reportService.exportToCSV(report);
         res.setHeader('Content-Type', 'text/csv');
@@ -144,18 +144,18 @@ export class ReportController {
   static async generatePerformanceReport(req: Request, res: Response): Promise<void> {
     try {
       const filter: ReportFilter = {
-        employeeId: req.query.employeeId as string,
-        departmentId: req.query.departmentId as string,
-        status: req.query.status as string,
-        startDate: req.query.startDate ? new Date(req.query.startDate as string) : undefined,
-        endDate: req.query.endDate ? new Date(req.query.endDate as string) : undefined,
-        limit: req.query.limit ? parseInt(req.query.limit as string) : 10000,
-        offset: req.query.offset ? parseInt(req.query.offset as string) : 0,
+        employeeId: req.query['employeeId'] as string,
+        departmentId: req.query['departmentId'] as string,
+        status: req.query['status'] as string,
+        startDate: req.query['startDate'] ? new Date(req.query['startDate'] as string) : undefined,
+        endDate: req.query['endDate'] ? new Date(req.query['endDate'] as string) : undefined,
+        limit: req.query['limit'] ? parseInt(req.query['limit'] as string) : 10000,
+        offset: req.query['offset'] ? parseInt(req.query['offset'] as string) : 0,
       };
 
-      const report = await reportService.generatePerformanceReport(filter, req.user?.id || 'system');
+      const report = await reportService.generatePerformanceReport(filter, (req.user as any)?.id || 'system');
 
-      const format = req.query.format as string || 'json';
+      const format = req.query['format'] as string || 'json';
       if (format === 'csv') {
         const csv = reportService.exportToCSV(report);
         res.setHeader('Content-Type', 'text/csv');
@@ -178,18 +178,18 @@ export class ReportController {
   static async generateTrainingReport(req: Request, res: Response): Promise<void> {
     try {
       const filter: ReportFilter = {
-        employeeId: req.query.employeeId as string,
-        departmentId: req.query.departmentId as string,
-        status: req.query.status as string,
-        startDate: req.query.startDate ? new Date(req.query.startDate as string) : undefined,
-        endDate: req.query.endDate ? new Date(req.query.endDate as string) : undefined,
-        limit: req.query.limit ? parseInt(req.query.limit as string) : 10000,
-        offset: req.query.offset ? parseInt(req.query.offset as string) : 0,
+        employeeId: req.query['employeeId'] as string,
+        departmentId: req.query['departmentId'] as string,
+        status: req.query['status'] as string,
+        startDate: req.query['startDate'] ? new Date(req.query['startDate'] as string) : undefined,
+        endDate: req.query['endDate'] ? new Date(req.query['endDate'] as string) : undefined,
+        limit: req.query['limit'] ? parseInt(req.query['limit'] as string) : 10000,
+        offset: req.query['offset'] ? parseInt(req.query['offset'] as string) : 0,
       };
 
-      const report = await reportService.generateTrainingReport(filter, req.user?.id || 'system');
+      const report = await reportService.generateTrainingReport(filter, (req.user as any)?.id || 'system');
 
-      const format = req.query.format as string || 'json';
+      const format = req.query['format'] as string || 'json';
       if (format === 'csv') {
         const csv = reportService.exportToCSV(report);
         res.setHeader('Content-Type', 'text/csv');

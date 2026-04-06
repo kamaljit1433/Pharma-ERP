@@ -24,6 +24,7 @@ export interface Employee {
   employment_type: 'permanent' | 'contract' | 'temporary' | 'intern';
   status: 'active' | 'on_leave' | 'suspended' | 'resigned' | 'terminated';
   profile_photo_url?: string;
+  notice_period_days?: number;
   created_at: string;
   updated_at: string;
 }
@@ -103,6 +104,7 @@ export interface UpdateEmployeeDTO {
   designation_id?: string;
   reporting_manager_id?: string;
   profile_photo_url?: string;
+  notice_period_days?: number;
 }
 
 export interface EmployeeFilters {

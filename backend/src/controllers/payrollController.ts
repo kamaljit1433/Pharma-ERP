@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+﻿import { Request, Response } from 'express';
 import { SalaryStructureService } from '../services/salaryStructureService';
 import { PayslipService } from '../services/payslipService';
 import { PayrollProcessingService } from '../services/payrollProcessingService';
@@ -62,7 +62,11 @@ export class PayrollController {
 
   async getSalaryStructure(req: Request, res: Response): Promise<void> {
     try {
-      const { employeeId } = req.params;
+      const employeeId = req.params['employeeId'] as string;
+      if (!employeeId) {
+        res.status(400).json({ success: false, error: 'Employee ID is required' });
+        return;
+      }
       const result = await this.salaryStructureService.getSalaryStructure(employeeId);
 
       if (!result) {
@@ -102,6 +106,10 @@ export class PayrollController {
   async getPayrollDetails(req: Request, res: Response): Promise<void> {
     try {
       const { employeeId, month, year } = req.params;
+      if (!employeeId || !month || !year) {
+        res.status(400).json({ success: false, error: 'Employee ID, month, and year are required' });
+        return;
+      }
 
       const payroll = await this.knex('payroll')
         .where({
@@ -127,7 +135,11 @@ export class PayrollController {
 
   async getPayslip(req: Request, res: Response): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params['id'] as string;
+      if (!id) {
+        res.status(400).json({ success: false, error: 'Payslip ID is required' });
+        return;
+      }
       const payslip = await this.payslipService.getPayslip(id);
 
       if (!payslip) {
@@ -164,7 +176,11 @@ export class PayrollController {
   async lockPayroll(req: Request, res: Response): Promise<void> {
     try {
       const authReq = req as AuthenticatedRequest;
-      const { id } = req.params;
+      const id = req.params['id'] as string;
+      if (!id) {
+        res.status(400).json({ success: false, error: 'Payroll ID is required' });
+        return;
+      }
 
       await this.payrollProcessingService.lockPayroll(id, authReq.user?.id ?? '');
 
@@ -181,6 +197,12 @@ export class PayrollController {
     try {
       const { month, year } = req.params;
       const { format } = req.query;
+
+      // Validate month and year are provided
+      if (!month || !year) {
+        res.status(400).json({ success: false, error: 'Month and year are required' });
+        return;
+      }
 
       // Validate month and year before passing to the service
       const parsedMonth = parseInt(month);

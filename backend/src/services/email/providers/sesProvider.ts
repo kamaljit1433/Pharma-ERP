@@ -84,7 +84,7 @@ export class SESProvider implements EmailProvider {
   private async sendRawEmail(options: EmailOptions, fromEmail: string): Promise<EmailResult> {
     try {
       // Build raw email with attachments
-      const boundary = `----=_Part_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const boundary = `----=_Part_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
       const destinations = Array.isArray(options.to) ? options.to : [options.to];
       
       let rawMessage = '';

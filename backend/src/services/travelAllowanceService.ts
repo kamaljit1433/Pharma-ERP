@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+import logger from '../utils/logger';
 import { JourneyRepository } from '../repositories/journeyRepository';
 import { GeoTrackingService } from './geoTrackingService';
 import { ApprovalRoutingService } from './approvalRoutingService';
@@ -31,10 +32,10 @@ export class TravelAllowanceService {
     this.geoTrackingService = new GeoTrackingService();
     this.approvalRoutingService = new ApprovalRoutingService(knex);
     this.config = {
-      ratePerKm: parseFloat(process.env.TRAVEL_ALLOWANCE_RATE_PER_KM || '10'),
-      minDistance: parseFloat(process.env.TRAVEL_ALLOWANCE_MIN_DISTANCE || '5'),
-      maxAllowancePerDay: parseFloat(process.env.TRAVEL_ALLOWANCE_MAX_PER_DAY || '500'),
-      currency: process.env.TRAVEL_ALLOWANCE_CURRENCY || 'INR',
+      ratePerKm: parseFloat(process.env['TRAVEL_ALLOWANCE_RATE_PER_KM'] || '10'),
+      minDistance: parseFloat(process.env['TRAVEL_ALLOWANCE_MIN_DISTANCE'] || '5'),
+      maxAllowancePerDay: parseFloat(process.env['TRAVEL_ALLOWANCE_MAX_PER_DAY'] || '500'),
+      currency: process.env['TRAVEL_ALLOWANCE_CURRENCY'] || 'INR',
     };
   }
 
@@ -80,7 +81,7 @@ export class TravelAllowanceService {
       });
     } catch (error) {
       // Log error but don't fail the travel log creation
-      console.error('Failed to route travel approval:', error);
+      logger.error('Failed to route travel approval', { error: error instanceof Error ? error.message : String(error) });
     }
 
     return travelLog;
@@ -205,6 +206,6 @@ export class TravelAllowanceService {
    * Generate unique ID
    */
   private generateId(): string {
-    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
   }
 }

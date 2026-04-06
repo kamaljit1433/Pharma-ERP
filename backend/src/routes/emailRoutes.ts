@@ -1,4 +1,4 @@
-import { Router, RequestHandler } from 'express';
+﻿import { Router, RequestHandler } from 'express';
 import { emailController } from '../controllers/emailController';
 import { authenticateToken } from '../middleware/auth';
 

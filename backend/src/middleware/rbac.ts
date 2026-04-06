@@ -1,4 +1,4 @@
-/**
+﻿/**
  * RBAC Middleware
  * Express middleware for role-based access control
  */

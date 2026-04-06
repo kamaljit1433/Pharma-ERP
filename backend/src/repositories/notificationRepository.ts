@@ -101,4 +101,18 @@ export class NotificationRepository {
       .where('created_at', '<', cutoffDate)
       .delete();
   }
+
+  /**
+   * Load notification templates from DB.
+   * Returns empty array if the table does not exist.
+   */
+  async getTemplates(): Promise<any[]> {
+    try {
+      const hasTable = await this.knex.schema.hasTable('notification_templates');
+      if (!hasTable) return [];
+      return this.knex('notification_templates').select('*');
+    } catch {
+      return [];
+    }
+  }
 }

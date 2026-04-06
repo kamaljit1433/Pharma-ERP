@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Full & Final Settlement Statement</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #0a0a0a;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #0a0a0a;
+            margin-bottom: 5px;
+        }
+        
+        .header p {
+            font-size: 14px;
+            color: #737373;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #0a0a0a;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #f5f5f5;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .info-item {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .info-label {
+            font-size: 12px;
+            color: #737373;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        
+        .info-value {
+            font-size: 15px;
+            color: #0a0a0a;
+            font-weight: 500;
+        }
+        
+        .amount-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        
+        .amount-table tr {
+            border-bottom: 1px solid #f5f5f5;
+        }
+        
+        .amount-table td {
+            padding: 12px 0;
+            font-size: 14px;
+        }
+        
+        .amount-table td:first-child {
+            color: #0a0a0a;
+        }
+        
+        .amount-table td:last-child {
+            text-align: right;
+            font-weight: 500;
+            color: #0a0a0a;
+        }
+        
+        .amount-table .subtotal {
+            font-weight: 600;
+            border-top: 2px solid #e5e5e5;
+            padding-top: 15px;
+        }
+        
+        .amount-table .total {
+            font-size: 18px;
+            font-weight: 700;
+            color: #0a0a0a;
+            border-top: 3px solid #0a0a0a;
+            padding-top: 15px;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .status-draft {
+            background: #f5f5f5;
+            color: #737373;
+        }
+        
+        .status-pending_approval {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .status-approved {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .status-paid {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #f5f5f5;
+            text-align: center;
+            font-size: 12px;
+            color: #737373;
+        }
+        
+        .footer p {
+            margin-bottom: 5px;
+        }
+        
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            
+            .container {
+                box-shadow: none;
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Full & Final Settlement Statement</h1>
+            <p>Employee Separation Settlement</p>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">Employee Details</div>
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">Employee ID</span>
+                    <span class="info-value">{{employee.employee_id}}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Employee Name</span>
+                    <span class="info-value">{{employee.first_name}} {{employee.last_name}}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Department</span>
+                    <span class="info-value">{{employee.department_name}}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Designation</span>
+                    <span class="info-value">{{employee.designation}}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Date of Joining</span>
+                    <span class="info-value">{{employee.date_of_joining}}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Last Working Day</span>
+                    <span class="info-value">{{employee.last_working_day}}</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">Settlement Details</div>
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">Settlement ID</span>
+                    <span class="info-value">{{settlement.id}}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Status</span>
+                    <span class="status-badge status-{{settlement.status}}">{{settlement.status}}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Generated Date</span>
+                    <span class="info-value">{{settlement.generated_date}}</span>
+                </div>
+                {{#if settlement.approved_at}}
+                <div class="info-item">
+                    <span class="info-label">Approved Date</span>
+                    <span class="info-value">{{settlement.approved_date}}</span>
+                </div>
+                {{/if}}
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">Earnings</div>
+            <table class="amount-table">
+                <tbody>
+                    <tr>
+                        <td>Pending Salary</td>
+                        <td>₹ {{settlement.pending_salary}}</td>
+                    </tr>
+                    <tr>
+                        <td>Leave Encashment</td>
+                        <td>₹ {{settlement.leave_encashment}}</td>
+                    </tr>
+                    <tr>
+                        <td>Gratuity</td>
+                        <td>₹ {{settlement.gratuity}}</td>
+                    </tr>
+                    <tr>
+                        <td>Bonus</td>
+                        <td>₹ {{settlement.bonus}}</td>
+                    </tr>
+                    <tr>
+                        <td>Other Benefits</td>
+                        <td>₹ {{settlement.other_benefits}}</td>
+                    </tr>
+                    <tr class="subtotal">
+                        <td>Total Earnings</td>
+                        <td>₹ {{settlement.total_earnings}}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">Deductions</div>
+            <table class="amount-table">
+                <tbody>
+                    <tr>
+                        <td>Advance Salary Deduction</td>
+                        <td>₹ {{settlement.advance_deduction}}</td>
+                    </tr>
+                    <tr>
+                        <td>Asset Damage Deduction</td>
+                        <td>₹ {{settlement.asset_damage_deduction}}</td>
+                    </tr>
+                    <tr>
+                        <td>Other Deductions</td>
+                        <td>₹ {{settlement.other_deductions}}</td>
+                    </tr>
+                    <tr class="subtotal">
+                        <td>Total Deductions</td>
+                        <td>₹ {{settlement.total_deductions}}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="section">
+            <table class="amount-table">
+                <tbody>
+                    <tr class="total">
+                        <td>Net Settlement Amount</td>
+                        <td>₹ {{settlement.net_settlement}}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        {{#if settlement.approved_by}}
+        <div class="section">
+            <div class="section-title">Approval Details</div>
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">Approved By</span>
+                    <span class="info-value">{{settlement.approved_by}}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Approved At</span>
+                    <span class="info-value">{{settlement.approved_date}}</span>
+                </div>
+            </div>
+        </div>
+        {{/if}}
+        
+        <div class="footer">
+            <p>This is a computer-generated statement and does not require a signature.</p>
+            <p>For queries, please contact the HR Department.</p>
+            <p>Generated on {{settlement.generated_date}}</p>
+        </div>
+    </div>
+</body>
+</html>

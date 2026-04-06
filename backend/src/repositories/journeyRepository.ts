@@ -116,26 +116,35 @@ export class JourneyRepository {
   }
 
   private mapToJourney(row: any): Journey {
+    let waypoints: any[] = [];
+    if (row.waypoints) {
+      try {
+        waypoints = JSON.parse(row.waypoints);
+      } catch {
+        // Return empty array rather than crashing on corrupted waypoints
+      }
+    }
+
     return {
       id: row.id,
       employeeId: row.employee_id,
       startLocation: {
-        latitude: row.start_latitude,
-        longitude: row.start_longitude,
+        latitude: Number(row.start_latitude),
+        longitude: Number(row.start_longitude),
         timestamp: row.start_time,
       },
       endLocation: {
-        latitude: row.end_latitude,
-        longitude: row.end_longitude,
+        latitude: Number(row.end_latitude),
+        longitude: Number(row.end_longitude),
         timestamp: row.end_time,
       },
-      waypoints: row.waypoints ? JSON.parse(row.waypoints) : [],
-      totalDistance: row.total_distance,
-      totalDuration: row.total_duration,
+      waypoints,
+      totalDistance: Number(row.total_distance),
+      totalDuration: Number(row.total_duration),
       startTime: row.start_time,
       endTime: row.end_time,
       purpose: row.purpose,
-      travelAllowance: row.travel_allowance,
+      travelAllowance: Number(row.travel_allowance),
       status: row.status,
       createdAt: row.created_at,
       updatedAt: row.updated_at,

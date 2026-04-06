@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+﻿import { Request, Response } from 'express';
 import { BankDetailsService } from '../services/bankDetailsService';
 import { UserRole } from '../types/auth';
 
@@ -53,7 +53,7 @@ export class BankDetailsController {
    */
   async updateBankAccount(req: Request, res: Response): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params['id'] as string;
       const employeeId = (req as any).user?.id;
       const performedBy = (req as any).user?.id;
       const userRole = (req as any).user?.role;
@@ -117,7 +117,7 @@ export class BankDetailsController {
    */
   async setPrimaryAccount(req: Request, res: Response): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params['id'] as string;
       const employeeId = (req as any).user?.id;
       const performedBy = (req as any).user?.id;
       const userRole = (req as any).user?.role;
@@ -180,7 +180,7 @@ export class BankDetailsController {
    */
   async verifyBankAccount(req: Request, res: Response): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params['id'] as string;
       const verifiedBy = (req as any).user?.id;
 
       if (!id) {
@@ -219,7 +219,7 @@ export class BankDetailsController {
    */
   async getBankAccounts(req: Request, res: Response): Promise<void> {
     try {
-      const { employeeId } = req.params;
+      const employeeId = req.params['employeeId'] as string;
       const requestedBy = (req as any).user?.id;
       const userRole = (req as any).user?.role;
 

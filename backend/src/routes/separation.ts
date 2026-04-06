@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import * as separationController from '../controllers/separationController';
 import { authenticateToken } from '../middleware/auth';
 import { authorize } from '../middleware/authorize';
@@ -83,7 +83,9 @@ router.put(
 /**
  * F&F Settlement endpoints
  * GET /api/v1/separation/fnf/:employeeId - Calculate F&F
+ * PUT /api/v1/separation/fnf/:id/submit - Submit for approval
  * PUT /api/v1/separation/fnf/:id/approve - Approve F&F
+ * PUT /api/v1/separation/fnf/:id/reject - Reject F&F
  */
 router.get(
   '/fnf/:employeeId',
@@ -92,11 +94,29 @@ router.get(
 );
 
 router.put(
+  '/fnf/:id/submit',
+  authorize(['Finance / Payroll', 'HR Manager', 'Super Admin']) as any,
+  async (req, res, next) => {
+    req.params.fnfSettlementId = req.params.id;
+    separationController.submitFnFSettlementForApproval(req, res, next);
+  }
+);
+
+router.put(
   '/fnf/:id/approve',
   authorize(['Finance / Payroll', 'Super Admin']) as any,
   async (req, res, next) => {
     req.params.fnfSettlementId = req.params.id;
     separationController.approveFnFSettlement(req, res, next);
+  }
+);
+
+router.put(
+  '/fnf/:id/reject',
+  authorize(['Finance / Payroll', 'Super Admin']) as any,
+  async (req, res, next) => {
+    req.params.fnfSettlementId = req.params.id;
+    separationController.rejectFnFSettlement(req, res, next);
   }
 );
 
@@ -136,6 +156,75 @@ router.put(
   '/deactivate/:employeeId',
   authorize(['HR Manager', 'Super Admin']) as any,
   separationController.deactivateEmployee
+);
+
+/**
+ * Questionnaire Template endpoints
+ * POST /api/v1/separation/questionnaire-templates - Create template
+ * GET /api/v1/separation/questionnaire-templates - List templates
+ * GET /api/v1/separation/questionnaire-templates/active - Get active templates
+ * GET /api/v1/separation/questionnaire-templates/:id - Get template
+ * PUT /api/v1/separation/questionnaire-templates/:id - Update template
+ * DELETE /api/v1/separation/questionnaire-templates/:id - Delete template
+ */
+router.post(
+  '/questionnaire-templates',
+  authorize(['HR Manager', 'Super Admin']) as any,
+  separationController.createQuestionnaireTemplate
+);
+
+router.get(
+  '/questionnaire-templates/active',
+  authorize(['HR Manager', 'Employee', 'Super Admin']) as any,
+  separationController.getActiveQuestionnaireTemplates
+);
+
+router.get(
+  '/questionnaire-templates',
+  authorize(['HR Manager', 'Super Admin']) as any,
+  separationController.getAllQuestionnaireTemplates
+);
+
+router.get(
+  '/questionnaire-templates/:id',
+  authorize(['HR Manager', 'Employee', 'Super Admin']) as any,
+  separationController.getQuestionnaireTemplate
+);
+
+router.put(
+  '/questionnaire-templates/:id',
+  authorize(['HR Manager', 'Super Admin']) as any,
+  separationController.updateQuestionnaireTemplate
+);
+
+router.delete(
+  '/questionnaire-templates/:id',
+  authorize(['HR Manager', 'Super Admin']) as any,
+  separationController.deleteQuestionnaireTemplate
+);
+
+/**
+ * Questionnaire Template Question endpoints
+ * POST /api/v1/separation/questionnaire-templates/:id/questions - Add question
+ * PUT /api/v1/separation/questionnaire-templates/:id/questions/:questionId - Update question
+ * DELETE /api/v1/separation/questionnaire-templates/:id/questions/:questionId - Remove question
+ */
+router.post(
+  '/questionnaire-templates/:id/questions',
+  authorize(['HR Manager', 'Super Admin']) as any,
+  separationController.addQuestionToTemplate
+);
+
+router.put(
+  '/questionnaire-templates/:id/questions/:questionId',
+  authorize(['HR Manager', 'Super Admin']) as any,
+  separationController.updateQuestionInTemplate
+);
+
+router.delete(
+  '/questionnaire-templates/:id/questions/:questionId',
+  authorize(['HR Manager', 'Super Admin']) as any,
+  separationController.removeQuestionFromTemplate
 );
 
 export default router;

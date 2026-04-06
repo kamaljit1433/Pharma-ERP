@@ -1,4 +1,5 @@
 import path from 'path';
+import logger from '../utils/logger';
 import config from '../config';
 import { 
   EmailProvider, 
@@ -70,7 +71,7 @@ export class EmailService {
 
       return result;
     } catch (error: any) {
-      console.error('Email service send error:', error);
+      logger.error('Email service send error', { error: error.message });
       
       this.stats.failed++;
       this.stats.lastError = error.message;
@@ -110,7 +111,7 @@ export class EmailService {
 
   async queueEmail(options: EmailOptions, scheduledAt?: Date): Promise<string> {
     const queueItem: EmailQueueItem = {
-      id: `email_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: `email_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
       options,
       attempts: 0,
       maxAttempts: 3,
@@ -171,7 +172,7 @@ export class EmailService {
               // Max attempts reached, remove from queue
               this.queue.splice(index, 1);
               this.stats.queued--;
-              console.error(`Email queue item ${item.id} failed after ${item.maxAttempts} attempts:`, result.error);
+              logger.error('Email queue item failed after max attempts', { itemId: item.id, maxAttempts: item.maxAttempts, error: result.error });
             } else {
               // Schedule retry with exponential backoff
               const backoffMs = Math.pow(2, item.attempts) * 1000; // 2s, 4s, 8s, etc.
@@ -179,7 +180,7 @@ export class EmailService {
             }
           }
         } catch (error: any) {
-          console.error(`Error processing queue item ${item.id}:`, error);
+          logger.error('Error processing queue item', { itemId: item.id, error: error.message });
           item.attempts++;
           item.lastAttemptAt = now;
           item.error = error.message;
@@ -202,7 +203,7 @@ export class EmailService {
     try {
       return await this.provider.validateConfiguration();
     } catch (error) {
-      console.error('Email configuration validation error:', error);
+      logger.error('Email configuration validation error', { error: error instanceof Error ? error.message : String(error) });
       return false;
     }
   }

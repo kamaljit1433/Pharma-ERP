@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+﻿import { Request, Response, NextFunction } from 'express';
 import { LeaveService } from '../services/leaveService';
 import { LeaveTypeService } from '../services/leaveTypeService';
 import { HolidayService } from '../services/holidayService';
@@ -21,7 +21,7 @@ export class LeaveController {
       const leaveType = await this.leaveTypeService.createLeaveType(req.body);
       res.status(201).json(leaveType);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -31,7 +31,7 @@ export class LeaveController {
       const leaveTypes = await this.leaveTypeService.getAllLeaveTypes(activeOnly);
       res.json(leaveTypes);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -40,7 +40,7 @@ export class LeaveController {
       const leaveType = await this.leaveTypeService.getLeaveType(req.params['id'] as string);
       res.json(leaveType);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -52,7 +52,7 @@ export class LeaveController {
       );
       res.json(leaveType);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -61,7 +61,7 @@ export class LeaveController {
       await this.leaveTypeService.deleteLeaveType(req.params['id'] as string);
       res.status(204).send();
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -71,7 +71,7 @@ export class LeaveController {
       const holiday = await this.holidayService.createHoliday(req.body);
       res.status(201).json(holiday);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -92,7 +92,7 @@ export class LeaveController {
 
       res.json(holidays);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -101,7 +101,7 @@ export class LeaveController {
       const holiday = await this.holidayService.getHoliday(req.params['id'] as string);
       res.json(holiday);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -113,7 +113,7 @@ export class LeaveController {
       );
       res.json(holiday);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -122,7 +122,7 @@ export class LeaveController {
       await this.holidayService.deleteHoliday(req.params['id'] as string);
       res.status(204).send();
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -132,7 +132,7 @@ export class LeaveController {
       const leave = await this.leaveService.applyLeave(req.body);
       res.status(201).json(leave);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -142,7 +142,7 @@ export class LeaveController {
       await this.leaveService.approveLeave(req.params['id'] as string, approverId);
       res.status(204).send();
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -153,18 +153,18 @@ export class LeaveController {
       await this.leaveService.rejectLeave(req.params['id'] as string, approverId, reason);
       res.status(204).send();
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
   async getLeaveBalance(req: Request, res: Response, next: NextFunction) {
     try {
-      const { employeeId } = req.params;
+      const employeeId = req.params['employeeId'] as string;
       const year = req.query['year'] ? Number(req.query['year']) : new Date().getFullYear();
       const balances = await this.leaveService.getLeaveBalance(employeeId as string, year);
       res.json(balances);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -174,7 +174,7 @@ export class LeaveController {
       const calendar = await this.leaveService.getTeamLeaveCalendar(managerId);
       res.json(calendar);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 }

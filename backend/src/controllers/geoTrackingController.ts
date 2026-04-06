@@ -4,14 +4,17 @@ import { GeoLogRepository } from '../repositories/geoLogRepository';
 import { GeoFenceRepository } from '../repositories/geoFenceRepository';
 import { JourneyRepository } from '../repositories/journeyRepository';
 import { GeoTrackingService } from '../services/geoTrackingService';
+import { v4 as uuidv4 } from 'uuid';
 import { TravelAllowanceService } from '../services/travelAllowanceService';
 import { NotificationService } from '../services/notificationService';
+import { NotificationRepository } from '../repositories/notificationRepository';
+import { NotificationType } from '../types/notification';
 
 export class GeoTrackingController {
   private geoLogRepository: GeoLogRepository;
   private geoFenceRepository: GeoFenceRepository;
   private journeyRepository: JourneyRepository;
-  private geoTrackingService: any;
+  private geoTrackingService: GeoTrackingService;
   private travelAllowanceService: TravelAllowanceService;
   private notificationService: NotificationService;
 
@@ -21,7 +24,7 @@ export class GeoTrackingController {
     this.journeyRepository = new JourneyRepository(knex);
     this.geoTrackingService = new GeoTrackingService();
     this.travelAllowanceService = new TravelAllowanceService(knex);
-    this.notificationService = new NotificationService(knex);
+    this.notificationService = new NotificationService(new NotificationRepository(knex));
   }
 
   /**
@@ -31,14 +34,17 @@ export class GeoTrackingController {
     try {
       const { employeeId, latitude, longitude, timestamp, accuracy } = req.body;
 
-      // Validate coordinates
+      // Validate coordinates - parse as numbers first
+      const lat = typeof latitude === 'string' ? parseFloat(latitude) : latitude;
+      const lng = typeof longitude === 'string' ? parseFloat(longitude) : longitude;
+
       if (
-        !latitude ||
-        !longitude ||
-        latitude < -90 ||
-        latitude > 90 ||
-        longitude < -180 ||
-        longitude > 180
+        lat === undefined || lat === null || isNaN(lat) ||
+        lng === undefined || lng === null || isNaN(lng) ||
+        lat < -90 ||
+        lat > 90 ||
+        lng < -180 ||
+        lng > 180
       ) {
         return res.status(400).json({
           error: 'Invalid coordinates',
@@ -53,11 +59,11 @@ export class GeoTrackingController {
         accuracy,
         action: 'Manual',
         timestamp: new Date(timestamp),
-      });
+      } as any);
 
       // Audit logging
       await this.knex('audit_logs').insert({
-        id: require('uuid').v4(),
+        id: uuidv4(),
         user_id: (req as any).user?.id,
         action: 'GEO_TRACK_LOG',
         resource_type: 'GeoLog',
@@ -66,7 +72,7 @@ export class GeoTrackingController {
         created_at: new Date(),
       });
 
-      res.status(201).json({
+      return res.status(201).json({
         id: geoLog.id,
         employeeId: geoLog.employeeId,
         latitude: geoLog.location.latitude,
@@ -75,7 +81,7 @@ export class GeoTrackingController {
         accuracy: geoLog.location.accuracy,
       });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -87,7 +93,7 @@ export class GeoTrackingController {
       const { employeeId, date } = req.params;
 
       // Parse date
-      const journeyDate = new Date(date);
+      const journeyDate = new Date(date as string);
       if (isNaN(journeyDate.getTime())) {
         return res.status(400).json({
           error: 'Invalid date format',
@@ -96,12 +102,12 @@ export class GeoTrackingController {
       }
 
       const journeys = await this.journeyRepository.getByEmployeeAndDate(
-        employeeId,
+        employeeId as string,
         journeyDate
       );
 
       const geoLogs = await this.geoLogRepository.getByEmployeeAndDate(
-        employeeId,
+        employeeId as string,
         journeyDate
       );
 
@@ -130,10 +136,11 @@ export class GeoTrackingController {
           accuracy: log.location.accuracy,
         })),
         totalDistance,
-        status: journeys.length > 0 ? journeys[0].status : 'pending',
+        status: journeys.length > 0 ? journeys[0]?.status : 'pending',
       });
+      return;
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -142,11 +149,11 @@ export class GeoTrackingController {
    */
   async approveJourney(req: Request, res: Response, next: NextFunction) {
     try {
-      const { id } = req.params;
+      const id = req.params['id'] as string;
       const { approvedBy, notes } = req.body;
-      const approverId = (req as any).user?.id;
+      const approverId = (req as any).user?.id || 'system';
 
-      const journey = await this.journeyRepository.getById(id);
+      const journey = await this.journeyRepository.getById(id as string);
       if (!journey) {
         return res.status(404).json({
           error: 'Journey not found',
@@ -154,14 +161,14 @@ export class GeoTrackingController {
       }
 
       const approvedJourney = await this.journeyRepository.approve(
-        id,
+        id as string,
         approverId,
-        notes
+        notes as string
       );
 
       // Audit logging
       await this.knex('audit_logs').insert({
-        id: require('uuid').v4(),
+        id: uuidv4(),
         user_id: approverId,
         action: 'GEO_JOURNEY_APPROVE',
         resource_type: 'Journey',
@@ -173,20 +180,20 @@ export class GeoTrackingController {
       // Send notification to employee
       await this.notificationService.sendNotification({
         employeeId: journey.employeeId,
-        type: 'TRAVEL_APPROVED',
+        type: 'system_notification' as NotificationType,
         title: 'Travel Log Approved',
-        message: `Your travel log for ${journey.startTime.toDateString()} has been approved.`,
+        body: "Your travel log has been approved.",
         data: { journeyId: id },
       });
 
-      res.json({
-        id: approvedJourney?.id,
+      return res.json({
+        id: approvedJourney?.id as string,
         status: approvedJourney?.status,
         approvedBy: approverId,
         approvedAt: new Date(),
       });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -196,18 +203,26 @@ export class GeoTrackingController {
   async getMonthlyAllowance(req: Request, res: Response, next: NextFunction) {
     try {
       const { employeeId, month } = req.params;
-      const year = req.query.year ? parseInt(req.query.year as string) : new Date().getFullYear();
+      const yearStr = req.query['year'] as string | undefined;
+      const year = yearStr ? parseInt(yearStr) : new Date().getFullYear();
 
-      const monthNum = parseInt(month);
-      if (monthNum < 1 || monthNum > 12) {
+      const monthNum = parseInt(month as string);
+      if (isNaN(monthNum) || monthNum < 1 || monthNum > 12) {
         return res.status(400).json({
           error: 'Invalid month',
-          message: 'Month must be between 1 and 12',
+          message: 'Month must be a number between 1 and 12',
+        });
+      }
+
+      if (isNaN(year)) {
+        return res.status(400).json({
+          error: 'Invalid year',
+          message: 'Year must be a valid number',
         });
       }
 
       const allowance = await this.travelAllowanceService.calculateMonthlyAllowance(
-        employeeId,
+        employeeId as string,
         monthNum,
         year
       );
@@ -223,8 +238,9 @@ export class GeoTrackingController {
         currency: allowance.currency,
         status: 'calculated',
       });
+      return;
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -272,7 +288,7 @@ export class GeoTrackingController {
 
       // Audit logging
       await this.knex('audit_logs').insert({
-        id: require('uuid').v4(),
+        id: uuidv4(),
         user_id: (req as any).user?.id,
         action: 'GEO_FENCE_CREATE',
         resource_type: 'GeoFence',
@@ -290,7 +306,7 @@ export class GeoTrackingController {
         type: geoFence.type,
       });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -299,8 +315,8 @@ export class GeoTrackingController {
    */
   async getGeoFences(req: Request, res: Response, next: NextFunction) {
     try {
-      const enabledOnly = req.query.enabled === 'true';
-      const type = req.query.type as string | undefined;
+      const enabledOnly = req.query['enabled'] === 'true';
+      const type = req.query['type'] as string | undefined;
 
       let geoFences;
       if (type) {
@@ -325,7 +341,7 @@ export class GeoTrackingController {
         }))
       );
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 }
