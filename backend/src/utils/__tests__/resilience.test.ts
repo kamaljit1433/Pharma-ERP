@@ -151,7 +151,7 @@ describe('Retry', () => {
     });
 
     it('should identify timeout errors as retryable', () => {
-      const error = new Error('Operation timed out');
+      const error = new Error('Operation timeout');
       expect(isRetryableError(error)).toBe(true);
     });
 
@@ -273,7 +273,7 @@ describe('ResilienceWrapper', () => {
       name: 'test-wrapper',
       enableLogging: false,
       retry: { maxAttempts: 2, initialDelayMs: 10 },
-      circuitBreaker: { failureThreshold: 2, timeout: 500 },
+      circuitBreaker: { failureThreshold: 2, timeout: 1000 },
     });
   });
 

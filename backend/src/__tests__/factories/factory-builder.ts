@@ -126,7 +126,7 @@ export class FactoryBuilder {
 
       // Create employees for department
       for (let j = 0; j < employeesPerDepartment; j++) {
-        const designation = deptDesignations[j % deptDesignations.length];
+        const designation = deptDesignations[j % deptDesignations.length]!;
         const employee = await this.employeeFactory.createWithRole(dept.id, designation.id);
         employees.push(employee);
 

@@ -34,7 +34,7 @@ export class ShiftFactory extends BaseFactory<Shift> {
    * Create a single shift
    */
   async create(overrides?: Partial<Shift>): Promise<Shift> {
-    const shift = ShiftFactory.shifts[ShiftFactory.counter % ShiftFactory.shifts.length];
+    const shift = ShiftFactory.shifts[ShiftFactory.counter % ShiftFactory.shifts.length]!;
     ShiftFactory.counter++;
 
     const data: any = {

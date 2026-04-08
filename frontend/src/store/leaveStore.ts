@@ -44,6 +44,7 @@ interface LeaveState {
   applyLeave: (data: any) => Promise<void>;
   approveLeave: (id: string) => Promise<void>;
   rejectLeave: (id: string, reason: string) => Promise<void>;
+  cancelLeave: (id: string) => Promise<void>;
 
   // Error handling
   error: string | null;
@@ -224,6 +225,17 @@ export const useLeaveStore = create<LeaveState>()(
         try {
           await leaveService.rejectLeave(id, reason);
           // Refresh leaves after rejection
+          const data = await leaveService.getLeaves();
+          set({ leaves: data });
+        } catch (error) {
+          set({ error: (error as Error).message });
+        }
+      },
+      cancelLeave: async (id) => {
+        set({ error: null });
+        try {
+          await leaveService.cancelLeave(id);
+          // Refresh leaves after cancellation
           const data = await leaveService.getLeaves();
           set({ leaves: data });
         } catch (error) {

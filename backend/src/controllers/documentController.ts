@@ -127,7 +127,7 @@ export class DocumentController {
   async getExpiringDocuments(req: Request, res: Response): Promise<void> {
     try {
       const userRole = (req as any).user?.role;
-      const days = req.query.days ? parseInt(req.query.days as string) : 30;
+      const days = req.query['days'] ? parseInt(req.query['days'] as string) : 30;
 
       // Validate days parameter
       if (isNaN(days) || days <= 0) {

@@ -30,7 +30,7 @@ export interface Applicant {
   updated_at: Date;
 }
 
-export class JobPostingFactory extends BaseFactory {
+export class JobPostingFactory extends BaseFactory<JobPosting> {
   constructor(knex: Knex) {
     super(knex, 'job_postings');
   }
@@ -58,7 +58,7 @@ export class JobPostingFactory extends BaseFactory {
   }
 }
 
-export class ApplicantFactory extends BaseFactory {
+export class ApplicantFactory extends BaseFactory<Applicant> {
   constructor(knex: Knex) {
     super(knex, 'applicants');
   }

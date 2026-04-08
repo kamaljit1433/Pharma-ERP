@@ -1,4 +1,4 @@
-import { knex } from '../../config/knex';
+import knex from '../../config/knex';
 import { ApplicantTrackingService } from '../applicantTrackingService';
 import { InterviewManagementService } from '../interviewManagementService';
 import { OfferLetterService } from '../offerLetterService';

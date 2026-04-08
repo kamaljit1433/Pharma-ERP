@@ -689,8 +689,65 @@ export class SeparationService {
   }
 
   /**
+   * Generate plain text F&F Statement
+   */
+  private generateFnFStatementText(templateData: any): string {
+    const { employee, settlement } = templateData;
+    
+    const lines = [
+      '═══════════════════════════════════════════════════════════════',
+      'FULL & FINAL (F&F) SETTLEMENT STATEMENT',
+      '═══════════════════════════════════════════════════════════════',
+      '',
+      'EMPLOYEE INFORMATION',
+      '─────────────────────────────────────────────────────────────',
+      `Employee ID: ${employee.employee_id}`,
+      `Name: ${employee.first_name} ${employee.last_name}`,
+      `Department: ${employee.department_name}`,
+      `Designation: ${employee.designation}`,
+      `Date of Joining: ${employee.date_of_joining}`,
+      `Last Working Day: ${employee.last_working_day}`,
+      '',
+      'SETTLEMENT DETAILS',
+      '─────────────────────────────────────────────────────────────',
+      `Settlement ID: ${settlement.id}`,
+      `Status: ${settlement.status}`,
+      `Generated Date: ${settlement.generated_date}`,
+      `Approved Date: ${settlement.approved_date || 'Pending'}`,
+      '',
+      'EARNINGS',
+      '─────────────────────────────────────────────────────────────',
+      `Pending Salary: ₹${settlement.pending_salary}`,
+      `Leave Encashment: ₹${settlement.leave_encashment}`,
+      `Gratuity: ₹${settlement.gratuity}`,
+      `Bonus: ₹${settlement.bonus}`,
+      `Other Benefits: ₹${settlement.other_benefits}`,
+      `Total Earnings: ₹${settlement.total_earnings}`,
+      '',
+      'DEDUCTIONS',
+      '─────────────────────────────────────────────────────────────',
+      `Advance Deduction: ₹${settlement.advance_deduction}`,
+      `Asset Damage Deduction: ₹${settlement.asset_damage_deduction}`,
+      `Other Deductions: ₹${settlement.other_deductions}`,
+      `Total Deductions: ₹${settlement.total_deductions}`,
+      '',
+      'NET SETTLEMENT',
+      '─────────────────────────────────────────────────────────────',
+      `Net Settlement Amount: ₹${settlement.net_settlement}`,
+      '',
+      `Approved By: ${settlement.approved_by || 'Pending Approval'}`,
+      '',
+      '═══════════════════════════════════════════════════════════════',
+      'This is a system-generated document.',
+      '═══════════════════════════════════════════════════════════════',
+    ];
+    
+    return lines.join('\n');
+  }
+
+  /**
    * Generate F&F Statement document for employee records
-   * Creates a formatted HTML document, stores it in file storage, and returns the file URL
+   * Creates a formatted text document, stores it in file storage, and returns the file URL
    */
   async generateFnFStatement(fnfSettlementId: string): Promise<{ fileUrl: string; fileKey: string }> {
     const settlement = await this.fnfSettlementRepository.getFnFSettlement(fnfSettlementId);
@@ -773,15 +830,12 @@ export class SeparationService {
       },
     };
 
-    // Load and compile template
-    const templatePath = path.join(__dirname, '../templates/fnf-statement.hbs');
-    const templateSource = fs.readFileSync(templatePath, 'utf-8');
-    const template = Handlebars.compile(templateSource);
-    const htmlContent = template(templateData);
+    // Generate plain text F&F statement
+    const textContent = this.generateFnFStatementText(templateData);
 
     // Store in file storage
-    const fileName = `fnf-statement-${employee.employee_id}-${Date.now()}.html`;
-    const fileBuffer = Buffer.from(htmlContent, 'utf-8');
+    const fileName = `fnf-statement-${employee.employee_id}-${Date.now()}.txt`;
+    const fileBuffer = Buffer.from(textContent, 'utf-8');
 
     const uploadResult = await this.fileStorageService.uploadFile(fileBuffer, fileName, {
       employeeId: settlement.employee_id,
@@ -898,6 +952,99 @@ export class SeparationService {
   }
 
   /**
+   * Revoke system access for an employee
+   * Invalidates all active sessions, clears cached authentication data,
+   * and prevents future login attempts
+   *
+   * @param employeeId - The employee ID to revoke access for
+   * @throws Error if employee not found or access revocation fails
+   */
+  async revokeSystemAccess(employeeId: string): Promise<void> {
+    const scopedLogger = logger.child('SeparationService.revokeSystemAccess');
+
+    try {
+      // Get user associated with employee
+      const user = await this.db('users')
+        .where('employee_id', employeeId)
+        .first();
+
+      if (!user) {
+        scopedLogger.warn('No user found for employee', { employeeId });
+        return;
+      }
+
+      const userId = user.id;
+      scopedLogger.info('Starting system access revocation', { employeeId, userId });
+
+      // 1. Invalidate all refresh tokens by incrementing token version
+      // This prevents any existing refresh tokens from being used
+      await this.db('users')
+        .where('id', userId)
+        .update({
+          refresh_token_version: this.db.raw('refresh_token_version + 1'),
+          updated_at: this.db.fn.now(),
+        });
+
+      scopedLogger.info('Incremented refresh token version', { userId });
+
+      // 2. Deactivate user account to prevent login attempts
+      await this.db('users')
+        .where('id', userId)
+        .update({
+          is_active: false,
+          updated_at: this.db.fn.now(),
+        });
+
+      scopedLogger.info('Deactivated user account', { userId });
+
+      // 3. Clear any active sessions from Redis
+      // Sessions are typically stored with key pattern: session:{userId}
+      const redisClient = require('../config/redis').getClient();
+      const sessionKey = `session:${userId}`;
+
+      try {
+        const sessionExists = await redisClient.exists(sessionKey);
+        if (sessionExists) {
+          await redisClient.del(sessionKey);
+          scopedLogger.info('Cleared Redis session', { sessionKey });
+        }
+      } catch (redisError) {
+        scopedLogger.warn('Failed to clear Redis session', {
+          sessionKey,
+          error: redisError instanceof Error ? redisError.message : String(redisError),
+        });
+        // Don't throw - Redis session clearing is best-effort
+      }
+
+      // 4. Log the access revocation in audit logs
+      await this.db('audit_logs').insert({
+        id: uuidv4(),
+        entity_type: 'user',
+        entity_id: userId,
+        action: 'system_access_revoked',
+        changes: {
+          is_active: false,
+          token_version_incremented: true,
+          session_cleared: true,
+          revocation_timestamp: new Date().toISOString(),
+        },
+        created_at: new Date(),
+      });
+
+      scopedLogger.info('System access revocation completed successfully', {
+        employeeId,
+        userId,
+      });
+    } catch (error) {
+      scopedLogger.error('Failed to revoke system access', {
+        employeeId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }
+
+  /**
    * Deactivate employee
    * Validates all offboarding preconditions are met, revokes system access,
    * updates employee status, and sends deactivation notification
@@ -918,8 +1065,8 @@ export class SeparationService {
     // Update employee status to resigned
     await this.employeeRepository.updateEmployeeStatus(employeeId, 'resigned');
 
-    // Revoke system access
-    await this.db('users').where('employee_id', employeeId).update({ is_active: false });
+    // Revoke system access (invalidates sessions, tokens, and prevents login)
+    await this.revokeSystemAccess(employeeId);
 
     // Log deactivation in audit logs
     await this.db('audit_logs').insert({
@@ -1439,5 +1586,134 @@ export class SeparationService {
     }
 
     return result;
+  }
+
+  /**
+   * Archive employee data for compliance and audit purposes
+   * Marks employee as archived with timestamp and reason
+   * Archived employees are excluded from normal queries but remain searchable by HR/Admin
+   *
+   * @param employeeId - The employee ID to archive
+   * @param reason - The reason for archiving (e.g., "Resignation", "Termination")
+   * @throws Error if employee not found or archive fails
+   */
+  async archiveEmployee(employeeId: string, reason: string): Promise<void> {
+    const scopedLogger = logger.child('SeparationService.archiveEmployee');
+
+    try {
+      // Validate employee exists
+      const employee = await this.employeeRepository.getEmployee(employeeId);
+      if (!employee) {
+        throw new Error('Employee not found');
+      }
+
+      scopedLogger.info('Starting employee archiving', { employeeId, reason });
+
+      // Archive the employee record
+      await this.employeeRepository.archiveEmployee(employeeId, reason);
+
+      scopedLogger.info('Employee archived successfully', { employeeId, reason });
+
+      // Log archiving in audit logs
+      await this.db('audit_logs').insert({
+        id: uuidv4(),
+        entity_type: 'employee',
+        entity_id: employeeId,
+        action: 'employee_archived',
+        changes: {
+          archived_at: new Date().toISOString(),
+          archive_reason: reason,
+        },
+        created_at: new Date(),
+      });
+
+      scopedLogger.info('Archiving logged in audit trail', { employeeId });
+    } catch (error) {
+      scopedLogger.error('Failed to archive employee', {
+        employeeId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get archived employees for HR/Admin compliance review
+   * Returns paginated list of archived employees with archiving details
+   *
+   * @param limit - Number of records to return
+   * @param offset - Number of records to skip
+   * @returns List of archived employees
+   */
+  async getArchivedEmployees(limit: number = 50, offset: number = 0): Promise<any[]> {
+    return this.employeeRepository.getArchivedEmployees(limit, offset);
+  }
+
+  /**
+   * Get count of archived employees
+   * Used for pagination and reporting
+   *
+   * @returns Total count of archived employees
+   */
+  async getArchivedEmployeeCount(): Promise<number> {
+    return this.employeeRepository.getArchivedEmployeeCount();
+  }
+
+  /**
+   * Complete offboarding process for an employee
+   * Performs all final offboarding steps including archiving
+   * Should be called after all other offboarding tasks are complete
+   *
+   * @param employeeId - The employee ID to complete offboarding for
+   * @throws Error if employee not found or offboarding cannot be completed
+   */
+  async completeOffboarding(employeeId: string): Promise<void> {
+    const scopedLogger = logger.child('SeparationService.completeOffboarding');
+
+    try {
+      // Validate employee exists
+      const employee = await this.employeeRepository.getEmployee(employeeId);
+      if (!employee) {
+        throw new Error('Employee not found');
+      }
+
+      scopedLogger.info('Starting complete offboarding process', { employeeId });
+
+      // Check offboarding preconditions
+      const preconditions = await this.checkOffboardingPreconditions(employeeId);
+      if (!preconditions.canDeactivate) {
+        throw new Error(`Cannot complete offboarding: ${preconditions.missingItems.join(', ')}`);
+      }
+
+      // Get resignation or termination reason for archiving
+      let archiveReason = 'Employee Offboarding';
+      const resignation = await this.resignationRepository.getResignationByEmployeeId(employeeId);
+      if (resignation) {
+        archiveReason = `Resignation - ${resignation.reason || 'No reason provided'}`;
+      }
+
+      // Archive employee data
+      await this.archiveEmployee(employeeId, archiveReason);
+
+      scopedLogger.info('Complete offboarding process finished', { employeeId });
+
+      // Send final notification to employee
+      await notificationService.sendNotification({
+        employeeId,
+        type: NotificationType.SYSTEM_NOTIFICATION,
+        title: 'Offboarding Complete',
+        body: 'Your offboarding process has been completed. Your employee record has been archived for compliance purposes.',
+        data: {
+          completion_date: new Date().toISOString(),
+          employee_id: employeeId,
+        },
+      });
+    } catch (error) {
+      scopedLogger.error('Failed to complete offboarding', {
+        employeeId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
   }
 }

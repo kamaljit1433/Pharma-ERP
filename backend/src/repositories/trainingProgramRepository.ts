@@ -5,10 +5,10 @@ import { v4 as uuidv4 } from 'uuid';
 export class TrainingProgramRepository {
   constructor(private db: Knex) {}
 
-  async createTrainingProgram(data: CreateTrainingProgramDTO): Promise<TrainingProgram> {
+  async createProgram(data: CreateTrainingProgramDTO): Promise<TrainingProgram> {
     const id = uuidv4();
 
-    const result = await this.db('training_programs')
+    const [row] = await this.db('training_programs')
       .insert({
         id,
         name: data.name,
@@ -17,71 +17,104 @@ export class TrainingProgramRepository {
         start_date: data.start_date,
         end_date: data.end_date,
         duration_hours: data.duration_hours,
+        duration_days: data.duration_days,
         max_participants: data.max_participants,
-        status: 'draft',
+        status: data.status ?? 'draft',
       })
       .returning('*');
 
-    if (!result[0]) {
+    if (!row) {
       throw new Error('Failed to create training program');
     }
 
-    return this.mapToTrainingProgram(result[0]);
+    return this.mapRow(row);
+  }
+
+  async createTrainingProgram(data: CreateTrainingProgramDTO): Promise<TrainingProgram> {
+    return this.createProgram(data);
+  }
+
+  async getProgramById(id: string): Promise<TrainingProgram | null> {
+    const row = await this.db('training_programs').where('id', id).first();
+    return row ? this.mapRow(row) : null;
   }
 
   async getTrainingProgramById(id: string): Promise<TrainingProgram | null> {
-    const program = await this.db('training_programs').where('id', id).first();
-    return program ? this.mapToTrainingProgram(program) : null;
+    return this.getProgramById(id);
+  }
+
+  async getProgramByName(name: string): Promise<TrainingProgram | null> {
+    const row = await this.db('training_programs').where('name', name).first();
+    return row ? this.mapRow(row) : null;
+  }
+
+  async getAllPrograms(): Promise<TrainingProgram[]> {
+    const rows = await this.db('training_programs').orderBy('created_at', 'desc');
+    return rows.map((r: any) => this.mapRow(r));
   }
 
   async getAllTrainingPrograms(status?: string): Promise<TrainingProgram[]> {
     let query = this.db('training_programs');
-
     if (status) {
       query = query.where('status', status);
     }
+    const rows = await query.orderBy('created_at', 'desc');
+    return rows.map((r: any) => this.mapRow(r));
+  }
 
-    const programs = await query.orderBy('start_date', 'desc');
-    return programs.map((p) => this.mapToTrainingProgram(p));
+  async getActivePrograms(): Promise<TrainingProgram[]> {
+    const rows = await this.db('training_programs')
+      .where('status', 'active')
+      .orderBy('created_at', 'desc');
+    return rows.map((r: any) => this.mapRow(r));
   }
 
   async getActiveTrainingPrograms(): Promise<TrainingProgram[]> {
-    const programs = await this.db('training_programs')
-      .where('status', 'active')
-      .orderBy('start_date', 'asc');
-
-    return programs.map((p) => this.mapToTrainingProgram(p));
+    return this.getActivePrograms();
   }
 
-  async updateTrainingProgram(id: string, data: UpdateTrainingProgramDTO): Promise<TrainingProgram> {
-    const result = await this.db('training_programs')
+  async getProgramsByStatus(status: string): Promise<TrainingProgram[]> {
+    const rows = await this.db('training_programs')
+      .where('status', status)
+      .orderBy('created_at', 'desc');
+    return rows.map((r: any) => this.mapRow(r));
+  }
+
+  async updateProgram(id: string, data: UpdateTrainingProgramDTO): Promise<TrainingProgram> {
+    const [row] = await this.db('training_programs')
       .where('id', id)
-      .update({
-        ...data,
-        updated_at: this.db.fn.now(),
-      })
+      .update({ ...data, updated_at: this.db.fn.now() })
       .returning('*');
 
-    if (!result[0]) {
+    if (!row) {
       throw new Error('Training program not found or update failed');
     }
 
-    return this.mapToTrainingProgram(result[0]);
+    return this.mapRow(row);
   }
 
-  async deleteTrainingProgram(id: string): Promise<void> {
+  async updateTrainingProgram(id: string, data: UpdateTrainingProgramDTO): Promise<TrainingProgram> {
+    return this.updateProgram(id, data);
+  }
+
+  async deleteProgram(id: string): Promise<void> {
     await this.db('training_programs').where('id', id).delete();
   }
 
-  private mapToTrainingProgram(row: any): TrainingProgram {
+  async deleteTrainingProgram(id: string): Promise<void> {
+    return this.deleteProgram(id);
+  }
+
+  private mapRow(row: any): TrainingProgram {
     return {
       id: row.id,
       name: row.name,
       description: row.description,
       provider: row.provider,
-      start_date: new Date(row.start_date),
-      end_date: new Date(row.end_date),
+      start_date: row.start_date ? new Date(row.start_date) : undefined,
+      end_date: row.end_date ? new Date(row.end_date) : undefined,
       duration_hours: row.duration_hours,
+      duration_days: row.duration_days,
       status: row.status,
       max_participants: row.max_participants,
       created_at: new Date(row.created_at),

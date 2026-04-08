@@ -279,6 +279,10 @@ export class PayrollProcessingService {
       }
     }
 
+    if (skipped.length > 0) {
+      neft += `# WARNING: The following employees were skipped (no primary bank account): ${skipped.join(', ')}\n`;
+    }
+
     return Buffer.from(neft, 'utf-8');
   }
 
@@ -287,11 +291,14 @@ export class PayrollProcessingService {
     details: string,
     performedBy: string
   ): Promise<void> {
+    const { v4: uuidv4 } = await import('uuid');
     await this.knex('audit_logs').insert({
+      id: uuidv4(),
+      entity_type: 'payroll',
+      entity_id: performedBy,
       action,
-      details,
       performed_by: performedBy,
-      created_at: this.knex.fn.now(),
+      changes: JSON.stringify({ details }),
     });
   }
 }

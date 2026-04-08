@@ -8,7 +8,7 @@ describe('ExpenseService', () => {
   let mockKnex: jest.Mocked<Knex>;
 
   beforeEach(() => {
-    mockKnex = {
+    const queryBuilder = {
       insert: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
       whereIn: jest.fn().mockReturnThis(),
@@ -16,7 +16,8 @@ describe('ExpenseService', () => {
       first: jest.fn(),
       select: jest.fn(),
       update: jest.fn().mockReturnThis(),
-    } as any;
+    };
+    mockKnex = Object.assign(jest.fn().mockReturnValue(queryBuilder), queryBuilder) as any;
 
     service = new ExpenseService(mockKnex);
   });
@@ -159,8 +160,8 @@ describe('ExpenseService', () => {
 
       expect(result).toBeDefined();
       expect(result.length).toBe(2);
-      expect(result[0].id).toBe('exp1');
-      expect(result[1].id).toBe('exp2');
+      expect(result[0]!.id).toBe('exp1');
+      expect(result[1]!.id).toBe('exp2');
     });
 
     it('should return empty array if employee has no claims', async () => {

@@ -42,8 +42,8 @@ describe('Geo Tracking Service - Property Tests', () => {
           let expectedTotal = 0;
           for (let i = 1; i < waypoints.length; i++) {
             const distance = geoTrackingService.calculateDistance(
-              waypoints[i - 1],
-              waypoints[i]
+              waypoints[i - 1]!,
+              waypoints[i]!
             );
             expectedTotal += distance;
           }

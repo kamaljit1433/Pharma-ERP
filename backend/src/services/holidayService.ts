@@ -1,6 +1,6 @@
 import { Knex } from 'knex';
 import { HolidayRepository } from '../repositories/holidayRepository';
-import { CompanyHoliday, CreateHolidayDTO } from '../types/leave';
+import { CompanyHoliday, CreateHolidayDTO, UpdateHolidayDTO } from '../types/leave';
 
 export class HolidayService {
   private holidayRepository: HolidayRepository;
@@ -12,7 +12,7 @@ export class HolidayService {
   async createHoliday(data: CreateHolidayDTO): Promise<CompanyHoliday> {
     // Check if holiday already exists on that date
     const existing = await this.knex('company_holidays')
-      .where('holiday_date', data.holiday_date)
+      .where('holiday_date', data.date)
       .first();
 
     if (existing) {
@@ -49,7 +49,7 @@ export class HolidayService {
 
   async updateHoliday(
     id: string,
-    data: Partial<CompanyHoliday>
+    data: UpdateHolidayDTO
   ): Promise<CompanyHoliday> {
     const holiday = await this.holidayRepository.getHolidayById(id);
     if (!holiday) {
@@ -73,6 +73,7 @@ export class HolidayService {
   }
 
   async getHolidayCount(fromDate: string, toDate: string): Promise<number> {
-    return this.holidayRepository.getHolidaysInRange(fromDate, toDate);
+    const holidays = await this.holidayRepository.getHolidaysInRange(fromDate, toDate);
+    return holidays.length;
   }
 }

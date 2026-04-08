@@ -21,11 +21,19 @@ export class LeaveTypeRepository {
   }
 
   async getLeaveTypeById(id: string): Promise<LeaveType | null> {
-    return this.knex('leave_types').where({ id }).first();
+    return (await this.knex('leave_types').where({ id }).first()) ?? null;
+  }
+
+  async getLeaveType(id: string): Promise<LeaveType | null> {
+    return this.getLeaveTypeById(id);
   }
 
   async getLeaveTypeByCode(code: string): Promise<LeaveType | null> {
-    return this.knex('leave_types').where({ code }).first();
+    return (await this.knex('leave_types').where({ code }).first()) ?? null;
+  }
+
+  async getLeaveTypeByName(name: string): Promise<LeaveType | null> {
+    return (await this.knex('leave_types').where({ name }).first()) ?? null;
   }
 
   async getAllLeaveTypes(activeOnly = true): Promise<LeaveType[]> {
@@ -38,10 +46,30 @@ export class LeaveTypeRepository {
     return query.orderBy('name');
   }
 
-  async updateLeaveType(
-    id: string,
-    data: UpdateLeaveTypeDTO
-  ): Promise<LeaveType> {
+  async getActiveLeaveTypes(): Promise<LeaveType[]> {
+    return this.knex('leave_types').where({ is_active: true }).orderBy('name');
+  }
+
+  async getPaidLeaveTypes(): Promise<LeaveType[]> {
+    return this.knex('leave_types').where({ is_paid: true }).orderBy('name');
+  }
+
+  async getUnpaidLeaveTypes(): Promise<LeaveType[]> {
+    return this.knex('leave_types').where({ is_paid: false }).orderBy('name');
+  }
+
+  async getLeaveTypeCount(): Promise<number> {
+    const result = await this.knex('leave_types').count('id as count').first();
+    return parseInt(String(result?.['count'] || 0), 10);
+  }
+
+  async searchLeaveTypes(query: string): Promise<LeaveType[]> {
+    return this.knex('leave_types')
+      .whereILike('name', `%${query}%`)
+      .orderBy('name');
+  }
+
+  async updateLeaveType(id: string, data: UpdateLeaveTypeDTO): Promise<LeaveType> {
     const [leaveType] = await this.knex('leave_types')
       .where({ id })
       .update({
@@ -49,6 +77,10 @@ export class LeaveTypeRepository {
         updated_at: this.knex.fn.now(),
       })
       .returning('*');
+
+    if (!leaveType) {
+      throw new Error(`LeaveType with id ${id} not found`);
+    }
 
     return leaveType;
   }

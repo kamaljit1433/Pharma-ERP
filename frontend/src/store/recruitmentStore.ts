@@ -14,6 +14,7 @@ interface RecruitmentState {
   currentJob: JobPosting | null;
   candidates: Applicant[];
   interviews: Interview[];
+  currentInterview: Interview | null;
   offers: OfferLetter[];
   onboardingChecklists: OnboardingChecklist[];
 
@@ -28,7 +29,9 @@ interface RecruitmentState {
   fetchCandidates: (filters?: any) => Promise<void>;
   addCandidate: (jobPostingId: string, data: Partial<Applicant>) => Promise<void>;
   moveCandidateStage: (applicantId: string, stage: string) => Promise<void>;
+  fetchInterviews: (filters?: any) => Promise<void>;
   scheduleInterview: (data: Partial<Interview>) => Promise<void>;
+  cancelInterview: (interviewId: string) => Promise<void>;
   submitFeedback: (interviewId: string, data: any) => Promise<void>;
   generateOffer: (data: Partial<OfferLetter>) => Promise<void>;
   sendOffer: (offerLetterId: string) => Promise<void>;
@@ -41,6 +44,7 @@ const initialState = {
   currentJob: null,
   candidates: [],
   interviews: [],
+  currentInterview: null,
   offers: [],
   onboardingChecklists: [],
   loading: false,
@@ -129,11 +133,42 @@ export const useRecruitmentStore = create<RecruitmentState>((set, get) => ({
     }
   },
 
+  fetchInterviews: async (filters) => {
+    set({ loading: true, error: null });
+    try {
+      const interviews = await recruitmentService.getInterviews(filters);
+      set({ interviews, loading: false });
+    } catch (error) {
+      set({ error: (error as Error).message, loading: false });
+    }
+  },
+
+  cancelInterview: async (interviewId) => {
+    set({ loading: true, error: null });
+    try {
+      await recruitmentService.cancelInterview(interviewId);
+      set((state) => ({
+        interviews: state.interviews.map((i) =>
+          i.id === interviewId ? { ...i, status: 'Cancelled' } : i
+        ),
+        loading: false,
+      }));
+    } catch (error) {
+      set({ error: (error as Error).message, loading: false });
+      throw error;
+    }
+  },
+
   submitFeedback: async (interviewId, data) => {
     set({ loading: true, error: null });
     try {
       await recruitmentService.submitInterviewFeedback(interviewId, data);
-      set({ loading: false });
+      set((state) => ({
+        interviews: state.interviews.map((i) =>
+          i.id === interviewId ? { ...i, status: 'Completed' } : i
+        ),
+        loading: false,
+      }));
     } catch (error) {
       set({ error: (error as Error).message, loading: false });
       throw error;

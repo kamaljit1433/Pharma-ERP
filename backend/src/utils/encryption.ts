@@ -14,7 +14,7 @@ const IV_LENGTH = 12;
  * Get encryption key from environment
  */
 function getEncryptionKey(): Buffer {
-  const key = process.env.ENCRYPTION_KEY;
+  const key = process.env['ENCRYPTION_KEY'];
   if (!key) {
     throw new Error('ENCRYPTION_KEY environment variable is not set');
   }
@@ -133,6 +133,20 @@ export function encryptObject(obj: any): string {
 export function decryptObject(encryptedData: string): any {
   const json = decrypt(encryptedData);
   return JSON.parse(json);
+}
+
+/**
+ * Serialize encrypted data for storage (identity — the format is already a string)
+ */
+export function serializeEncryptedData(encryptedData: string): string {
+  return encryptedData;
+}
+
+/**
+ * Parse encrypted data from storage (identity — already a string)
+ */
+export function parseEncryptedData(storedData: string): string {
+  return storedData;
 }
 
 /**

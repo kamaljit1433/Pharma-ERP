@@ -6,6 +6,8 @@ import Employees from '../Employees';
 import EmployeeDetail from '../EmployeeDetail';
 import { Attendance } from '../Attendance';
 import Leave from '../Leave';
+import Payroll from '../Payroll';
+import Recruitment from '../Recruitment';
 import ProtectedRoute from '../../routes/ProtectedRoute';
 import { UserRole } from '../../types/auth';
 
@@ -61,6 +63,22 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <Leave />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'payroll',
+        element: (
+          <ProtectedRoute requiredRoles={[UserRole.FINANCE, UserRole.HR_MANAGER]}>
+            <Payroll />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'recruitment',
+        element: (
+          <ProtectedRoute requiredRoles={[UserRole.HR_MANAGER, UserRole.SUPER_ADMIN]}>
+            <Recruitment />
           </ProtectedRoute>
         ),
       },

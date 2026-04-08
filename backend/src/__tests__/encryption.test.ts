@@ -21,7 +21,7 @@ import {
 describe('Encryption Utilities', () => {
   beforeEach(() => {
     // Set a test encryption key
-    process.env.ENCRYPTION_KEY = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+    process.env['ENCRYPTION_KEY'] = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
   });
 
   describe('encrypt and decrypt', () => {

@@ -6,6 +6,8 @@ import {
   InterviewFeedback,
   OfferLetter,
   OnboardingChecklist,
+  CandidateCommunication,
+  SendCommunicationDTO,
 } from '../types/recruitment';
 
 export const recruitmentService = {
@@ -44,6 +46,21 @@ export const recruitmentService = {
   // Interviews
   scheduleInterview: async (data: Partial<Interview>) => {
     const response = await apiClient.post('/recruitment/interviews', data);
+    return response.data;
+  },
+
+  getInterviews: async (filters?: { applicant_id?: string; status?: string }) => {
+    const response = await apiClient.get('/recruitment/interviews', { params: filters });
+    return response.data;
+  },
+
+  getInterview: async (id: string) => {
+    const response = await apiClient.get(`/recruitment/interviews/${id}`);
+    return response.data;
+  },
+
+  cancelInterview: async (interviewId: string) => {
+    const response = await apiClient.put(`/recruitment/interviews/${interviewId}/cancel`);
     return response.data;
   },
 
@@ -86,6 +103,22 @@ export const recruitmentService = {
 
   getOnboardingChecklist: async (employeeId: string) => {
     const response = await apiClient.get(`/recruitment/onboarding/${employeeId}`);
+    return response.data;
+  },
+
+  // Candidate Communication
+  sendCommunication: async (data: SendCommunicationDTO) => {
+    const response = await apiClient.post('/recruitment/communications', data);
+    return response.data;
+  },
+
+  getCommunicationHistory: async (applicantId: string) => {
+    const response = await apiClient.get(`/recruitment/communications/${applicantId}`);
+    return response.data;
+  },
+
+  markCommunicationAsRead: async (communicationId: string) => {
+    const response = await apiClient.put(`/recruitment/communications/${communicationId}/read`);
     return response.data;
   },
 };

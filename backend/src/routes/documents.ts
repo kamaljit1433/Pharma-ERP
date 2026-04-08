@@ -3,7 +3,7 @@ import { Knex } from 'knex';
 import { DocumentController } from '../controllers/documentController';
 import { authenticateToken } from '../middleware/auth';
 import { authorize } from '../middleware/authorize';
-import { fileUpload } from '../middleware/fileUpload';
+import { upload as fileUpload } from '../middleware/fileUpload';
 import knex from '../config/knex';
 
 export function createDocumentRoutes(database?: Knex): Router {

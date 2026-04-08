@@ -34,7 +34,7 @@ export class InterviewRepository {
   }
 
   async getInterviewById(id: string): Promise<Interview | null> {
-    return this.knex('interviews').where({ id }).first();
+    return (await this.knex('interviews').where({ id }).first()) ?? null;
   }
 
   async getInterviewsByApplicant(applicantId: string): Promise<Interview[]> {
@@ -79,9 +79,12 @@ export class InterviewRepository {
   }
 
   async getScheduledInterviews(startDate: Date, endDate: Date): Promise<Interview[]> {
+    // Convert dates to ISO strings for SQLite compatibility
+    const startDateStr = startDate.toISOString().substring(0, 10);
+    const endDateStr = endDate.toISOString().substring(0, 10);
+    
     return this.knex('interviews')
-      .where('scheduled_at', '>=', startDate)
-      .where('scheduled_at', '<=', endDate)
+      .whereBetween('scheduled_at', [startDateStr, `${endDateStr} 23:59:59`])
       .where({ status: 'scheduled' });
   }
 }

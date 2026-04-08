@@ -115,19 +115,19 @@ describe('Leave Balance Management', () => {
     fc.assert(
       fc.property(
         leaveBalanceArbitrary(),
-        fc.integer({ min: 0, max: 5 })
-      ),
-      (balance, daysUsed) => {
-        const newBalance = balance - daysUsed;
+        fc.integer({ min: 0, max: 5 }),
+        (balance, daysUsed) => {
+          const newBalance = balance - daysUsed;
 
-        // Property: New balance should never be negative
-        expect(newBalance).toBeGreaterThanOrEqual(-daysUsed);
+          // Property: New balance should never be negative
+          expect(newBalance).toBeGreaterThanOrEqual(-daysUsed);
 
-        // Property: Deduction should reduce balance
-        if (daysUsed > 0) {
-          expect(newBalance).toBeLessThan(balance);
+          // Property: Deduction should reduce balance
+          if (daysUsed > 0) {
+            expect(newBalance).toBeLessThan(balance);
+          }
         }
-      }
+      )
     );
   });
 });

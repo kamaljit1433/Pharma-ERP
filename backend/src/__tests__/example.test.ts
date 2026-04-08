@@ -39,7 +39,7 @@ describe('Test Database and Factories Example', () => {
 
       expect(parent).toBeDefined();
       expect(children).toHaveLength(3);
-      expect(children[0].parent_department_id).toBe(parent.id);
+      expect(children[0]!.parent_department_id).toBe(parent.id);
     });
   });
 

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Attendance API Routes
  * Handles check-in, check-out, and attendance management endpoints
  */
@@ -14,13 +14,13 @@ const router = Router();
  * POST /api/v1/attendance/check-in
  * Mark employee check-in with face detection and GPS validation
  */
-router.post('/check-in', async (req: Request, res: Response) => {
+router.post('/check-in', async (req: Request, res: Response): Promise<void> => {
   try {
     const { employeeId, location, faceDetected, shiftId } = req.body;
 
     // Validate required fields
     if (!employeeId) {
-      return res.status(400).json({
+      res.status(400).json({
         error: {
           code: 'MISSING_EMPLOYEE_ID',
           message: 'Employee ID is required',
@@ -28,10 +28,11 @@ router.post('/check-in', async (req: Request, res: Response) => {
           requestId: (req as any).id,
         },
       });
+      return;
     }
 
     if (!location) {
-      return res.status(400).json({
+      res.status(400).json({
         error: {
           code: 'MISSING_LOCATION',
           message: 'GPS location is required',
@@ -39,10 +40,11 @@ router.post('/check-in', async (req: Request, res: Response) => {
           requestId: (req as any).id,
         },
       });
+      return;
     }
 
     if (faceDetected === undefined) {
-      return res.status(400).json({
+      res.status(400).json({
         error: {
           code: 'MISSING_FACE_DETECTION',
           message: 'Face detection result is required',
@@ -50,6 +52,7 @@ router.post('/check-in', async (req: Request, res: Response) => {
           requestId: (req as any).id,
         },
       });
+      return;
     }
 
     // Perform check-in
@@ -82,13 +85,13 @@ router.post('/check-in', async (req: Request, res: Response) => {
  * POST /api/v1/attendance/check-out
  * Mark employee check-out with GPS capture
  */
-router.post('/check-out', async (req: Request, res: Response) => {
+router.post('/check-out', async (req: Request, res: Response): Promise<void> => {
   try {
     const { attendanceId, location } = req.body;
 
     // Validate required fields
     if (!attendanceId) {
-      return res.status(400).json({
+      res.status(400).json({
         error: {
           code: 'MISSING_ATTENDANCE_ID',
           message: 'Attendance ID is required',
@@ -96,10 +99,11 @@ router.post('/check-out', async (req: Request, res: Response) => {
           requestId: (req as any).id,
         },
       });
+      return;
     }
 
     if (!location) {
-      return res.status(400).json({
+      res.status(400).json({
         error: {
           code: 'MISSING_LOCATION',
           message: 'GPS location is required',
@@ -107,6 +111,7 @@ router.post('/check-out', async (req: Request, res: Response) => {
           requestId: (req as any).id,
         },
       });
+      return;
     }
 
     // Perform check-out
@@ -134,14 +139,14 @@ router.post('/check-out', async (req: Request, res: Response) => {
  * GET /api/v1/attendance/monthly/:employeeId
  * Get monthly attendance summary for an employee
  */
-router.get('/monthly/:employeeId', async (req: Request, res: Response) => {
+router.get('/monthly/:employeeId', async (req: Request, res: Response): Promise<void> => {
   try {
     const { employeeId } = req.params;
     const { month, year } = req.query;
 
     // Validate required parameters
     if (!employeeId) {
-      return res.status(400).json({
+      res.status(400).json({
         error: {
           code: 'MISSING_EMPLOYEE_ID',
           message: 'Employee ID is required',
@@ -149,10 +154,11 @@ router.get('/monthly/:employeeId', async (req: Request, res: Response) => {
           requestId: (req as any).id,
         },
       });
+      return;
     }
 
     if (!month || !year) {
-      return res.status(400).json({
+      res.status(400).json({
         error: {
           code: 'MISSING_PERIOD',
           message: 'Month and year are required',
@@ -160,6 +166,7 @@ router.get('/monthly/:employeeId', async (req: Request, res: Response) => {
           requestId: (req as any).id,
         },
       });
+      return;
     }
 
     const monthNum = parseInt(month as string, 10);
@@ -167,7 +174,7 @@ router.get('/monthly/:employeeId', async (req: Request, res: Response) => {
 
     // Validate month and year
     if (monthNum < 1 || monthNum > 12) {
-      return res.status(400).json({
+      res.status(400).json({
         error: {
           code: 'INVALID_MONTH',
           message: 'Month must be between 1 and 12',
@@ -175,6 +182,7 @@ router.get('/monthly/:employeeId', async (req: Request, res: Response) => {
           requestId: (req as any).id,
         },
       });
+      return;
     }
 
     // Get monthly attendance
@@ -206,13 +214,13 @@ router.get('/monthly/:employeeId', async (req: Request, res: Response) => {
  * POST /api/v1/attendance/regularization
  * Request attendance regularization
  */
-router.post('/regularization', async (req: Request, res: Response) => {
+router.post('/regularization', async (req: Request, res: Response): Promise<void> => {
   try {
     const { attendanceId, employeeId, reason } = req.body;
 
     // Validate required fields
     if (!attendanceId || !employeeId || !reason) {
-      return res.status(400).json({
+      res.status(400).json({
         error: {
           code: 'MISSING_FIELDS',
           message: 'Attendance ID, Employee ID, and reason are required',
@@ -220,6 +228,7 @@ router.post('/regularization', async (req: Request, res: Response) => {
           requestId: (req as any).id,
         },
       });
+      return;
     }
 
     // Create regularization request
@@ -251,14 +260,14 @@ router.post('/regularization', async (req: Request, res: Response) => {
  * PUT /api/v1/attendance/regularization/:id/approve
  * Approve attendance regularization request
  */
-router.put('/regularization/:id/approve', async (req: Request, res: Response) => {
+router.put('/regularization/:id/approve', async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const { approverId, comments } = req.body;
 
     // Validate required fields
     if (!id || !approverId) {
-      return res.status(400).json({
+      res.status(400).json({
         error: {
           code: 'MISSING_FIELDS',
           message: 'Request ID and Approver ID are required',
@@ -266,6 +275,7 @@ router.put('/regularization/:id/approve', async (req: Request, res: Response) =>
           requestId: (req as any).id,
         },
       });
+      return;
     }
 
     // Approve regularization
@@ -323,13 +333,13 @@ router.get('/shifts', async (req: Request, res: Response) => {
  * POST /api/v1/shifts
  * Create a new shift
  */
-router.post('/shifts', async (req: Request, res: Response) => {
+router.post('/shifts', async (req: Request, res: Response): Promise<void> => {
   try {
     const { name, startTime, endTime, breakDuration, type } = req.body;
 
     // Validate required fields
     if (!name || !startTime || !endTime || breakDuration === undefined || !type) {
-      return res.status(400).json({
+      res.status(400).json({
         error: {
           code: 'MISSING_FIELDS',
           message: 'Name, start time, end time, break duration, and type are required',
@@ -337,6 +347,7 @@ router.post('/shifts', async (req: Request, res: Response) => {
           requestId: (req as any).id,
         },
       });
+      return;
     }
 
     // Create shift

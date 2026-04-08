@@ -285,8 +285,8 @@ describe('ShiftService', () => {
 
       const history = await shiftService.getShiftHistoryForEmployee(employeeId);
 
-      expect(history[0].effectiveFrom.getTime()).toBeGreaterThanOrEqual(
-        history[1].effectiveFrom.getTime()
+      expect(history[0]!.effectiveFrom.getTime()).toBeGreaterThanOrEqual(
+        history[1]!.effectiveFrom.getTime()
       );
     });
   });

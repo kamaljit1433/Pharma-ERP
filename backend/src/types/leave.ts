@@ -36,6 +36,7 @@ export interface Leave {
   approved_by?: string;
   approval_notes?: string;
   approved_at?: string;
+  cancellation_reason?: string;
   created_at: string;
   updated_at: string;
 }
@@ -43,8 +44,8 @@ export interface Leave {
 export interface CompanyHoliday {
   id: string;
   name: string;
-  holiday_date: string;
-  type: 'national' | 'regional' | 'company';
+  date: string;
+  holiday_type: 'national' | 'regional' | 'company';
   is_optional: boolean;
   created_at: string;
 }
@@ -55,6 +56,22 @@ export interface LeaveApplicationDTO {
   from_date: string;
   to_date: string;
   reason?: string;
+}
+
+export interface CreateLeaveDTO {
+  employee_id: string;
+  leave_type_id: string;
+  from_date: string;
+  to_date: string;
+  reason?: string;
+  status?: string;
+}
+
+export interface UpdateLeaveDTO {
+  status?: string;
+  approved_by?: string;
+  approval_notes?: string;
+  approval_date?: Date;
 }
 
 export interface CreateLeaveTypeDTO {
@@ -77,8 +94,15 @@ export interface UpdateLeaveTypeDTO {
 
 export interface CreateHolidayDTO {
   name: string;
-  holiday_date: string;
-  type: 'national' | 'regional' | 'company';
+  date: string;
+  holiday_type: 'national' | 'regional' | 'company';
+  is_optional?: boolean;
+}
+
+export interface UpdateHolidayDTO {
+  name?: string;
+  date?: string;
+  holiday_type?: 'national' | 'regional' | 'company';
   is_optional?: boolean;
 }
 

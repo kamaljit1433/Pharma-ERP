@@ -1,5 +1,10 @@
 import { Knex } from 'knex';
-import { OnboardingChecklist, OnboardingChecklistItem, CreateOnboardingChecklistDTO } from '../types/recruitment';
+import {
+  OnboardingChecklist,
+  OnboardingChecklistItem,
+  CreateOnboardingChecklistDTO,
+  UpdateOnboardingChecklistDTO,
+} from '../types/recruitment';
 import { v4 as uuidv4 } from 'uuid';
 
 export class OnboardingRepository {
@@ -7,84 +12,114 @@ export class OnboardingRepository {
 
   async createChecklist(data: CreateOnboardingChecklistDTO): Promise<OnboardingChecklist> {
     const checklistId = uuidv4();
-    
-    // Create items with IDs
-    const items: any[] = data.items.map(item => ({
-      id: uuidv4(),
-      checklist_id: checklistId,
-      title: item.title,
-      description: item.description,
-      ...(item.assigned_to && { assigned_to: item.assigned_to }),
-      completed: false,
-    }));
+    const now = new Date();
 
-    const checklist: OnboardingChecklist = {
-      id: checklistId,
-      employee_id: data.employee_id,
-      title: 'Onboarding Checklist',
-      status: 'pending',
-      items: items as OnboardingChecklistItem[],
-      created_at: new Date(),
-      updated_at: new Date(),
-    };
+    const items: OnboardingChecklistItem[] = data.items.map((item) => ({
+      task: item.task,
+      completed: item.completed ?? false,
+    }));
 
     await this.knex('onboarding_checklists').insert({
       id: checklistId,
       employee_id: data.employee_id,
       title: 'Onboarding Checklist',
       items: JSON.stringify(items),
-      status: 'pending',
-      created_at: checklist.created_at,
-      updated_at: checklist.updated_at,
+      status: data.status ?? 'pending',
+      created_at: now,
+      updated_at: now,
     });
 
-    return checklist;
+    return {
+      id: checklistId,
+      employee_id: data.employee_id,
+      title: 'Onboarding Checklist',
+      status: data.status ?? 'pending',
+      items,
+      created_at: now,
+      updated_at: now,
+    };
   }
 
   async getChecklistById(id: string): Promise<OnboardingChecklist | null> {
     const checklist = await this.knex('onboarding_checklists').where({ id }).first();
     if (!checklist) return null;
-
-    const items = typeof checklist.items === 'string' 
-      ? JSON.parse(checklist.items) 
-      : checklist.items || [];
-
-    return {
-      ...checklist,
-      items,
-    };
+    return this.mapToChecklist(checklist);
   }
 
   async getChecklistByEmployee(employeeId: string): Promise<OnboardingChecklist | null> {
-    const checklist = await this.knex('onboarding_checklists').where({ employee_id: employeeId }).first();
+    const checklist = await this.knex('onboarding_checklists')
+      .where({ employee_id: employeeId })
+      .first();
     if (!checklist) return null;
+    return this.mapToChecklist(checklist);
+  }
 
-    const items = typeof checklist.items === 'string' 
-      ? JSON.parse(checklist.items) 
-      : checklist.items || [];
+  async updateChecklist(
+    id: string,
+    data: UpdateOnboardingChecklistDTO
+  ): Promise<OnboardingChecklist> {
+    const updateData: any = { updated_at: this.knex.fn.now() };
 
-    return {
-      ...checklist,
-      items,
-    };
+    if (data.status !== undefined) updateData.status = data.status;
+    if (data.items !== undefined) {
+      const items: OnboardingChecklistItem[] = data.items.map((item) => ({
+        task: item.task,
+        completed: item.completed ?? false,
+      }));
+      updateData.items = JSON.stringify(items);
+    }
+
+    await this.knex('onboarding_checklists').where({ id }).update(updateData);
+
+    const updated = await this.getChecklistById(id);
+    if (!updated) throw new Error(`Checklist with id ${id} not found`);
+    return updated;
+  }
+
+  async completeItem(checklistId: string, itemIndex: number): Promise<OnboardingChecklist> {
+    const checklist = await this.getChecklistById(checklistId);
+    if (!checklist) throw new Error(`Checklist with id ${checklistId} not found`);
+
+    const items = [...checklist.items];
+    if (itemIndex < 0 || itemIndex >= items.length) {
+      throw new Error(`Item index ${itemIndex} out of range`);
+    }
+
+    items[itemIndex] = { ...items[itemIndex]!, completed: true, completed_at: new Date() };
+
+    await this.knex('onboarding_checklists')
+      .where({ id: checklistId })
+      .update({ items: JSON.stringify(items), updated_at: this.knex.fn.now() });
+
+    return { ...checklist, items };
+  }
+
+  async deleteChecklist(id: string): Promise<void> {
+    await this.knex('onboarding_checklists').where({ id }).del();
   }
 
   async completeChecklistItem(itemId: string, completedBy: string): Promise<OnboardingChecklistItem> {
-    // Get the checklist to find the item
     const checklists = await this.knex('onboarding_checklists').select('*');
-    
+
     let targetChecklist = null;
-    let targetItem = null;
-    
+    let targetItem: any = null;
+    let targetItems: any[] = [];
+
     for (const checklist of checklists) {
-      const items = typeof checklist.items === 'string' 
-        ? JSON.parse(checklist.items) 
-        : checklist.items || [];
-      
-      const item = items.find((i: any) => i.id === itemId);
+      let items: any[] = [];
+      try {
+        items = typeof checklist.items === 'string'
+          ? JSON.parse(checklist.items)
+          : Array.isArray(checklist.items) ? checklist.items : [];
+      } catch (e) {
+        items = [];
+      }
+
+      const item = Array.isArray(items) ? items.find((i: any) => i.id === itemId) : null;
       if (item) {
         targetChecklist = checklist;
         targetItem = item;
+        targetItems = items;
         break;
       }
     }
@@ -93,32 +128,22 @@ export class OnboardingRepository {
       throw new Error('Checklist item not found');
     }
 
-    // Update the item
     const now = new Date();
     targetItem.completed = true;
     targetItem.completed_at = now;
     targetItem.completed_by = completedBy;
 
-    // Update the checklist with new items
     await this.knex('onboarding_checklists')
       .where({ id: targetChecklist.id })
-      .update({
-        items: JSON.stringify(targetChecklist.items),
-        updated_at: now,
-      });
+      .update({ items: JSON.stringify(targetItems), updated_at: now });
 
     return targetItem;
   }
 
   async isChecklistComplete(checklistId: string): Promise<boolean> {
-    const checklist = await this.knex('onboarding_checklists').where({ id: checklistId }).first();
+    const checklist = await this.getChecklistById(checklistId);
     if (!checklist) return false;
-
-    const items = typeof checklist.items === 'string' 
-      ? JSON.parse(checklist.items) 
-      : checklist.items || [];
-
-    return items.every((item: any) => item.completed === true);
+    return checklist.items.every((item) => item.completed === true);
   }
 
   async completeChecklist(checklistId: string): Promise<OnboardingChecklist> {
@@ -132,5 +157,29 @@ export class OnboardingRepository {
     const checklist = await this.getChecklistById(checklistId);
     if (!checklist) throw new Error('Checklist not found');
     return checklist;
+  }
+
+  private mapToChecklist(row: any): OnboardingChecklist {
+    const items: OnboardingChecklistItem[] =
+      typeof row.items === 'string'
+        ? JSON.parse(row.items)
+        : Array.isArray(row.items)
+        ? row.items
+        : [];
+
+    return {
+      id: row.id,
+      employee_id: row.employee_id,
+      title: row.title,
+      description: row.description,
+      status: row.status,
+      items,
+      target_completion_date: row.target_completion_date
+        ? new Date(row.target_completion_date)
+        : undefined,
+      completed_date: row.completed_date ? new Date(row.completed_date) : undefined,
+      created_at: new Date(row.created_at),
+      updated_at: new Date(row.updated_at),
+    };
   }
 }

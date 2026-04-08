@@ -142,7 +142,7 @@ describe('QuestionnaireTemplateRepository', () => {
     });
 
     it('should return null for non-existent template', async () => {
-      const template = await repository.getTemplate('non-existent-id');
+      const template = await repository.getTemplate('00000000-0000-4000-a000-ffffffffffff');
 
       expect(template).toBeNull();
     });
@@ -365,7 +365,7 @@ describe('QuestionnaireTemplateRepository', () => {
 
     it('should throw error when adding question to non-existent template', async () => {
       await expect(
-        repository.addQuestion('non-existent-id', {
+        repository.addQuestion('00000000-0000-4000-a000-ffffffffffff', {
           question_text: 'Test',
           question_type: 'text',
           is_required: true,
@@ -421,7 +421,7 @@ describe('QuestionnaireTemplateRepository', () => {
       const template = await repository.createTemplate(data);
 
       await expect(
-        repository.updateQuestion(template.id, 'non-existent-id', {
+        repository.updateQuestion(template.id, '00000000-0000-4000-a000-ffffffffffff', {
           question_text: 'Updated',
         })
       ).rejects.toThrow('Question not found in template');

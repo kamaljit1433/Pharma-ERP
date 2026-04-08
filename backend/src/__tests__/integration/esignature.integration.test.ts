@@ -94,7 +94,7 @@ describe('e-Signature API Integration Tests', () => {
 
       const response = await request(app)
         .post('/api/v1/esignature/requests')
-        .set('Authorization', `Bearer ${hrManagerToken}`)
+        .set('Authorization', `Bearer ${hrToken}`)
         .send({
           document_id: documentId,
           signer_id: employeeId,
@@ -113,7 +113,7 @@ describe('e-Signature API Integration Tests', () => {
 
       const response = await request(app)
         .post('/api/v1/esignature/requests')
-        .set('Authorization', `Bearer ${hrManagerToken}`)
+        .set('Authorization', `Bearer ${hrToken}`)
         .send({
           document_id: uuidv4(),
           signer_id: employeeId,

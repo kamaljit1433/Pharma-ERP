@@ -18,6 +18,7 @@ jest.mock('../../config', () => ({
     },
     templateDir: 'src/templates/email',
   },
+  logging: { level: 'info' },
 }));
 
 // Mock the providers

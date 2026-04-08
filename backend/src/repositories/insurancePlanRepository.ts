@@ -84,7 +84,7 @@ export class InsurancePlanRepository {
       coverage_type: row.coverage_type,
       enrollment_start_date: new Date(row.enrollment_start_date),
       enrollment_end_date: new Date(row.enrollment_end_date),
-      is_active: row.is_active,
+      is_active: Boolean(row.is_active),
       created_at: new Date(row.created_at),
       updated_at: new Date(row.updated_at),
     };

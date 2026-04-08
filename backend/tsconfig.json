@@ -9,6 +9,7 @@
     /* Modules */
     "module": "commonjs",
     "moduleResolution": "node10",
+    "ignoreDeprecations": "6.0",
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],

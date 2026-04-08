@@ -12,11 +12,12 @@ import {
   CreateEmploymentHistoryDTO,
 } from '../types/employee';
 import { isValidEmail, isValidPhone } from '../utils/validation';
+import { logAuditEvent } from '../utils/auditLog';
 
 export class EmployeeService {
   private employeeRepository: EmployeeRepository;
 
-  constructor(db: Knex) {
+  constructor(private db: Knex) {
     this.employeeRepository = new EmployeeRepository(db);
   }
 
@@ -63,7 +64,28 @@ export class EmployeeService {
       throw new Error('Employee not found');
     }
 
-    return this.employeeRepository.updateEmployeeStatus(id, status);
+    // Validate status transition
+    const validStatuses = ['active', 'on_leave', 'suspended', 'resigned', 'terminated'];
+    if (!validStatuses.includes(status)) {
+      throw new Error(`Invalid status. Allowed values: ${validStatuses.join(', ')}`);
+    }
+
+    const updatedEmployee = await this.employeeRepository.updateEmployeeStatus(id, status);
+
+    // Log the status change in audit logs
+    await logAuditEvent(
+      this.db,
+      'employee',
+      id,
+      'employee_status_updated',
+      {
+        old_status: employee.status,
+        new_status: status,
+        timestamp: new Date().toISOString(),
+      }
+    );
+
+    return updatedEmployee;
   }
 
   async searchEmployees(filters: EmployeeFilters): Promise<Employee[]> {

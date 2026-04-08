@@ -50,8 +50,8 @@ export class EmployeeFactory extends BaseFactory<Employee> {
    */
   async create(overrides?: Partial<Employee>): Promise<Employee> {
     EmployeeFactory.counter++;
-    const firstName = EmployeeFactory.firstNames[EmployeeFactory.counter % EmployeeFactory.firstNames.length];
-    const lastName = EmployeeFactory.lastNames[EmployeeFactory.counter % EmployeeFactory.lastNames.length];
+    const firstName = EmployeeFactory.firstNames[EmployeeFactory.counter % EmployeeFactory.firstNames.length]!;
+    const lastName = EmployeeFactory.lastNames[EmployeeFactory.counter % EmployeeFactory.lastNames.length]!;
     const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}${EmployeeFactory.counter}@example.com`;
     const employeeId = `EMP${String(EmployeeFactory.counter).padStart(6, '0')}`;
 

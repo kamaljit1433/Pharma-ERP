@@ -34,28 +34,28 @@ describe('HolidayService', () => {
     it('should create a new holiday', async () => {
       const holiday = await holidayService.createHoliday({
         name: 'Independence Day',
-        holiday_date: '2026-08-15',
-        type: 'national',
+        date: '2026-08-15',
+        holiday_type: 'national',
       });
 
       expect(holiday).toBeDefined();
       expect(holiday.name).toBe('Independence Day');
-      expect(holiday.holiday_date).toBe('2026-08-15');
-      expect(holiday.type).toBe('national');
+      expect(holiday.date).toBe('2026-08-15');
+      expect(holiday.holiday_type).toBe('national');
     });
 
     it('should reject duplicate holiday on same date', async () => {
       await holidayService.createHoliday({
         name: 'Independence Day',
-        holiday_date: '2026-08-15',
-        type: 'national',
+        date: '2026-08-15',
+        holiday_type: 'national',
       });
 
       await expect(
         holidayService.createHoliday({
           name: 'Another Holiday',
-          holiday_date: '2026-08-15',
-          type: 'national',
+          date: '2026-08-15',
+          holiday_type: 'national',
         })
       ).rejects.toThrow('already exists');
     });
@@ -65,8 +65,8 @@ describe('HolidayService', () => {
     it('should retrieve holiday by id', async () => {
       const created = await holidayService.createHoliday({
         name: 'Independence Day',
-        holiday_date: '2026-08-15',
-        type: 'national',
+        date: '2026-08-15',
+        holiday_type: 'national',
       });
 
       const retrieved = await holidayService.getHoliday(created.id);
@@ -86,14 +86,14 @@ describe('HolidayService', () => {
     it('should return holidays for a specific year', async () => {
       await holidayService.createHoliday({
         name: 'Independence Day',
-        holiday_date: '2026-08-15',
-        type: 'national',
+        date: '2026-08-15',
+        holiday_type: 'national',
       });
 
       await holidayService.createHoliday({
         name: 'Republic Day',
-        holiday_date: '2026-01-26',
-        type: 'national',
+        date: '2026-01-26',
+        holiday_type: 'national',
       });
 
       const holidays = await holidayService.getHolidaysByYear(2026);
@@ -106,20 +106,20 @@ describe('HolidayService', () => {
     it('should return holidays by type', async () => {
       await holidayService.createHoliday({
         name: 'Independence Day',
-        holiday_date: '2026-08-15',
-        type: 'national',
+        date: '2026-08-15',
+        holiday_type: 'national',
       });
 
       await holidayService.createHoliday({
         name: 'Company Founding Day',
-        holiday_date: '2026-06-01',
-        type: 'company',
+        date: '2026-06-01',
+        holiday_type: 'company',
       });
 
       const nationalHolidays = await holidayService.getHolidaysByType('national');
 
       expect(nationalHolidays).toHaveLength(1);
-      expect(nationalHolidays[0].type).toBe('national');
+      expect(nationalHolidays[0]!.holiday_type).toBe('national');
     });
   });
 
@@ -127,14 +127,14 @@ describe('HolidayService', () => {
     it('should return holidays within date range', async () => {
       await holidayService.createHoliday({
         name: 'Independence Day',
-        holiday_date: '2026-08-15',
-        type: 'national',
+        date: '2026-08-15',
+        holiday_type: 'national',
       });
 
       await holidayService.createHoliday({
         name: 'Republic Day',
-        holiday_date: '2026-01-26',
-        type: 'national',
+        date: '2026-01-26',
+        holiday_type: 'national',
       });
 
       const holidays = await holidayService.getHolidaysByDateRange(
@@ -143,7 +143,7 @@ describe('HolidayService', () => {
       );
 
       expect(holidays).toHaveLength(1);
-      expect(holidays[0].name).toBe('Republic Day');
+      expect(holidays[0]!.name).toBe('Republic Day');
     });
   });
 
@@ -151,8 +151,8 @@ describe('HolidayService', () => {
     it('should return true for holiday date', async () => {
       await holidayService.createHoliday({
         name: 'Independence Day',
-        holiday_date: '2026-08-15',
-        type: 'national',
+        date: '2026-08-15',
+        holiday_type: 'national',
       });
 
       const isHoliday = await holidayService.isHoliday('2026-08-15');
@@ -171,14 +171,14 @@ describe('HolidayService', () => {
     it('should count holidays in date range', async () => {
       await holidayService.createHoliday({
         name: 'Independence Day',
-        holiday_date: '2026-08-15',
-        type: 'national',
+        date: '2026-08-15',
+        holiday_type: 'national',
       });
 
       await holidayService.createHoliday({
         name: 'Republic Day',
-        holiday_date: '2026-01-26',
-        type: 'national',
+        date: '2026-01-26',
+        holiday_type: 'national',
       });
 
       const count = await holidayService.getHolidayCount(
@@ -194,8 +194,8 @@ describe('HolidayService', () => {
     it('should update holiday', async () => {
       const created = await holidayService.createHoliday({
         name: 'Independence Day',
-        holiday_date: '2026-08-15',
-        type: 'national',
+        date: '2026-08-15',
+        holiday_type: 'national',
       });
 
       const updated = await holidayService.updateHoliday(created.id, {
@@ -210,8 +210,8 @@ describe('HolidayService', () => {
     it('should delete holiday', async () => {
       const created = await holidayService.createHoliday({
         name: 'Independence Day',
-        holiday_date: '2026-08-15',
-        type: 'national',
+        date: '2026-08-15',
+        holiday_type: 'national',
       });
 
       await holidayService.deleteHoliday(created.id);

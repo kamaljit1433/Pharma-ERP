@@ -14,10 +14,11 @@ export interface JobPosting {
 
 export interface CreateJobPostingDTO {
   title: string;
-  department_id: string;
-  designation_id: string;
-  description: string;
+  department_id?: string;
+  designation_id?: string;
+  description?: string;
   positions_count: number;
+  status?: 'draft' | 'open' | 'closed' | 'on_hold';
   posted_date?: Date;
   closing_date?: Date;
 }
@@ -99,11 +100,9 @@ export interface OnboardingChecklist {
 }
 
 export interface OnboardingChecklistItem {
-  id: string;
-  checklist_id: string;
-  title: string;
-  description: string;
-  assigned_to?: string;
+  id?: string;
+  checklist_id?: string;
+  task: string;
   completed: boolean;
   completed_at?: Date;
   completed_by?: string;
@@ -113,11 +112,12 @@ export interface OfferLetter {
   id: string;
   applicant_id: string;
   position: string;
-  department: string;
+  department?: string;
   salary: number;
+  currency?: string;
   start_date: Date;
   terms: string;
-  status: 'Draft' | 'Sent' | 'Signed' | 'Accepted' | 'Rejected';
+  status: 'draft' | 'sent' | 'signed' | 'accepted' | 'rejected';
   created_at: Date;
   updated_at: Date;
 }
@@ -154,17 +154,27 @@ export interface CreateInterviewFeedbackDTO {
 export interface CreateOfferLetterDTO {
   applicant_id: string;
   position: string;
-  department: string;
+  department?: string;
   salary: number;
+  currency?: string;
   start_date: Date;
   terms: string;
+  status?: 'draft' | 'sent' | 'signed' | 'accepted' | 'rejected';
 }
 
 export interface CreateOnboardingChecklistDTO {
   employee_id: string;
+  status?: 'pending' | 'in_progress' | 'completed';
   items: Array<{
-    title: string;
-    description: string;
-    assigned_to?: string;
+    task: string;
+    completed?: boolean;
+  }>;
+}
+
+export interface UpdateOnboardingChecklistDTO {
+  status?: 'pending' | 'in_progress' | 'completed';
+  items?: Array<{
+    task: string;
+    completed?: boolean;
   }>;
 }

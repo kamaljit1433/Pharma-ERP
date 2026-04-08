@@ -23,7 +23,7 @@ describe('Security Middleware', () => {
       body: {},
       query: {},
       params: {},
-      session: {},
+      session: {} as any,
       headers: {},
       method: 'POST',
       path: '/api/test'

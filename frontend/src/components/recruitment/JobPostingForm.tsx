@@ -5,43 +5,65 @@ import { Label } from '../ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Textarea } from '../ui/textarea';
 import { recruitmentService } from '../../services/recruitmentService';
-import { Briefcase, Plus, X } from 'lucide-react';
+import { jobPostingSchema, type JobPostingFormData } from '../../utils/schemas';
+import { Briefcase, Plus, X, AlertCircle } from 'lucide-react';
+import { ZodError } from 'zod';
 
 interface JobPostingFormProps {
   onSuccess?: () => void;
+  initialData?: Partial<JobPostingFormData>;
+  isEditing?: boolean;
 }
 
-export const JobPostingForm: React.FC<JobPostingFormProps> = ({ onSuccess }) => {
-  const [formData, setFormData] = useState({
-    title: '',
-    department_id: '',
-    location: '',
-    description: '',
-    required_skills: [] as string[],
-    experience_min: 0,
-    experience_max: 0,
-    application_deadline: '',
+export const JobPostingForm: React.FC<JobPostingFormProps> = ({ onSuccess, initialData, isEditing = false }) => {
+  const [formData, setFormData] = useState<JobPostingFormData>({
+    title: initialData?.title || '',
+    department_id: initialData?.department_id || '',
+    location: initialData?.location || '',
+    description: initialData?.description || '',
+    required_skills: initialData?.required_skills || [],
+    experience_min: initialData?.experience_min || 0,
+    experience_max: initialData?.experience_max || 0,
+    application_deadline: initialData?.application_deadline || '',
   });
 
   const [skillInput, setSkillInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [generalError, setGeneralError] = useState('');
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name.includes('experience') ? parseInt(value) : value,
+      [name]: name.includes('experience') ? parseInt(value) || 0 : value,
     }));
+    // Clear error for this field when user starts typing
+    if (errors[name]) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
   };
 
   const addSkill = () => {
     if (skillInput.trim()) {
+      const newSkills = [...formData.required_skills, skillInput.trim()];
       setFormData((prev) => ({
         ...prev,
-        required_skills: [...prev.required_skills, skillInput.trim()],
+        required_skills: newSkills,
       }));
       setSkillInput('');
+      // Clear error for skills field
+      if (errors.required_skills) {
+        setErrors((prev) => {
+          const newErrors = { ...prev };
+          delete newErrors.required_skills;
+          return newErrors;
+        });
+      }
     }
   };
 
@@ -55,10 +77,17 @@ export const JobPostingForm: React.FC<JobPostingFormProps> = ({ onSuccess }) => 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
+    setErrors({});
+    setGeneralError('');
 
     try {
-      await recruitmentService.createJobPosting(formData);
+      // Validate form data
+      const validatedData = jobPostingSchema.parse(formData);
+      
+      // Submit to API
+      await recruitmentService.createJobPosting(validatedData);
+      
+      // Reset form
       setFormData({
         title: '',
         department_id: '',
@@ -71,7 +100,19 @@ export const JobPostingForm: React.FC<JobPostingFormProps> = ({ onSuccess }) => 
       });
       onSuccess?.();
     } catch (err) {
-      setError((err as Error).message);
+      if (err instanceof ZodError) {
+        // Handle validation errors
+        const fieldErrors: Record<string, string> = {};
+        if (err.issues) {
+          err.issues.forEach((issue) => {
+            const path = issue.path.join('.');
+            fieldErrors[path] = issue.message;
+          });
+        }
+        setErrors(fieldErrors);
+      } else {
+        setGeneralError((err as Error).message || 'Failed to create job posting');
+      }
     } finally {
       setLoading(false);
     }
@@ -82,43 +123,63 @@ export const JobPostingForm: React.FC<JobPostingFormProps> = ({ onSuccess }) => 
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Briefcase className="w-5 h-5" />
-          Create Job Posting
+          {isEditing ? 'Edit Job Posting' : 'Create Job Posting'}
         </CardTitle>
-        <CardDescription>Post a new job opening</CardDescription>
+        <CardDescription>{isEditing ? 'Update job posting details' : 'Post a new job opening'}</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && <div className="p-3 bg-destructive/10 text-destructive rounded-md text-sm">{error}</div>}
+          {generalError && (
+            <div className="p-3 bg-destructive/10 text-destructive rounded-md text-sm flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <span>{generalError}</span>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="title">Job Title</Label>
+              <Label htmlFor="title">Job Title *</Label>
               <Input
                 id="title"
                 name="title"
                 value={formData.title}
                 onChange={handleInputChange}
                 placeholder="e.g., Senior Developer"
-                required
+                className={errors.title ? 'border-destructive' : ''}
               />
+              {errors.title && <p className="text-destructive text-sm mt-1">{errors.title}</p>}
             </div>
 
             <div>
-              <Label htmlFor="location">Location</Label>
+              <Label htmlFor="location">Location *</Label>
               <Input
                 id="location"
                 name="location"
                 value={formData.location}
                 onChange={handleInputChange}
                 placeholder="e.g., New York, NY"
-                required
+                className={errors.location ? 'border-destructive' : ''}
               />
+              {errors.location && <p className="text-destructive text-sm mt-1">{errors.location}</p>}
             </div>
+          </div>
+
+          <div>
+            <Label htmlFor="department_id">Department *</Label>
+            <Input
+              id="department_id"
+              name="department_id"
+              value={formData.department_id}
+              onChange={handleInputChange}
+              placeholder="Select or enter department ID"
+              className={errors.department_id ? 'border-destructive' : ''}
+            />
+            {errors.department_id && <p className="text-destructive text-sm mt-1">{errors.department_id}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="experience_min">Min Experience (years)</Label>
+              <Label htmlFor="experience_min">Min Experience (years) *</Label>
               <Input
                 id="experience_min"
                 name="experience_min"
@@ -126,11 +187,13 @@ export const JobPostingForm: React.FC<JobPostingFormProps> = ({ onSuccess }) => 
                 value={formData.experience_min}
                 onChange={handleInputChange}
                 min="0"
+                className={errors.experience_min ? 'border-destructive' : ''}
               />
+              {errors.experience_min && <p className="text-destructive text-sm mt-1">{errors.experience_min}</p>}
             </div>
 
             <div>
-              <Label htmlFor="experience_max">Max Experience (years)</Label>
+              <Label htmlFor="experience_max">Max Experience (years) *</Label>
               <Input
                 id="experience_max"
                 name="experience_max"
@@ -138,24 +201,27 @@ export const JobPostingForm: React.FC<JobPostingFormProps> = ({ onSuccess }) => 
                 value={formData.experience_max}
                 onChange={handleInputChange}
                 min="0"
+                className={errors.experience_max ? 'border-destructive' : ''}
               />
+              {errors.experience_max && <p className="text-destructive text-sm mt-1">{errors.experience_max}</p>}
             </div>
           </div>
 
           <div>
-            <Label htmlFor="application_deadline">Application Deadline</Label>
+            <Label htmlFor="application_deadline">Application Deadline *</Label>
             <Input
               id="application_deadline"
               name="application_deadline"
               type="date"
               value={formData.application_deadline}
               onChange={handleInputChange}
-              required
+              className={errors.application_deadline ? 'border-destructive' : ''}
             />
+            {errors.application_deadline && <p className="text-destructive text-sm mt-1">{errors.application_deadline}</p>}
           </div>
 
           <div>
-            <Label htmlFor="description">Job Description</Label>
+            <Label htmlFor="description">Job Description *</Label>
             <Textarea
               id="description"
               name="description"
@@ -163,12 +229,13 @@ export const JobPostingForm: React.FC<JobPostingFormProps> = ({ onSuccess }) => 
               onChange={handleInputChange}
               placeholder="Describe the role, responsibilities, and requirements"
               rows={4}
-              required
+              className={errors.description ? 'border-destructive' : ''}
             />
+            {errors.description && <p className="text-destructive text-sm mt-1">{errors.description}</p>}
           </div>
 
           <div>
-            <Label>Required Skills</Label>
+            <Label>Required Skills * ({formData.required_skills.length})</Label>
             <div className="flex gap-2 mb-2">
               <Input
                 value={skillInput}
@@ -180,6 +247,7 @@ export const JobPostingForm: React.FC<JobPostingFormProps> = ({ onSuccess }) => 
                 <Plus className="w-4 h-4" />
               </Button>
             </div>
+            {errors.required_skills && <p className="text-destructive text-sm mb-2">{errors.required_skills}</p>}
             <div className="flex flex-wrap gap-2">
               {formData.required_skills.map((skill, index) => (
                 <div key={index} className="bg-muted px-3 py-1 rounded-full flex items-center gap-2 text-sm">
@@ -193,7 +261,7 @@ export const JobPostingForm: React.FC<JobPostingFormProps> = ({ onSuccess }) => 
           </div>
 
           <Button type="submit" disabled={loading} className="w-full">
-            {loading ? 'Creating...' : 'Create Job Posting'}
+            {loading ? (isEditing ? 'Updating...' : 'Creating...') : (isEditing ? 'Update Job Posting' : 'Create Job Posting')}
           </Button>
         </form>
       </CardContent>

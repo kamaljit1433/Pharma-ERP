@@ -156,19 +156,35 @@ export class FileValidationService {
     return 'document';
   }
   
+  // MIME types recognised by this system — exotic types (e.g. chemical/x-xyz) are excluded
+  private static readonly RECOGNISED_MIME_TYPES = new Set([
+    'application/pdf',
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+    'image/bmp', 'image/tiff', 'image/svg+xml',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/zip',
+    'text/plain', 'text/csv',
+  ]);
+
   /**
    * Detect MIME type using multiple methods
    */
   static detectMimeType(filename: string, fileBuffer?: Buffer): string | null {
-    // First try to detect from filename
-    let mimeType: string | false | null = mime.lookup(filename);
-    
+    // First try to detect from filename, but only return recognised types
+    const mimeFromName = mime.lookup(filename);
+    const mimeType = (mimeFromName && this.RECOGNISED_MIME_TYPES.has(mimeFromName))
+      ? mimeFromName
+      : null;
+
     if (!mimeType && fileBuffer) {
       // Try to detect from file signature (magic numbers)
-      mimeType = this.detectMimeTypeFromSignature(fileBuffer);
+      return this.detectMimeTypeFromSignature(fileBuffer);
     }
-    
-    return mimeType || null;
+
+    return mimeType;
   }
   
   /**
@@ -176,8 +192,8 @@ export class FileValidationService {
    */
   static detectMimeTypeFromSignature(buffer: Buffer): string | null {
     if (buffer.length < 4) return null;
-    
-    const signature = buffer.subarray(0, 8);
+
+    const signature = buffer.subarray(0, 12);
     
     // PDF
     if (signature.subarray(0, 4).toString() === '%PDF') {
@@ -500,8 +516,8 @@ export class FileValidationService {
     
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    
+    const i = Math.ceil(Math.log(bytes) / Math.log(k));
+
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
   

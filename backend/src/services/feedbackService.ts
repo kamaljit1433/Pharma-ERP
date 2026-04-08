@@ -1,43 +1,41 @@
 import { FeedbackRepository } from '../repositories/feedbackRepository';
 import { Feedback } from '../types/performance';
 
-import { Knex } from 'knex';
-
 export class FeedbackService {
-  private feedbackRepository: FeedbackRepository;
-
-  constructor(private knex: Knex) {
-    this.feedbackRepository = new FeedbackRepository(knex);
-  }
+  constructor(private feedbackRepository: FeedbackRepository) {}
 
   async provideFeedback(
-    data: any,
+    toEmployeeId: string,
+    type: string,
+    content: string,
+    isAnonymous: boolean,
+    visibility: string,
     fromEmployeeId: string
   ): Promise<Feedback> {
     // Validate input
-    if (!data.toEmployeeId || !data.content) {
+    if (!toEmployeeId || !content) {
       throw new Error('Employee ID and feedback content are required');
     }
 
-    if (data.content.trim().length < 10) {
+    if (content.trim().length < 10) {
       throw new Error('Feedback content must be at least 10 characters');
     }
 
-    if (data.content.trim().length > 5000) {
+    if (content.trim().length > 5000) {
       throw new Error('Feedback content must not exceed 5000 characters');
     }
 
     // Prevent self-feedback
-    if (data.toEmployeeId === fromEmployeeId && !data.isAnonymous) {
+    if (toEmployeeId === fromEmployeeId && !isAnonymous) {
       throw new Error('Cannot provide non-anonymous feedback to yourself');
     }
 
     return this.feedbackRepository.createFeedback({
-      toEmployeeId: data.toEmployeeId,
-      type: data.type,
-      content: data.content,
-      isAnonymous: data.isAnonymous,
-      visibility: data.visibility,
+      toEmployeeId,
+      type: type as 'Positive' | 'Constructive' | 'Neutral',
+      content,
+      isAnonymous,
+      visibility: visibility as 'Private' | 'Manager Only' | 'Public',
       fromEmployeeId,
     });
   }

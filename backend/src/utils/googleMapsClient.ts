@@ -87,7 +87,7 @@ class GoogleMapsClient {
         status: 'OK',
       };
     } catch (error) {
-      logger.error('Error calculating distance:', error);
+      logger.error('Error calculating distance:', { error });
       throw error;
     }
   }
@@ -151,7 +151,7 @@ class GoogleMapsClient {
         status: 'OK',
       };
     } catch (error) {
-      logger.error('Error calculating distance with waypoints:', error);
+      logger.error('Error calculating distance with waypoints:', { error });
       throw error;
     }
   }
@@ -175,9 +175,9 @@ class GoogleMapsClient {
         return `${location.latitude}, ${location.longitude}`;
       }
 
-      return response.data.results[0].formatted_address;
+      return response.data.results[0]!.formatted_address;
     } catch (error) {
-      logger.error('Error geocoding coordinates:', error);
+      logger.error('Error geocoding coordinates:', { error });
       return `${location.latitude}, ${location.longitude}`;
     }
   }
@@ -201,7 +201,7 @@ class GoogleMapsClient {
         return null;
       }
 
-      const result = response.data.results[0];
+      const result = response.data.results[0]!;
       return {
         latitude: result.geometry.location.lat,
         longitude: result.geometry.location.lng,
@@ -209,7 +209,7 @@ class GoogleMapsClient {
         address: result.formatted_address,
       };
     } catch (error) {
-      logger.error('Error reverse geocoding address:', error);
+      logger.error('Error reverse geocoding address:', { error });
       return null;
     }
   }
@@ -271,7 +271,7 @@ class GoogleMapsClient {
     // Check for time gaps between waypoints
     for (let i = 1; i < waypoints.length; i++) {
       const timeDiff =
-        waypoints[i].timestamp.getTime() - waypoints[i - 1].timestamp.getTime();
+        waypoints[i]!.timestamp.getTime() - waypoints[i - 1]!.timestamp.getTime();
       if (timeDiff > googleMapsConfig.anomalyDetection.maxTimeGap) {
         anomalies.push({
           type: 'TimeGap',

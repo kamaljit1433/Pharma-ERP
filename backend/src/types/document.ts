@@ -34,8 +34,18 @@ export interface DocumentUploadDTO {
   expiry_date?: string;
 }
 
+export interface CreateDocumentDTO {
+  employee_id: string;
+  document_type: string;
+  document_name: string;
+  file_url: string;
+  expiry_date?: string;
+  issue_date?: string;
+}
+
 export interface UpdateDocumentDTO {
-  document_type?: DocumentType;
+  document_type?: string;
+  document_name?: string;
   issue_date?: string;
   expiry_date?: string;
 }

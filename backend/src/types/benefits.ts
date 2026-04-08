@@ -151,29 +151,36 @@ export type RewardCategory = 'performance' | 'attendance' | 'innovation' | 'team
 export interface Reward {
   id: string;
   employee_id: string;
-  category: RewardCategory;
+  category: RewardCategory | string;
   title: string;
   description?: string | null;
   awarded_by?: string | null;
   awarded_date: Date;
+  amount?: number;
+  currency?: string;
   is_public: boolean;
   created_at: Date;
+  updated_at?: Date;
 }
 
 export interface CreateRewardDTO {
   employee_id: string;
-  category: RewardCategory;
+  category: RewardCategory | string;
   title: string;
   description?: string;
   awarded_by?: string;
   awarded_date: Date;
+  amount?: number;
+  currency?: string;
   is_public?: boolean;
 }
 
 export interface UpdateRewardDTO {
-  category?: RewardCategory;
+  category?: RewardCategory | string;
   title?: string;
   description?: string;
+  amount?: number;
+  currency?: string;
   is_public?: boolean;
 }
 

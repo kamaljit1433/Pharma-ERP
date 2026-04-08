@@ -36,7 +36,7 @@ describe('S3StorageProvider - Deletion and Cleanup', () => {
     it('should delete a single file successfully', async () => {
       const key = 'employees/emp1/document/2024-01-01/test.pdf';
 
-      mockS3Client.send.mockResolvedValue({});
+      mockS3Client.send.mockResolvedValue({} as any);
 
       await s3Provider.deleteFile(key);
 
@@ -242,8 +242,8 @@ describe('S3StorageProvider - Deletion and Cleanup', () => {
       });
 
       // Mock abort responses
-      mockS3Client.send.mockResolvedValueOnce({}); // First abort
-      mockS3Client.send.mockResolvedValueOnce({}); // Second abort
+      mockS3Client.send.mockResolvedValueOnce({} as any); // First abort
+      mockS3Client.send.mockResolvedValueOnce({} as any); // Second abort
 
       const result = await s3Provider.cleanupOrphanedMultipartUploads(24);
 
@@ -278,7 +278,7 @@ describe('S3StorageProvider - Deletion and Cleanup', () => {
       });
 
       // Mock abort responses - one success, one failure
-      mockS3Client.send.mockResolvedValueOnce({}); // First abort succeeds
+      mockS3Client.send.mockResolvedValueOnce({} as any); // First abort succeeds
       mockS3Client.send.mockRejectedValueOnce(new Error('Abort failed')); // Second abort fails
 
       const result = await s3Provider.cleanupOrphanedMultipartUploads(24);

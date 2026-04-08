@@ -1,153 +1,122 @@
 import { Knex } from 'knex';
-import { Journey, GeoLocation } from '../types/geoTracking';
-import { v4 as uuidv4 } from 'uuid';
+
+export interface Journey {
+  id: string;
+  employee_id: string;
+  supplier_buyer_id: string;
+  start_location: { latitude: number; longitude: number } | null;
+  end_location: { latitude: number; longitude: number } | null;
+  distance: number;
+  duration: number;
+  travel_date: Date;
+  purpose: string | null;
+  notes: string | null;
+  created_at: Date;
+}
+
+export interface CreateJourneyDTO {
+  employee_id: string;
+  supplier_buyer_id: string;
+  start_location?: { latitude: number; longitude: number };
+  end_location?: { latitude: number; longitude: number };
+  distance?: number;
+  duration?: number;
+  travel_date: Date;
+  purpose?: string;
+  notes?: string;
+}
+
+export interface UpdateJourneyDTO {
+  start_location?: { latitude: number; longitude: number };
+  end_location?: { latitude: number; longitude: number };
+  distance?: number;
+  duration?: number;
+  travel_date?: Date;
+  purpose?: string;
+  notes?: string;
+}
 
 export class JourneyRepository {
   constructor(private knex: Knex) {}
 
-  async create(data: {
-    employeeId: string;
-    startLocation: GeoLocation;
-    endLocation: GeoLocation;
-    waypoints: GeoLocation[];
-    totalDistance: number;
-    totalDuration: number;
-    purpose?: string;
-    travelAllowance: number;
-  }): Promise<Journey> {
-    const id = uuidv4();
-    const now = new Date();
-
-    await this.knex('journeys').insert({
-      id,
-      employee_id: data.employeeId,
-      start_latitude: data.startLocation.latitude,
-      start_longitude: data.startLocation.longitude,
-      end_latitude: data.endLocation.latitude,
-      end_longitude: data.endLocation.longitude,
-      waypoints: JSON.stringify(data.waypoints),
-      total_distance: data.totalDistance,
-      total_duration: data.totalDuration,
-      start_time: data.startLocation.timestamp,
-      end_time: data.endLocation.timestamp,
-      purpose: data.purpose,
-      travel_allowance: data.travelAllowance,
-      status: 'In Progress',
-      created_at: now,
-      updated_at: now,
-    });
-
-    return this.getById(id) as Promise<Journey>;
-  }
-
-  async getById(id: string): Promise<Journey | null> {
-    const row = await this.knex('journeys').where('id', id).first();
-    return row ? this.mapToJourney(row) : null;
-  }
-
-  async getByEmployeeAndDate(
-    employeeId: string,
-    date: Date
-  ): Promise<Journey[]> {
-    const startOfDay = new Date(date);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(date);
-    endOfDay.setHours(23, 59, 59, 999);
-
-    const rows = await this.knex('journeys')
-      .where('employee_id', employeeId)
-      .whereBetween('start_time', [startOfDay, endOfDay])
-      .orderBy('start_time', 'asc');
-
-    return rows.map((row) => this.mapToJourney(row));
-  }
-
-  async getByEmployeeAndMonth(
-    employeeId: string,
-    month: number,
-    year: number
-  ): Promise<Journey[]> {
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0, 23, 59, 59, 999);
-
-    const rows = await this.knex('journeys')
-      .where('employee_id', employeeId)
-      .where('status', 'Completed')
-      .whereBetween('start_time', [startDate, endDate])
-      .orderBy('start_time', 'asc');
-
-    return rows.map((row) => this.mapToJourney(row));
-  }
-
-  async updateStatus(
-    id: string,
-    status: 'In Progress' | 'Completed' | 'Cancelled'
-  ): Promise<Journey | null> {
-    const now = new Date();
-
-    await this.knex('journeys')
-      .where('id', id)
-      .update({
-        status,
-        updated_at: now,
-      });
-
-    return this.getById(id);
-  }
-
-  async approve(
-    id: string,
-    approvedBy: string,
-    notes?: string
-  ): Promise<Journey | null> {
-    const now = new Date();
-
-    await this.knex('journeys')
-      .where('id', id)
-      .update({
-        status: 'Completed',
-        approved_by: approvedBy,
-        approved_at: now,
-        approval_notes: notes,
-        updated_at: now,
-      });
-
-    return this.getById(id);
-  }
-
-  private mapToJourney(row: any): Journey {
-    let waypoints: any[] = [];
-    if (row.waypoints) {
-      try {
-        waypoints = JSON.parse(row.waypoints);
-      } catch {
-        // Return empty array rather than crashing on corrupted waypoints
-      }
-    }
-
+  private mapRow(row: any): Journey {
     return {
       id: row.id,
-      employeeId: row.employee_id,
-      startLocation: {
-        latitude: Number(row.start_latitude),
-        longitude: Number(row.start_longitude),
-        timestamp: row.start_time,
-      },
-      endLocation: {
-        latitude: Number(row.end_latitude),
-        longitude: Number(row.end_longitude),
-        timestamp: row.end_time,
-      },
-      waypoints,
-      totalDistance: Number(row.total_distance),
-      totalDuration: Number(row.total_duration),
-      startTime: row.start_time,
-      endTime: row.end_time,
+      employee_id: row.employee_id,
+      supplier_buyer_id: row.supplier_buyer_id,
+      start_location: row.latitude != null
+        ? { latitude: Number(row.latitude), longitude: Number(row.longitude) }
+        : null,
+      end_location: row.end_latitude != null
+        ? { latitude: Number(row.end_latitude), longitude: Number(row.end_longitude) }
+        : null,
+      distance: Number(row.distance ?? 0),
+      duration: Number(row.duration_minutes ?? 0),
+      travel_date: row.visit_date,
       purpose: row.purpose,
-      travelAllowance: Number(row.travel_allowance),
-      status: row.status,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
+      notes: row.notes,
+      created_at: row.created_at,
     };
+  }
+
+  async createJourney(data: CreateJourneyDTO): Promise<Journey> {
+    const [row] = await this.knex('visits')
+      .insert({
+        employee_id: data.employee_id,
+        supplier_buyer_id: data.supplier_buyer_id,
+        visit_date: data.travel_date,
+        latitude: data.start_location?.latitude ?? null,
+        longitude: data.start_location?.longitude ?? null,
+        purpose: data.purpose ?? null,
+        notes: data.notes ?? null,
+        duration_minutes: data.duration ?? 0,
+      })
+      .returning('*');
+
+    return this.mapRow({ ...row, distance: data.distance ?? 0 });
+  }
+
+  async getJourneyById(id: string): Promise<Journey | null> {
+    const row = await this.knex('visits').where({ id }).first();
+    return row ? this.mapRow(row) : null;
+  }
+
+  async getJourneysByEmployee(employeeId: string): Promise<Journey[]> {
+    const rows = await this.knex('visits')
+      .where({ employee_id: employeeId })
+      .orderBy('visit_date', 'desc');
+    return rows.map((r) => this.mapRow(r));
+  }
+
+  async getJourneysByDateRange(startDate: Date, endDate: Date): Promise<Journey[]> {
+    const rows = await this.knex('visits')
+      .whereBetween('visit_date', [startDate, endDate])
+      .orderBy('visit_date', 'asc');
+    return rows.map((r) => this.mapRow(r));
+  }
+
+  async updateJourney(id: string, data: UpdateJourneyDTO): Promise<Journey> {
+    const updateData: Record<string, any> = {};
+    if (data.start_location) {
+      updateData['latitude'] = data.start_location.latitude;
+      updateData['longitude'] = data.start_location.longitude;
+    }
+    if (data.travel_date !== undefined) updateData['visit_date'] = data.travel_date;
+    if (data.purpose !== undefined) updateData['purpose'] = data.purpose;
+    if (data.notes !== undefined) updateData['notes'] = data.notes;
+    if (data.duration !== undefined) updateData['duration_minutes'] = data.duration;
+
+    const [row] = await this.knex('visits')
+      .where({ id })
+      .update(updateData)
+      .returning('*');
+
+    if (!row) throw new Error(`Journey with id ${id} not found`);
+
+    return this.mapRow({ ...row, distance: data.distance ?? 0 });
+  }
+
+  async deleteJourney(id: string): Promise<void> {
+    await this.knex('visits').where({ id }).delete();
   }
 }

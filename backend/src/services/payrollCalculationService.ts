@@ -109,7 +109,7 @@ export class PayrollCalculationService {
 
     const attendance = await this.knex('attendance')
       .where({ employee_id: employeeId })
-      .whereBetween('date', [startDate, endDate])
+      .whereBetween('attendance_date', [startDate, endDate])
       .select('*');
 
     return {

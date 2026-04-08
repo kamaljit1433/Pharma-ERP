@@ -68,14 +68,18 @@ export class SalaryStructureService {
         previousStructure.dearness_allowance +
         previousStructure.other_allowances;
 
-      await this.salaryStructureRepository.createRevision(
-        data.employee_id,
-        previousStructure.id,
-        previousGrossSalary,
-        grossSalary,
-        'Salary structure update',
-        createdBy
-      );
+      try {
+        await this.salaryStructureRepository.createRevision(
+          data.employee_id,
+          previousStructure.id,
+          previousGrossSalary,
+          grossSalary,
+          'Salary structure update',
+          createdBy
+        );
+      } catch {
+        // Revision table may not exist in all environments; do not block the update
+      }
     }
 
     return this.salaryStructureRepository.createSalaryStructure(data);

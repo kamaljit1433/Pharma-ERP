@@ -9,7 +9,7 @@ describe('Recruitment API Integration Tests', () => {
   beforeAll(async () => {
     // Initialize app (assuming it's exported from index.ts)
     const module = await import('../../index');
-    app = module.default || module.app;
+    app = module.default;
   });
 
   afterEach(async () => {

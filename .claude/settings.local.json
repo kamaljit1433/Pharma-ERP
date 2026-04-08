@@ -1,7 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(npm run:*)",
+      "Bash(npm install:*)",
+      "Bash(npm list:*)",
+      "Bash(node:*)",
+      "Bash(npx jest:*)",
+      "Bash(grep -n \"FileCleanupOptions\\\\|getSignedUrl\" backend/src/types/*.ts)",
+      "Bash(npx knex:*)"
     ]
   }
 }

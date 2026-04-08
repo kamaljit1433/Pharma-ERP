@@ -1,12 +1,10 @@
 import { PerformanceReviewService } from '../performanceReviewService';
 import { PerformanceReviewRepository } from '../../repositories/performanceReviewRepository';
-import { ReviewCycleRepository } from '../../repositories/reviewCycleRepository';
-import { PerformanceReview, ReviewCycle } from '../../types/performance';
+import { PerformanceReview, PerformanceReviewDTO } from '../../types/performance';
 
 describe('PerformanceReviewService', () => {
   let service: PerformanceReviewService;
   let reviewRepository: PerformanceReviewRepository;
-  let cycleRepository: ReviewCycleRepository;
 
   beforeEach(() => {
     reviewRepository = {
@@ -14,6 +12,7 @@ describe('PerformanceReviewService', () => {
       getPerformanceReviewById: jest.fn(),
       getPerformanceReviewsByEmployee: jest.fn(),
       getPerformanceReviewsByCycle: jest.fn(),
+      getPerformanceReviewByEmployeeAndCycle: jest.fn(),
       updatePerformanceReview: jest.fn(),
       updateReviewStatus: jest.fn(),
       updateFinalRating: jest.fn(),
@@ -21,37 +20,11 @@ describe('PerformanceReviewService', () => {
       deletePerformanceReview: jest.fn(),
     } as any;
 
-    cycleRepository = {
-      createReviewCycle: jest.fn(),
-      getReviewCycleById: jest.fn(),
-      getAllReviewCycles: jest.fn(),
-      getActiveReviewCycles: jest.fn(),
-      updateReviewCycleStatus: jest.fn(),
-      updateReviewCycle: jest.fn(),
-      deleteReviewCycle: jest.fn(),
-    } as any;
-
-    service = new PerformanceReviewService(reviewRepository, cycleRepository);
+    service = new PerformanceReviewService(reviewRepository);
   });
 
   describe('submitReview', () => {
     it('should submit a self-review', async () => {
-      const futureDate = new Date();
-      futureDate.setDate(futureDate.getDate() + 30);
-
-      const mockCycle: ReviewCycle = {
-        id: 'cycle-001',
-        name: 'Q1 2026',
-        startDate: new Date('2026-01-01'),
-        endDate: futureDate,
-        selfReviewDeadline: futureDate,
-        managerReviewDeadline: futureDate,
-        peerReviewDeadline: futureDate,
-        status: 'Active',
-        createdAt: new Date(),
-        createdBy: 'user-001',
-      };
-
       const mockReview: PerformanceReview = {
         id: 'review-001',
         employeeId: 'emp-001',
@@ -66,51 +39,51 @@ describe('PerformanceReviewService', () => {
         updatedAt: new Date(),
       };
 
-      (cycleRepository.getReviewCycleById as jest.Mock).mockResolvedValue(mockCycle);
       (reviewRepository.createPerformanceReview as jest.Mock).mockResolvedValue(mockReview);
       (reviewRepository.updateReviewStatus as jest.Mock).mockResolvedValue(undefined);
       (reviewRepository.getPerformanceReviewById as jest.Mock).mockResolvedValue(mockReview);
 
-      const result = await service.submitReview(
-        'emp-001',
-        'cycle-001',
-        'Self',
-        4,
-        'Good performance',
-        undefined
-      );
+      const dto: PerformanceReviewDTO = {
+        employeeId: 'emp-001',
+        cycleId: 'cycle-001',
+        reviewType: 'Self',
+        rating: 4,
+        comments: 'Good performance',
+      };
+
+      const result = await service.submitReview(dto, 'user-001');
 
       expect(result).toEqual(mockReview);
       expect(reviewRepository.createPerformanceReview).toHaveBeenCalled();
+      expect(reviewRepository.updateReviewStatus).toHaveBeenCalledWith('review-001', 'Self-Assessment Complete');
     });
 
     it('should throw error if rating is invalid', async () => {
-      const mockCycle: ReviewCycle = {
-        id: 'cycle-001',
-        name: 'Q1 2026',
-        startDate: new Date('2026-01-01'),
-        endDate: new Date('2026-03-31'),
-        selfReviewDeadline: new Date('2026-03-15'),
-        managerReviewDeadline: new Date('2026-03-20'),
-        peerReviewDeadline: new Date('2026-03-25'),
-        status: 'Active',
-        createdAt: new Date(),
-        createdBy: 'user-001',
+      const dto: PerformanceReviewDTO = {
+        employeeId: 'emp-001',
+        cycleId: 'cycle-001',
+        reviewType: 'Self',
+        rating: 6,
+        comments: 'Good performance',
       };
 
-      (cycleRepository.getReviewCycleById as jest.Mock).mockResolvedValue(mockCycle);
-
-      await expect(
-        service.submitReview('emp-001', 'cycle-001', 'Self', 6, 'Good performance', undefined)
-      ).rejects.toThrow('Rating must be between 1 and 5');
+      await expect(service.submitReview(dto, 'user-001')).rejects.toThrow(
+        'Rating must be between 1 and 5'
+      );
     });
 
-    it('should throw error if review cycle not found', async () => {
-      (cycleRepository.getReviewCycleById as jest.Mock).mockResolvedValue(null);
+    it('should throw error if rating is below 1', async () => {
+      const dto: PerformanceReviewDTO = {
+        employeeId: 'emp-001',
+        cycleId: 'cycle-001',
+        reviewType: 'Self',
+        rating: 0,
+        comments: 'Good performance',
+      };
 
-      await expect(
-        service.submitReview('emp-001', 'cycle-999', 'Self', 4, 'Good performance', undefined)
-      ).rejects.toThrow('Review cycle with ID cycle-999 not found');
+      await expect(service.submitReview(dto, 'user-001')).rejects.toThrow(
+        'Rating must be between 1 and 5'
+      );
     });
   });
 

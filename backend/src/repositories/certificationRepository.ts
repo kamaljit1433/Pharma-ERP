@@ -31,6 +31,10 @@ export class CertificationRepository {
   }
 
   async getEmployeeCertifications(employeeId: string): Promise<Certification[]> {
+    if (!employeeId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+      return [];
+    }
+
     const certifications = await this.db('certifications')
       .where('employee_id', employeeId)
       .where('is_active', true)

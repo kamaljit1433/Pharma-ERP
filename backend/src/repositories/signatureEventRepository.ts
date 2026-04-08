@@ -1,9 +1,79 @@
 import { Knex } from 'knex';
-import { SignatureEvent, SignatureEventType } from '../types/esignature';
+import {
+  SignatureEvent,
+  SignatureEventType,
+  SimpleSignatureEvent,
+  CreateSignatureEventDTO,
+} from '../types/esignature';
 import { v4 as uuidv4 } from 'uuid';
 
 export class SignatureEventRepository {
   constructor(private db: Knex) {}
+
+  // ── New simple API (signature_events table) ────────────────────────────────
+
+  async createEvent(data: CreateSignatureEventDTO): Promise<SimpleSignatureEvent> {
+    const id = uuidv4();
+
+    const [row] = await this.db('signature_events')
+      .insert({
+        id,
+        request_id: data.request_id,
+        signer_id: data.signer_id,
+        event_type: data.event_type,
+        timestamp: data.timestamp ?? new Date(),
+        ip_address: data.ip_address ?? null,
+        user_agent: data.user_agent ?? null,
+      })
+      .returning('*');
+
+    return this.mapSimpleRow(row);
+  }
+
+  async getEventById(id: string): Promise<SimpleSignatureEvent | null> {
+    const row = await this.db('signature_events').where('id', id).first();
+    return row ? this.mapSimpleRow(row) : null;
+  }
+
+  async getEventsByRequest(requestId: string): Promise<SimpleSignatureEvent[]> {
+    const rows = await this.db('signature_events')
+      .where('request_id', requestId)
+      .orderBy('created_at', 'asc');
+    return rows.map((r: any) => this.mapSimpleRow(r));
+  }
+
+  async getEventsBySigner(signerId: string): Promise<SimpleSignatureEvent[]> {
+    const rows = await this.db('signature_events')
+      .where('signer_id', signerId)
+      .orderBy('created_at', 'desc');
+    return rows.map((r: any) => this.mapSimpleRow(r));
+  }
+
+  async getEventsByType(eventType: string): Promise<SimpleSignatureEvent[]> {
+    const rows = await this.db('signature_events')
+      .where('event_type', eventType)
+      .orderBy('created_at', 'desc');
+    return rows.map((r: any) => this.mapSimpleRow(r));
+  }
+
+  async deleteEvent(id: string): Promise<void> {
+    await this.db('signature_events').where('id', id).delete();
+  }
+
+  private mapSimpleRow(row: any): SimpleSignatureEvent {
+    return {
+      id: row.id,
+      request_id: row.request_id,
+      signer_id: row.signer_id,
+      event_type: row.event_type,
+      timestamp: row.timestamp,
+      ip_address: row.ip_address,
+      user_agent: row.user_agent,
+      created_at: row.created_at,
+    };
+  }
+
+  // ── Legacy API (esignature_events table) ───────────────────────────────────
 
   async createSignatureEvent(
     esignatureRequestId: string,

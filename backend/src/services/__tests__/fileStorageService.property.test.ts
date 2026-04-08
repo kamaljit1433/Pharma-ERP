@@ -20,6 +20,7 @@ jest.mock('../storage/s3StorageProvider', () => ({
 
 // Mock config
 jest.mock('../../config', () => ({
+  __esModule: true,
   default: {
     fileStorage: {
       provider: 's3',
@@ -28,6 +29,7 @@ jest.mock('../../config', () => ({
       maxFileSize: 10485760, // 10MB
       allowedFileTypes: ['image/jpeg', 'image/png', 'application/pdf'],
     },
+    logging: { level: 'info' },
   },
 }));
 
@@ -284,21 +286,29 @@ describe('FileStorageService Property Tests', () => {
             1
           );
 
-          const files = mockFiles[0];
+          const files = mockFiles[0] ?? [];
           mockProvider.listFiles.mockResolvedValue(files);
           mockProvider.deleteFile.mockResolvedValue(undefined);
 
-          const result = await fileStorageService.cleanupFiles(cleanupOptions);
+          // fc.option() yields T | null; FileCleanupOptions uses undefined — normalise
+          const normalisedOptions = {
+            olderThan: cleanupOptions.olderThan ?? undefined,
+            category: cleanupOptions.category ?? undefined,
+            employeeId: cleanupOptions.employeeId ?? undefined,
+            dryRun: cleanupOptions.dryRun,
+          };
+
+          const result = await fileStorageService.cleanupFiles(normalisedOptions);
 
           // Count files that should match the criteria
           const expectedMatches = files.filter(file => {
-            if (cleanupOptions.olderThan && file.uploadedAt > cleanupOptions.olderThan) {
+            if (normalisedOptions.olderThan && file.uploadedAt > normalisedOptions.olderThan) {
               return false;
             }
-            if (cleanupOptions.category && file.category !== cleanupOptions.category) {
+            if (normalisedOptions.category && file.category !== normalisedOptions.category) {
               return false;
             }
-            if (cleanupOptions.employeeId && file.employeeId !== cleanupOptions.employeeId) {
+            if (normalisedOptions.employeeId && file.employeeId !== normalisedOptions.employeeId) {
               return false;
             }
             return true;
@@ -309,7 +319,7 @@ describe('FileStorageService Property Tests', () => {
           expect(result.deletedFiles.length).toBe(expectedMatches.length);
 
           // In dry run mode, should not actually delete
-          if (cleanupOptions.dryRun) {
+          if (normalisedOptions.dryRun) {
             expect(mockProvider.deleteFile).not.toHaveBeenCalled();
           } else {
             expect(mockProvider.deleteFile).toHaveBeenCalledTimes(expectedMatches.length);
@@ -339,7 +349,7 @@ describe('FileStorageService Property Tests', () => {
           const expectedUrl = `https://signed-url.com/${key}`;
           mockProvider.getSignedUrl.mockResolvedValue(expectedUrl);
 
-          const result = await fileStorageService.getSignedUrl(key, operation, options);
+          const result = await fileStorageService.getSignedUrl(key, operation as 'getObject' | 'putObject', options ?? undefined);
 
           expect(typeof result).toBe('string');
           expect(result).toBe(expectedUrl);

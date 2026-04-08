@@ -33,6 +33,8 @@ export interface CircuitBreakerMetrics {
   totalRequests: number;
   totalFailures: number;
   totalSuccesses: number;
+  successRate: number;
+  lastError?: Error;
 }
 
 export class CircuitBreaker {
@@ -46,6 +48,7 @@ export class CircuitBreaker {
   private totalFailures: number = 0;
   private totalSuccesses: number = 0;
   private failureTimestamps: number[] = [];
+  private lastError?: Error;
 
   constructor(private config: CircuitBreakerConfig) {
     this.validateConfig();
@@ -83,6 +86,7 @@ export class CircuitBreaker {
       this.onSuccess();
       return result;
     } catch (error) {
+      this.lastError = error instanceof Error ? error : new Error(String(error));
       this.onFailure();
       throw error;
     }
@@ -137,6 +141,10 @@ export class CircuitBreaker {
   }
 
   getMetrics(): CircuitBreakerMetrics {
+    const successRate = this.totalRequests > 0 
+      ? this.totalSuccesses / this.totalRequests 
+      : 0;
+
     return {
       state: this.state,
       failureCount: this.failureCount,
@@ -146,6 +154,8 @@ export class CircuitBreaker {
       totalRequests: this.totalRequests,
       totalFailures: this.totalFailures,
       totalSuccesses: this.totalSuccesses,
+      successRate,
+      lastError: this.lastError,
     };
   }
 
@@ -155,6 +165,12 @@ export class CircuitBreaker {
     this.successCount = 0;
     this.failureTimestamps = [];
     this.openedAt = undefined;
+    this.lastError = undefined;
+    this.totalRequests = 0;
+    this.totalFailures = 0;
+    this.totalSuccesses = 0;
+    this.lastFailureTime = undefined;
+    this.lastSuccessTime = undefined;
   }
 
   getState(): CircuitBreakerState {

@@ -65,7 +65,7 @@ const createUploadConfig = (category?: string) => {
 };
 
 // Configure multer for memory storage (we'll handle the actual storage via our service)
-const upload = multer({
+export const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
     fileSize: config.upload.maxFileSize,

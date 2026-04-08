@@ -5,13 +5,13 @@ import { v4 as uuidv4 } from 'uuid';
 export class SupplierBuyerRepository {
   constructor(private db: Knex) {}
 
-  async createSupplierBuyer(employeeId: string, data: CreateSupplierBuyerDTO): Promise<SupplierBuyer> {
+  async createRecord(data: CreateSupplierBuyerDTO & { employee_id: string }): Promise<SupplierBuyer> {
     const id = uuidv4();
 
-    const [supplierBuyer] = await this.db('suppliers_buyers')
+    const [row] = await this.db('suppliers_buyers')
       .insert({
         id,
-        employee_id: employeeId,
+        employee_id: data.employee_id,
         name: data.name,
         type: data.type,
         contact_person: data.contact_person,
@@ -21,20 +21,40 @@ export class SupplierBuyerRepository {
         city: data.city,
         state: data.state,
         country: data.country,
+        postal_code: data.postal_code,
         notes: data.notes,
       })
       .returning('*');
 
-    return supplierBuyer;
+    return row;
+  }
+
+  async createSupplierBuyer(employeeId: string, data: CreateSupplierBuyerDTO): Promise<SupplierBuyer> {
+    return this.createRecord({ ...data, employee_id: employeeId });
+  }
+
+  async getRecordById(id: string): Promise<SupplierBuyer | null> {
+    const row = await this.db('suppliers_buyers').where('id', id).first();
+    return row ?? null;
   }
 
   async getSupplierBuyerById(id: string): Promise<SupplierBuyer | null> {
-    return this.db('suppliers_buyers').where('id', id).first();
+    return this.getRecordById(id);
+  }
+
+  async getRecordsByEmployee(employeeId: string): Promise<SupplierBuyer[]> {
+    return this.db('suppliers_buyers')
+      .where('employee_id', employeeId)
+      .orderBy('created_at', 'desc');
   }
 
   async getSupplierBuyersByEmployee(employeeId: string): Promise<SupplierBuyer[]> {
+    return this.getRecordsByEmployee(employeeId);
+  }
+
+  async getRecordsByType(type: 'supplier' | 'buyer'): Promise<SupplierBuyer[]> {
     return this.db('suppliers_buyers')
-      .where('employee_id', employeeId)
+      .where('type', type)
       .orderBy('created_at', 'desc');
   }
 
@@ -45,20 +65,25 @@ export class SupplierBuyerRepository {
       .orderBy('created_at', 'desc');
   }
 
-  async updateSupplierBuyer(id: string, data: UpdateSupplierBuyerDTO): Promise<SupplierBuyer> {
-    const [supplierBuyer] = await this.db('suppliers_buyers')
+  async updateRecord(id: string, data: UpdateSupplierBuyerDTO): Promise<SupplierBuyer> {
+    const [row] = await this.db('suppliers_buyers')
       .where('id', id)
-      .update({
-        ...data,
-        updated_at: this.db.fn.now(),
-      })
+      .update({ ...data, updated_at: this.db.fn.now() })
       .returning('*');
 
-    return supplierBuyer;
+    return row;
+  }
+
+  async updateSupplierBuyer(id: string, data: UpdateSupplierBuyerDTO): Promise<SupplierBuyer> {
+    return this.updateRecord(id, data);
+  }
+
+  async deleteRecord(id: string): Promise<void> {
+    await this.db('suppliers_buyers').where('id', id).delete();
   }
 
   async deleteSupplierBuyer(id: string): Promise<void> {
-    await this.db('suppliers_buyers').where('id', id).delete();
+    return this.deleteRecord(id);
   }
 
   async searchSupplierBuyers(employeeId: string, searchTerm: string): Promise<SupplierBuyer[]> {

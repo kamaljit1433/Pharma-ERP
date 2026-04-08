@@ -8,6 +8,12 @@ import cors from 'cors';
 import { Request, Response, NextFunction } from 'express';
 import rateLimit from 'express-rate-limit';
 
+declare module 'express-session' {
+  interface SessionData {
+    csrfToken: string;
+  }
+}
+
 /**
  * Configure Helmet for security headers
  */
@@ -19,7 +25,7 @@ export function configureHelmet() {
         styleSrc: ["'self'", "'unsafe-inline'"],
         scriptSrc: ["'self'"],
         imgSrc: ["'self'", 'data:', 'https:'],
-        connectSrc: ["'self'", process.env.CORS_ORIGIN || 'http://localhost:5173'],
+        connectSrc: ["'self'", process.env['CORS_ORIGIN'] || 'http://localhost:5173'],
         fontSrc: ["'self'"],
         objectSrc: ["'none'"],
         mediaSrc: ["'self'"],
@@ -46,7 +52,7 @@ export function configureHelmet() {
  * Configure CORS
  */
 export function configureCors() {
-  const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173').split(',');
+  const allowedOrigins = (process.env['CORS_ORIGIN'] || 'http://localhost:5173').split(',');
 
   return cors({
     origin: (origin, callback) => {
@@ -72,7 +78,7 @@ export const generalLimiter = rateLimit({
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => {
+  skip: (req: Request) => {
     // Skip rate limiting for health checks
     return req.path === '/health';
   }
@@ -274,14 +280,15 @@ export function logSecurityEvents() {
  * Middleware to enforce HTTPS in production
  */
 export function enforceHttps() {
-  return (req: Request, res: Response, next: NextFunction) => {
-    if (process.env.NODE_ENV === 'production' && req.protocol !== 'https') {
-      return res.status(403).json({
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (process.env['NODE_ENV'] === 'production' && req.protocol !== 'https') {
+      res.status(403).json({
         error: {
           code: 'HTTPS_REQUIRED',
           message: 'HTTPS is required'
         }
       });
+      return;
     }
 
     next();
@@ -292,17 +299,18 @@ export function enforceHttps() {
  * Middleware to validate request size
  */
 export function validateRequestSize(maxSize: string = '10mb') {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
     const contentLength = parseInt(req.headers['content-length'] || '0', 10);
     const maxBytes = parseSize(maxSize);
 
     if (contentLength > maxBytes) {
-      return res.status(413).json({
+      res.status(413).json({
         error: {
           code: 'PAYLOAD_TOO_LARGE',
           message: `Request size exceeds maximum of ${maxSize}`
         }
       });
+      return;
     }
 
     next();
@@ -325,8 +333,8 @@ function parseSize(size: string): number {
     return 10 * 1024 * 1024; // Default 10MB
   }
 
-  const value = parseInt(match[1], 10);
-  const unit = match[2] || 'b';
+  const value = parseInt(match[1] ?? '0', 10);
+  const unit = match[2] ?? 'b';
 
-  return value * (units[unit] || 1);
+  return value * (units[unit] ?? 1);
 }

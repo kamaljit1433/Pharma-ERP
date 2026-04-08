@@ -1,14 +1,8 @@
 import { GoalRepository } from '../repositories/goalRepository';
 import { Goal, CreateGoalDTO, UpdateGoalProgressDTO } from '../types/performance';
 
-import { Knex } from 'knex';
-
 export class GoalService {
-  private goalRepository: GoalRepository;
-
-  constructor(private knex: Knex) {
-    this.goalRepository = new GoalRepository(knex);
-  }
+  constructor(private goalRepository: GoalRepository) {}
 
   async createGoal(data: CreateGoalDTO, userId: string): Promise<Goal> {
     // Validate input

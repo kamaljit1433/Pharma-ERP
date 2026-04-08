@@ -65,7 +65,7 @@ export const cicdFastCheckConfig: fc.Parameters<any> = {
  * @param config - Optional configuration overrides
  */
 export function assertProperty<T>(
-  property: fc.Property<T>,
+  property: fc.IRawProperty<any, any>,
   config?: Partial<fc.Parameters<T>>
 ): void {
   const finalConfig = { ...defaultFastCheckConfig, ...config };
@@ -81,7 +81,7 @@ export function assertProperty<T>(
  * @param config - Optional configuration overrides
  */
 export function assertPropertyQuick<T>(
-  property: fc.Property<T>,
+  property: fc.IRawProperty<any, any>,
   config?: Partial<fc.Parameters<T>>
 ): void {
   const finalConfig = { ...quickFastCheckConfig, ...config };
@@ -97,7 +97,7 @@ export function assertPropertyQuick<T>(
  * @param config - Optional configuration overrides
  */
 export function assertPropertyThorough<T>(
-  property: fc.Property<T>,
+  property: fc.IRawProperty<any, any>,
   config?: Partial<fc.Parameters<T>>
 ): void {
   const finalConfig = { ...thoroughFastCheckConfig, ...config };
@@ -113,7 +113,7 @@ export function assertPropertyThorough<T>(
  * @param config - Optional configuration overrides
  */
 export function assertPropertyCICD<T>(
-  property: fc.Property<T>,
+  property: fc.IRawProperty<any, any>,
   config?: Partial<fc.Parameters<T>>
 ): void {
   const finalConfig = { ...cicdFastCheckConfig, ...config };
@@ -130,7 +130,7 @@ export function assertPropertyCICD<T>(
  * @param config - Optional configuration overrides
  */
 export function assertPropertyWithSeed<T>(
-  property: fc.Property<T>,
+  property: fc.IRawProperty<any, any>,
   seed: number,
   config?: Partial<fc.Parameters<T>>
 ): void {
@@ -159,7 +159,7 @@ export function sampleArbitrary<T>(
  * @param arbitrary - The arbitrary to generate from
  */
 export function generateSingle<T>(arbitrary: fc.Arbitrary<T>): T {
-  return fc.sample(arbitrary, 1)[0];
+  return fc.sample(arbitrary, 1)[0]!;
 }
 
 /**
@@ -189,7 +189,7 @@ export function assertPropertyForExamples<T>(
 export function combineArbitraries<T extends any[]>(
   ...arbitraries: { [K in keyof T]: fc.Arbitrary<T[K]> }
 ): fc.Arbitrary<T> {
-  return fc.tuple(...arbitraries);
+  return fc.tuple(...arbitraries) as unknown as fc.Arbitrary<T>;
 }
 
 /**
@@ -268,7 +268,7 @@ export function debugArbitrary<T>(
  * 
  * Useful for testing the test infrastructure itself
  */
-export function alwaysPassProperty<T>(arbitrary: fc.Arbitrary<T>): fc.Property<T> {
+export function alwaysPassProperty<T>(arbitrary: fc.Arbitrary<T>): fc.IRawProperty<any, any> {
   return fc.property(arbitrary, () => true);
 }
 
@@ -277,7 +277,7 @@ export function alwaysPassProperty<T>(arbitrary: fc.Arbitrary<T>): fc.Property<T
  * 
  * Useful for testing the test infrastructure itself
  */
-export function alwaysFailProperty<T>(arbitrary: fc.Arbitrary<T>): fc.Property<T> {
+export function alwaysFailProperty<T>(arbitrary: fc.Arbitrary<T>): fc.IRawProperty<any, any> {
   return fc.property(arbitrary, () => {
     throw new Error('Intentional failure for testing');
   });
@@ -290,7 +290,7 @@ export function alwaysFailProperty<T>(arbitrary: fc.Arbitrary<T>): fc.Property<T
  * @param config - Optional configuration
  */
 export function measurePropertyPerformance<T>(
-  property: fc.Property<T>,
+  property: fc.IRawProperty<any, any>,
   config?: Partial<fc.Parameters<T>>
 ): { duration: number; runsPerSecond: number } {
   const finalConfig = { ...defaultFastCheckConfig, ...config };

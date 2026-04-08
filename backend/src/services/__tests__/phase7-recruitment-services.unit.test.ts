@@ -117,9 +117,9 @@ describe('Phase 7: Recruitment Services - Unit Tests', () => {
     });
 
     expect(applicant.id).toBeDefined();
-    expect(applicant.name).toBe('John Doe');
+    expect(applicant.first_name).toBe('John');
     expect(applicant.email).toBe('john@example.com');
-    expect(applicant.current_stage).toBe('Applied');
+    expect(applicant.stage).toBe('applied');
     expect(applicant.job_posting_id).toBe(jobPosting.id);
   });
 
@@ -154,17 +154,17 @@ describe('Phase 7: Recruitment Services - Unit Tests', () => {
       resume_url: 'https://example.com/resume.pdf',
     });
 
-    let updated = await applicantTrackingService.moveApplicantStage(applicant.id, 'Screening');
-    expect(updated.current_stage).toBe('Screening');
+    let updated = await applicantTrackingService.moveApplicantStage(applicant.id, 'screening');
+    expect(updated.stage).toBe('screening');
 
-    updated = await applicantTrackingService.moveApplicantStage(applicant.id, 'Interview');
-    expect(updated.current_stage).toBe('Interview');
+    updated = await applicantTrackingService.moveApplicantStage(applicant.id, 'interview');
+    expect(updated.stage).toBe('interview');
 
-    updated = await applicantTrackingService.moveApplicantStage(applicant.id, 'Offer');
-    expect(updated.current_stage).toBe('Offer');
+    updated = await applicantTrackingService.moveApplicantStage(applicant.id, 'offer');
+    expect(updated.stage).toBe('offer');
 
-    updated = await applicantTrackingService.moveApplicantStage(applicant.id, 'Hired');
-    expect(updated.current_stage).toBe('Hired');
+    updated = await applicantTrackingService.moveApplicantStage(applicant.id, 'hired');
+    expect(updated.stage).toBe('hired');
   });
 
   test('Applicant Tracking: should reject invalid stage transitions', async () => {
@@ -188,7 +188,7 @@ describe('Phase 7: Recruitment Services - Unit Tests', () => {
     });
 
     await expect(
-      applicantTrackingService.moveApplicantStage(applicant.id, 'Offer')
+      applicantTrackingService.moveApplicantStage(applicant.id, 'offer')
     ).rejects.toThrow('Invalid stage transition');
   });
 
@@ -250,9 +250,9 @@ describe('Phase 7: Recruitment Services - Unit Tests', () => {
       resume_url: 'https://example.com/resume2.pdf',
     });
 
-    await applicantTrackingService.moveApplicantStage(applicant1.id, 'Screening');
+    await applicantTrackingService.moveApplicantStage(applicant1.id, 'screening');
 
-    const screeningApplicants = await applicantTrackingService.getApplicantsByStage('Screening');
+    const screeningApplicants = await applicantTrackingService.getApplicantsByStage('screening');
     expect(screeningApplicants.length).toBeGreaterThan(0);
     expect(screeningApplicants.some((a) => a.id === applicant1.id)).toBe(true);
   });

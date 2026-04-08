@@ -68,7 +68,7 @@ export class TestHelpers {
    * Execute raw SQL query
    */
   async query<T = any>(sql: string, bindings?: any[]): Promise<T[]> {
-    const result = await this.getKnex().raw(sql, bindings);
+    const result = await (bindings ? this.getKnex().raw(sql, bindings) : this.getKnex().raw(sql));
     return result.rows || result;
   }
 
@@ -111,7 +111,7 @@ export class TestHelpers {
       query = query.where(where);
     }
     const result = await query.count('* as count').first();
-    return result?.count || 0;
+    return Number(result?.['count']) || 0;
   }
 
   /**

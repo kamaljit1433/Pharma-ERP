@@ -29,7 +29,8 @@ export class ApplicantRepository {
   }
 
   async getApplicantById(id: string): Promise<Applicant | null> {
-    return this.knex('applicants').where({ id }).first();
+    const row = await this.knex('applicants').where({ id }).first();
+    return row ?? null;
   }
 
   async getApplicantsByJobPosting(jobPostingId: string): Promise<Applicant[]> {

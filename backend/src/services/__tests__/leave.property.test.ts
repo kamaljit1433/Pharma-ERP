@@ -22,7 +22,7 @@ describe('Leave Module - Property-Based Tests', () => {
           (opening, used, carryForward) => {
             // Constraint: used and carry_forward cannot exceed opening
             if (used + carryForward > opening) {
-              return true;
+              return;
             }
 
             const available = opening - used;
@@ -43,7 +43,7 @@ describe('Leave Module - Property-Based Tests', () => {
           (available, daysToDeduct) => {
             // Only test valid deductions
             if (daysToDeduct > available) {
-              return true;
+              return;
             }
 
             const newAvailable = available - daysToDeduct;

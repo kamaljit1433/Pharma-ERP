@@ -207,8 +207,8 @@ describe('PayslipService', () => {
       const result = await service.getPayslipsByEmployee(employeeId);
 
       expect(result.length).toBe(2);
-      expect(result[0].employee_id).toBe(employeeId);
-      expect(result[1].employee_id).toBe(employeeId);
+      expect(result[0]!.employee_id).toBe(employeeId);
+      expect(result[1]!.employee_id).toBe(employeeId);
     });
   });
 

@@ -10,15 +10,20 @@ export interface SalaryStructure {
   id: string;
   employee_id: string;
   salary_mode: 'monthly' | 'daily' | 'hourly';
-  base_salary: number;
-  hra: number;
-  dearness_allowance: number;
-  other_allowances: number;
-  pf_contribution_rate: number;
-  esi_contribution_rate: number;
-  professional_tax: number;
+  base_salary?: number;
+  basic_salary?: number;
+  hra?: number;
+  dearness_allowance?: number;
+  other_allowances?: number;
+  pf_contribution_rate?: number;
+  pf_percentage?: number;
+  esi_contribution_rate?: number;
+  esi_percentage?: number;
+  professional_tax?: number;
+  daily_rate?: number;
+  hourly_rate?: number;
   deductions?: Record<string, number>;
-  effective_from: Date;
+  effective_from: Date | string;
   effective_to?: Date;
   is_active: boolean;
   created_at: Date;
@@ -40,27 +45,38 @@ export interface SalaryStructureRevision {
 export interface CreateSalaryStructureDTO {
   employee_id: string;
   salary_mode: 'monthly' | 'daily' | 'hourly';
-  base_salary: number;
-  hra: number;
-  dearness_allowance: number;
-  other_allowances: number;
-  pf_contribution_rate: number;
-  esi_contribution_rate: number;
-  professional_tax: number;
-  deductions?: Record<string, number>;
-  effective_from: Date;
-}
-
-export interface UpdateSalaryStructureDTO {
   base_salary?: number;
+  basic_salary?: number;
   hra?: number;
   dearness_allowance?: number;
   other_allowances?: number;
   pf_contribution_rate?: number;
+  pf_percentage?: number;
   esi_contribution_rate?: number;
+  esi_percentage?: number;
   professional_tax?: number;
+  daily_rate?: number;
+  hourly_rate?: number;
+  deductions?: Record<string, number>;
+  effective_from: Date | string;
+}
+
+export interface UpdateSalaryStructureDTO {
+  base_salary?: number;
+  basic_salary?: number;
+  hra?: number;
+  dearness_allowance?: number;
+  other_allowances?: number;
+  pf_contribution_rate?: number;
+  pf_percentage?: number;
+  esi_contribution_rate?: number;
+  esi_percentage?: number;
+  professional_tax?: number;
+  daily_rate?: number;
+  hourly_rate?: number;
   deductions?: Record<string, number>;
   effective_to?: Date;
+  is_active?: boolean;
 }
 
 export interface Payroll {
@@ -68,16 +84,53 @@ export interface Payroll {
   employee_id: string;
   month: number;
   year: number;
+  basic_salary?: number;
   gross_salary: number;
   net_salary: number;
-  total_deductions: number;
-  total_earnings: number;
+  total_deductions?: number;
+  total_earnings?: number;
+  pf_deduction?: number;
+  esi_deduction?: number;
+  tds_deduction?: number;
   status: 'draft' | 'processed' | 'paid' | 'locked';
   processed_by?: string;
   processed_at?: Date;
+  processed_date?: Date;
   paid_at?: Date;
+  is_locked?: boolean;
+  locked_at?: Date;
   created_at: Date;
   updated_at: Date;
+}
+
+export interface CreatePayrollDTO {
+  employee_id: string;
+  month: number;
+  year: number;
+  basic_salary?: number;
+  gross_salary: number;
+  net_salary: number;
+  total_deductions?: number;
+  total_earnings?: number;
+  pf_deduction?: number;
+  esi_deduction?: number;
+  tds_deduction?: number;
+  status?: 'draft' | 'processed' | 'paid' | 'locked';
+}
+
+export interface UpdatePayrollDTO {
+  basic_salary?: number;
+  gross_salary?: number;
+  net_salary?: number;
+  total_deductions?: number;
+  total_earnings?: number;
+  pf_deduction?: number;
+  esi_deduction?: number;
+  tds_deduction?: number;
+  status?: 'draft' | 'processed' | 'paid' | 'locked';
+  processed_by?: string;
+  processed_date?: Date;
+  processed_at?: Date;
 }
 
 export interface PayrollCalculation {
@@ -107,6 +160,28 @@ export interface Payslip {
   net_salary: number;
   generated_at: Date;
   created_at: Date;
+}
+
+export interface CreatePayslipDTO {
+  employee_id: string;
+  payroll_id: string;
+  month: number;
+  year: number;
+  basic_salary?: number;
+  gross_salary: number;
+  net_salary: number;
+  file_url?: string;
+  earnings?: Record<string, number>;
+  deductions?: Record<string, number>;
+  payslip_number?: string;
+}
+
+export interface UpdatePayslipDTO {
+  file_url?: string;
+  earnings?: Record<string, number>;
+  deductions?: Record<string, number>;
+  gross_salary?: number;
+  net_salary?: number;
 }
 
 export interface AdvanceSalaryRequest {

@@ -44,7 +44,7 @@ passport.use(
           role: user.role as UserRole,
         };
 
-        return done(null, userPayload);
+        return done(null, { ...userPayload, id: userPayload.userId });
       } catch (error) {
         return done(error);
       }
@@ -87,7 +87,7 @@ if (process.env['GOOGLE_CLIENT_ID'] && process.env['GOOGLE_CLIENT_SECRET']) {
             role: result.user.role as UserRole,
           };
 
-          return done(null, userPayload);
+          return done(null, { ...userPayload, id: userPayload.userId });
         } catch (error) {
           return done(error as Error);
         }
@@ -100,7 +100,7 @@ if (process.env['GOOGLE_CLIENT_ID'] && process.env['GOOGLE_CLIENT_SECRET']) {
  * Serialize user for session (stores only the user ID).
  */
 passport.serializeUser((user, done) => {
-  const payload = user as TokenPayload;
+  const payload = user as unknown as TokenPayload;
   const serialized: SerializedUser = { userId: payload.userId };
   done(null, serialized);
 });
@@ -118,7 +118,7 @@ passport.deserializeUser(async (serialized: SerializedUser, done) => {
         email: user.email,
         role: user.role as UserRole,
       };
-      done(null, userPayload);
+      done(null, { ...userPayload, id: userPayload.userId });
     } else {
       done(null, false);
     }

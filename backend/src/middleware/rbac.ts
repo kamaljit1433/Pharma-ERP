@@ -13,13 +13,11 @@ import { auditLogService } from '../services/auditLogService';
  */
 declare global {
   namespace Express {
-    interface Request {
-      user?: {
-        id: string;
-        role: Role;
-        departmentId?: string;
-        managerId?: string;
-      };
+    interface User {
+      id: string;
+      role: string;
+      departmentId?: string;
+      managerId?: string;
     }
   }
 }
@@ -28,25 +26,26 @@ declare global {
  * Middleware to check if user has a specific permission
  */
 export function requirePermission(permission: Permission | Permission[]) {
-  return async (req: Request, res: Response, next: NextFunction) => {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       if (!req.user) {
-        return res.status(401).json({
+        res.status(401).json({
           error: {
             code: 'UNAUTHORIZED',
             message: 'Authentication required'
           }
         });
+        return;
       }
 
       const permissions = Array.isArray(permission) ? permission : [permission];
-      const hasPermission = permissions.some(p => userHasPermission(req.user!.role, p));
+      const hasPermission = permissions.some(p => userHasPermission(req.user!.role as Role, p));
 
       if (!hasPermission) {
         // Log unauthorized access attempt
         await auditLogService.logAccessDenied({
           userId: req.user.id,
-          userRole: req.user.role,
+          userRole: req.user.role as Role,
           action: `Attempted to access ${permissions.join(', ')}`,
           resourceType: 'permission',
           resourceId: permissions.join(','),
@@ -55,12 +54,13 @@ export function requirePermission(permission: Permission | Permission[]) {
           reason: 'Insufficient permissions'
         });
 
-        return res.status(403).json({
+        res.status(403).json({
           error: {
             code: 'FORBIDDEN',
             message: 'Insufficient permissions for this operation'
           }
         });
+        return;
       }
 
       next();
@@ -79,25 +79,26 @@ export function requirePermission(permission: Permission | Permission[]) {
  * Middleware to check if user has a specific role
  */
 export function requireRole(role: Role | Role[]) {
-  return async (req: Request, res: Response, next: NextFunction) => {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       if (!req.user) {
-        return res.status(401).json({
+        res.status(401).json({
           error: {
             code: 'UNAUTHORIZED',
             message: 'Authentication required'
           }
         });
+        return;
       }
 
       const roles = Array.isArray(role) ? role : [role];
-      const hasRole = roles.includes(req.user.role);
+      const hasRole = roles.includes(req.user.role as Role);
 
       if (!hasRole) {
         // Log unauthorized access attempt
         await auditLogService.logAccessDenied({
           userId: req.user.id,
-          userRole: req.user.role,
+          userRole: req.user.role as Role,
           action: `Attempted to access resource requiring role: ${roles.join(', ')}`,
           resourceType: 'role',
           resourceId: roles.join(','),
@@ -106,12 +107,13 @@ export function requireRole(role: Role | Role[]) {
           reason: 'Insufficient role'
         });
 
-        return res.status(403).json({
+        res.status(403).json({
           error: {
             code: 'FORBIDDEN',
             message: 'This operation requires a higher role'
           }
         });
+        return;
       }
 
       next();
@@ -138,21 +140,22 @@ export function requireResourceAccess(
     targetResourceDepartmentId?: string;
   }
 ) {
-  return async (req: Request, res: Response, next: NextFunction) => {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       if (!req.user) {
-        return res.status(401).json({
+        res.status(401).json({
           error: {
             code: 'UNAUTHORIZED',
             message: 'Authentication required'
           }
         });
+        return;
       }
 
       const resourceContext = getResourceContext(req);
       const accessContext = {
         userId: req.user.id,
-        userRole: req.user.role,
+        userRole: req.user.role as Role,
         userDepartmentId: req.user.departmentId,
         userManagerId: req.user.managerId,
         ...resourceContext
@@ -164,7 +167,7 @@ export function requireResourceAccess(
         // Log unauthorized access attempt
         await auditLogService.logAccessDenied({
           userId: req.user.id,
-          userRole: req.user.role,
+          userRole: req.user.role as Role,
           action: `Attempted to access ${resourceContext.targetResourceType} ${resourceContext.targetResourceId}`,
           resourceType: resourceContext.targetResourceType,
           resourceId: resourceContext.targetResourceId,
@@ -173,12 +176,13 @@ export function requireResourceAccess(
           reason: result.reason || 'Access denied'
         });
 
-        return res.status(403).json({
+        res.status(403).json({
           error: {
             code: 'FORBIDDEN',
             message: result.reason || 'Access denied to this resource'
           }
         });
+        return;
       }
 
       next();
@@ -206,33 +210,34 @@ export function requireActionPermission(
     targetResourceDepartmentId?: string;
   }
 ) {
-  return async (req: Request, res: Response, next: NextFunction) => {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       if (!req.user) {
-        return res.status(401).json({
+        res.status(401).json({
           error: {
             code: 'UNAUTHORIZED',
             message: 'Authentication required'
           }
         });
+        return;
       }
 
       const resourceContext = getResourceContext(req);
       const accessContext = {
         userId: req.user.id,
-        userRole: req.user.role,
+        userRole: req.user.role as Role,
         userDepartmentId: req.user.departmentId,
         userManagerId: req.user.managerId,
         ...resourceContext
       };
 
-      const result = canPerformAction(req.user.role, permission, accessContext);
+      const result = canPerformAction(req.user.role as Role, permission, accessContext);
 
       if (!result.allowed) {
         // Log unauthorized access attempt
         await auditLogService.logAccessDenied({
           userId: req.user.id,
-          userRole: req.user.role,
+          userRole: req.user.role as Role,
           action: `Attempted to perform ${permission} on ${resourceContext.targetResourceType} ${resourceContext.targetResourceId}`,
           resourceType: resourceContext.targetResourceType,
           resourceId: resourceContext.targetResourceId,
@@ -241,12 +246,13 @@ export function requireActionPermission(
           reason: result.reason || 'Access denied'
         });
 
-        return res.status(403).json({
+        res.status(403).json({
           error: {
             code: 'FORBIDDEN',
             message: result.reason || 'Insufficient permissions for this operation'
           }
         });
+        return;
       }
 
       next();
@@ -273,7 +279,7 @@ export function logApiAccess() {
       if (req.user && res.statusCode < 400) {
         auditLogService.logAccess({
           userId: req.user.id,
-          userRole: req.user.role,
+          userRole: req.user.role as Role,
           action: `${req.method} ${req.path}`,
           resourceType: 'api',
           resourceId: req.path,

@@ -118,7 +118,7 @@ router.get(
   }),
   async (req, res) => {
     try {
-      const userPayload = req.user as TokenPayload;
+      const userPayload = req.user as unknown as TokenPayload;
 
       if (!userPayload) {
         res.redirect(`${FRONTEND_URL}${FRONTEND_LOGIN_PATH}?error=oauth_failed`);

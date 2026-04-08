@@ -35,7 +35,7 @@ describe('Audit Log Repository', () => {
 
       // Mock the insert operation
       mockKnex.mockReturnValue({
-        insert: jest.fn().mockResolvedValue(['audit-id-1'])
+        insert: (jest.fn() as any).mockResolvedValue(['audit-id-1'])
       });
 
       // Note: In real tests, you'd need to properly mock the database

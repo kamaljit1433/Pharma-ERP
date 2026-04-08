@@ -93,3 +93,18 @@ export interface OAuthProfile {
   displayName: string;
   provider: 'google' | 'microsoft';
 }
+
+export interface CreateUserDTO {
+  email: string;
+  password_hash: string;
+  role: string;
+  is_active: boolean;
+  employee_id?: string;
+}
+
+export interface UpdateUserDTO {
+  email?: string;
+  password_hash?: string;
+  role?: string;
+  is_active?: boolean;
+}

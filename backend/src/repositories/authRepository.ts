@@ -281,10 +281,16 @@ export class AuthRepository {
     userAgent?: string;
     metadata?: Record<string, unknown>;
   }): Promise<void> {
+    const eventTypeMap: Record<string, string> = {
+      login: 'login_success',
+      failed_login: 'login_failed',
+    };
+    const event_type = eventTypeMap[data.eventType] ?? data.eventType;
+
     await this.db('auth_audit_log').insert({
       user_id: data.userId,
       email: data.email?.toLowerCase() ?? '',
-      event_type: data.eventType,
+      event_type,
       ip_address: data.ipAddress,
       user_agent: data.userAgent,
       metadata: data.metadata ? JSON.stringify(data.metadata) : null,

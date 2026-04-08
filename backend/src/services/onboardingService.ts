@@ -53,11 +53,16 @@ export class OnboardingService {
     let checklist = null;
     
     for (const c of checklists) {
-      const items = typeof c.items === 'string' 
-        ? JSON.parse(c.items) 
-        : c.items || [];
+      let items: any[] = [];
+      try {
+        items = typeof c.items === 'string' 
+          ? JSON.parse(c.items) 
+          : Array.isArray(c.items) ? c.items : [];
+      } catch (e) {
+        items = [];
+      }
       
-      if (items.some((i: any) => i.id === itemId)) {
+      if (Array.isArray(items) && items.some((i: any) => i.id === itemId)) {
         checklist = c;
         break;
       }

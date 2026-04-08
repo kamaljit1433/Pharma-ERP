@@ -1,6 +1,6 @@
 import request from 'supertest';
 import { Express } from 'express';
-import { knex } from '../../config/knex';
+import knex from '../../config/knex';
 
 describe('Dashboard API Integration Tests', () => {
   let app: Express;

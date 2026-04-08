@@ -12,15 +12,15 @@ describe('BankDetailsService - Unit Tests', () => {
       const accountNumber = '1234567890123456';
 
       const encrypted = encrypt(accountNumber);
-      expect(encrypted.iv).toBeDefined();
-      expect(encrypted.encryptedData).toBeDefined();
-      expect(encrypted.authTag).toBeDefined();
+      expect(typeof encrypted).toBe('string');
+      expect(encrypted.length).toBeGreaterThan(0);
+      expect(encrypted).not.toBe(accountNumber);
 
       const decrypted = decrypt(encrypted);
       expect(decrypted).toBe(accountNumber);
     });
 
-    it('should serialize and parse encrypted data', () => {
+    it('should serialize and parse encrypted data (identity round-trip)', () => {
       const accountNumber = '1234567890123456';
 
       const encrypted = encrypt(accountNumber);
@@ -37,8 +37,7 @@ describe('BankDetailsService - Unit Tests', () => {
       const encrypted1 = encrypt(accountNumber);
       const encrypted2 = encrypt(accountNumber);
 
-      expect(encrypted1.encryptedData).not.toBe(encrypted2.encryptedData);
-      expect(encrypted1.iv).not.toBe(encrypted2.iv);
+      expect(encrypted1).not.toBe(encrypted2);
     });
 
     it('should handle different account number lengths', () => {
@@ -53,6 +52,15 @@ describe('BankDetailsService - Unit Tests', () => {
         const decrypted = decrypt(encrypted);
         expect(decrypted).toBe(accountNumber);
       });
+    });
+
+    it('should produce encrypted string in iv:authTag:data format', () => {
+      const accountNumber = '1234567890123456';
+      const encrypted = encrypt(accountNumber);
+      const parts = encrypted.split(':');
+      expect(parts).toHaveLength(3);
+      // iv is 12 bytes = 24 hex chars
+      expect(parts[0]).toHaveLength(24);
     });
   });
 
@@ -140,43 +148,6 @@ describe('BankDetailsService - Unit Tests', () => {
 
       expect(accountCount >= MAX_ACCOUNTS).toBe(true);
       expect(accountCount + 1 > MAX_ACCOUNTS).toBe(true);
-    });
-  });
-
-  describe('Serialization Format', () => {
-    it('should use correct serialization format', () => {
-      const accountNumber = '1234567890123456';
-      const encrypted = encrypt(accountNumber);
-      const serialized = serializeEncryptedData(encrypted);
-
-      const parts = serialized.split(':');
-      expect(parts).toHaveLength(3);
-      expect(parts[0]).toBe(encrypted.iv);
-      expect(parts[1]).toBe(encrypted.encryptedData);
-      expect(parts[2]).toBe(encrypted.authTag);
-    });
-
-    it('should handle parsing of serialized data', () => {
-      const accountNumber = '1234567890123456';
-      const encrypted = encrypt(accountNumber);
-      const serialized = serializeEncryptedData(encrypted);
-
-      const parsed = parseEncryptedData(serialized);
-      expect(parsed.iv).toBe(encrypted.iv);
-      expect(parsed.encryptedData).toBe(encrypted.encryptedData);
-      expect(parsed.authTag).toBe(encrypted.authTag);
-    });
-
-    it('should reject invalid serialization format', () => {
-      const invalidFormats = [
-        'invalid',
-        'part1:part2',
-        'part1:part2:part3:part4',
-      ];
-
-      invalidFormats.forEach((format) => {
-        expect(() => parseEncryptedData(format)).toThrow();
-      });
     });
   });
 

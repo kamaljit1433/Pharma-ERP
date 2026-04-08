@@ -16,7 +16,9 @@ global.console = {
 // Mock environment variables for tests
 process.env['NODE_ENV'] = 'test';
 process.env['JWT_SECRET'] = 'test-jwt-secret';
-process.env['ENCRYPTION_KEY'] = '0123456789abcdef0123456789abcdef';
+process.env['JWT_REFRESH_SECRET'] = 'test-jwt-refresh-secret';
+process.env['SESSION_SECRET'] = 'test-session-secret';
+process.env['ENCRYPTION_KEY'] = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 process.env['TEST_DB_HOST'] = process.env['TEST_DB_HOST'] || 'localhost';
 process.env['TEST_DB_PORT'] = process.env['TEST_DB_PORT'] || '5432';
 process.env['TEST_DB_NAME'] = process.env['TEST_DB_NAME'] || 'employee_management_system_test';

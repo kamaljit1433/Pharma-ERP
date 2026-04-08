@@ -36,7 +36,7 @@ export class LeaveTypeFactory extends BaseFactory<LeaveType> {
    * Create a single leave type
    */
   async create(overrides?: Partial<LeaveType>): Promise<LeaveType> {
-    const leaveType = LeaveTypeFactory.leaveTypes[LeaveTypeFactory.counter % LeaveTypeFactory.leaveTypes.length];
+    const leaveType = LeaveTypeFactory.leaveTypes[LeaveTypeFactory.counter % LeaveTypeFactory.leaveTypes.length]!;
     LeaveTypeFactory.counter++;
 
     const data: any = {

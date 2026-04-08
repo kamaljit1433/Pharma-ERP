@@ -56,6 +56,16 @@ export const updateEmployeeStatus = async (req: Request, res: Response, next: Ne
       return;
     }
 
+    // Validate status value
+    const validStatuses = ['active', 'on_leave', 'suspended', 'resigned', 'terminated'];
+    if (!validStatuses.includes(status)) {
+      res.status(400).json({
+        success: false,
+        message: `Invalid status. Allowed values: ${validStatuses.join(', ')}`,
+      });
+      return;
+    }
+
     const employee = await employeeService.updateEmployeeStatus(id as string, status);
     res.status(200).json({
       success: true,

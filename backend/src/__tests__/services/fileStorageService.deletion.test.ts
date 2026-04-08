@@ -119,7 +119,7 @@ describe('FileStorageService - Deletion and Cleanup', () => {
       };
 
       // Don't set deleteFiles method to simulate fallback
-      mockProvider.deleteFiles = undefined;
+      (mockProvider as any).deleteFiles = undefined;
       mockProvider.fileExists.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
       mockProvider.deleteFile.mockResolvedValue();
 
@@ -142,7 +142,7 @@ describe('FileStorageService - Deletion and Cleanup', () => {
         employeeId: 'emp1',
       };
 
-      mockProvider.deleteFiles = undefined;
+      (mockProvider as any).deleteFiles = undefined;
       mockProvider.fileExists.mockResolvedValue(true);
       mockProvider.deleteFile
         .mockResolvedValueOnce()

@@ -27,6 +27,7 @@ jest.mock('../../config', () => ({
       maxFileSize: 10485760, // 10MB
       allowedFileTypes: ['image/jpeg', 'image/png', 'application/pdf'],
     },
+    logging: { level: 'info' },
   },
 }));
 

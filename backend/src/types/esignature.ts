@@ -1,4 +1,46 @@
 export type SignatureMethod = 'drawn' | 'typed' | 'uploaded';
+
+export interface SimpleSignatureRequest {
+  id: string;
+  document_id: string;
+  requester_id: string;
+  signers: string[];
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateSignatureRequestDTO {
+  document_id: string;
+  requester_id: string;
+  signers: string[];
+  status?: string;
+}
+
+export interface UpdateSignatureRequestDTO {
+  status?: string;
+  signers?: string[];
+}
+
+export interface SimpleSignatureEvent {
+  id: string;
+  request_id: string;
+  signer_id: string;
+  event_type: string;
+  timestamp: Date | string;
+  ip_address?: string;
+  user_agent?: string;
+  created_at: string;
+}
+
+export interface CreateSignatureEventDTO {
+  request_id: string;
+  signer_id: string;
+  event_type: string;
+  timestamp?: Date;
+  ip_address?: string;
+  user_agent?: string;
+}
 export type SignatureRequestStatus = 'pending' | 'signed' | 'rejected' | 'expired';
 export type SignatureEventType = 'created' | 'viewed' | 'signed' | 'rejected' | 'reminder_sent' | 'expired';
 

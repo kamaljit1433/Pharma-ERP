@@ -7,11 +7,13 @@ export class RewardRepository {
   // Reward CRUD Operations
   async createReward(data: {
     employee_id: string;
-    category: RewardCategory;
+    category: RewardCategory | string;
     title: string;
     description?: string | null;
     awarded_by?: string | null;
     awarded_date: Date;
+    amount?: number;
+    currency?: string;
     is_public: boolean;
   }): Promise<Reward> {
     const [reward] = await this.knex('rewards')
@@ -87,9 +89,11 @@ export class RewardRepository {
   async updateReward(
     id: string,
     data: Partial<{
-      category: RewardCategory;
+      category: RewardCategory | string;
       title: string;
       description: string | null;
+      amount: number;
+      currency: string;
       is_public: boolean;
     }>
   ): Promise<Reward> {
@@ -211,11 +215,14 @@ export class RewardRepository {
       employee_id: row.employee_id,
       category: row.category,
       title: row.title,
-      description: row.description || null,
-      awarded_by: row.awarded_by || null,
+      description: row.description ?? null,
+      awarded_by: row.awarded_by ?? null,
       awarded_date: new Date(row.awarded_date),
+      amount: row.amount != null ? parseFloat(row.amount) : undefined,
+      currency: row.currency ?? undefined,
       is_public: row.is_public,
       created_at: new Date(row.created_at),
+      updated_at: row.updated_at ? new Date(row.updated_at) : undefined,
     };
   }
 

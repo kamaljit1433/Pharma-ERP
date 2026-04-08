@@ -18,6 +18,7 @@ jest.mock('../../../config', () => ({
       keyFile: '/path/to/key.json',
     },
   },
+  logging: { level: 'info' },
 }));
 
 // Mock the S3 provider

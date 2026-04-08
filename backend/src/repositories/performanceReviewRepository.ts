@@ -1,161 +1,153 @@
 import { Knex } from 'knex';
-import { PerformanceReview, PerformanceReviewDTO } from '../types/performance';
+
+export interface PerformanceReview {
+  id: string;
+  employee_id: string;
+  cycle_id: string;
+  reviewer_id: string;
+  review_type?: string;
+  rating: number;
+  comments: string;
+  status: string;
+  submitted_at?: Date;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface CreateReviewInput {
+  employee_id: string;
+  cycle_id: string;
+  reviewer_id: string;
+  review_type?: string;
+  rating: number;
+  comments: string;
+  status?: string;
+}
+
+export interface UpdateReviewInput {
+  rating?: number;
+  comments?: string;
+  status?: string;
+  review_type?: string;
+}
 
 export class PerformanceReviewRepository {
   constructor(private db: Knex) {}
 
-  async createPerformanceReview(
-    data: PerformanceReviewDTO & { reviewerId?: string }
-  ): Promise<PerformanceReview> {
-    const existingReview = await this.db('performance_reviews')
-      .where('employee_id', data.employeeId)
-      .where('cycle_id', data.cycleId)
-      .first();
+  async createReview(data: CreateReviewInput): Promise<PerformanceReview> {
+    const [row] = await this.db('performance_reviews')
+      .insert({
+        employee_id: data.employee_id,
+        review_cycle_id: data.cycle_id,
+        reviewer_id: data.reviewer_id,
+        review_type: data.review_type || 'self',
+        rating: data.rating,
+        comments: data.comments,
+        status: data.status || 'draft',
+        created_at: new Date(),
+        updated_at: new Date(),
+      })
+      .returning('*');
 
-    if (existingReview) {
-      // Update existing review
-      return this.updatePerformanceReview(existingReview.id, data);
-    }
+    return this.mapReview(row);
+  }
 
-    const ids = await this.db('performance_reviews').insert({
+  async getReviewById(id: string): Promise<PerformanceReview | null> {
+    const row = await this.db('performance_reviews').where({ id }).first();
+    return row ? this.mapReview(row) : null;
+  }
+
+  async getReviewsByEmployee(employeeId: string): Promise<PerformanceReview[]> {
+    const rows = await this.db('performance_reviews')
+      .where({ employee_id: employeeId })
+      .orderBy('created_at', 'desc');
+    return rows.map((r: any) => this.mapReview(r));
+  }
+
+  async getReviewsByCycle(cycleId: string): Promise<PerformanceReview[]> {
+    const rows = await this.db('performance_reviews')
+      .where({ review_cycle_id: cycleId })
+      .orderBy('created_at', 'desc');
+    return rows.map((r: any) => this.mapReview(r));
+  }
+
+  async updateReview(id: string, data: UpdateReviewInput): Promise<PerformanceReview> {
+    const updateData: any = { updated_at: new Date() };
+
+    if (data.rating !== undefined) updateData.rating = data.rating;
+    if (data.comments !== undefined) updateData.comments = data.comments;
+    if (data.status !== undefined) updateData.status = data.status;
+    if (data.review_type !== undefined) updateData.review_type = data.review_type;
+
+    const [row] = await this.db('performance_reviews')
+      .where({ id })
+      .update(updateData)
+      .returning('*');
+
+    return this.mapReview(row);
+  }
+
+  async deleteReview(id: string): Promise<void> {
+    await this.db('performance_reviews').where({ id }).delete();
+  }
+
+  // Legacy methods
+  async createPerformanceReview(data: { employeeId: string; cycleId: string; reviewerId?: string; reviewType?: string; rating?: number; comments?: string }): Promise<PerformanceReview> {
+    return this.createReview({
       employee_id: data.employeeId,
       cycle_id: data.cycleId,
-      self_rating: data.reviewType === 'Self' ? data.rating : null,
-      manager_rating: data.reviewType === 'Manager' ? data.rating : null,
-      peer_ratings: data.reviewType === 'Peer' ? JSON.stringify([data.rating]) : JSON.stringify([]),
-      final_rating: 0,
-      comments: data.comments,
-      status: 'Pending',
-      created_at: new Date(),
-      updated_at: new Date(),
+      reviewer_id: data.reviewerId || data.employeeId,
+      review_type: data.reviewType,
+      rating: data.rating || 0,
+      comments: data.comments || '',
     });
-
-    const id = Array.isArray(ids) ? ids[0] : ids;
-    if (!id) {
-      throw new Error('Failed to create performance review');
-    }
-    return this.getPerformanceReviewById(id.toString()) as Promise<PerformanceReview>;
   }
 
   async getPerformanceReviewById(id: string): Promise<PerformanceReview | null> {
-    const review = await this.db('performance_reviews').where('id', id).first();
-
-    if (!review) {
-      return null;
-    }
-
-    return this.mapPerformanceReview(review);
-  }
-
-  async getPerformanceReviewByEmployeeAndCycle(
-    employeeId: string,
-    cycleId: string
-  ): Promise<PerformanceReview | null> {
-    const review = await this.db('performance_reviews')
-      .where('employee_id', employeeId)
-      .where('cycle_id', cycleId)
-      .first();
-
-    if (!review) {
-      return null;
-    }
-
-    return this.mapPerformanceReview(review);
+    return this.getReviewById(id);
   }
 
   async getPerformanceReviewsByEmployee(employeeId: string): Promise<PerformanceReview[]> {
-    const reviews = await this.db('performance_reviews')
-      .where('employee_id', employeeId)
-      .orderBy('created_at', 'desc');
-    return reviews.map((review) => this.mapPerformanceReview(review));
+    return this.getReviewsByEmployee(employeeId);
   }
 
   async getPerformanceReviewsByCycle(cycleId: string): Promise<PerformanceReview[]> {
-    const reviews = await this.db('performance_reviews')
-      .where('cycle_id', cycleId)
-      .orderBy('created_at', 'desc');
-    return reviews.map((review) => this.mapPerformanceReview(review));
+    return this.getReviewsByCycle(cycleId);
   }
 
-  async updatePerformanceReview(
-    id: string,
-    data: Partial<PerformanceReviewDTO>
-  ): Promise<PerformanceReview> {
-    const review = await this.getPerformanceReviewById(id);
-    if (!review) {
-      throw new Error(`Performance review with ID ${id} not found`);
-    }
-
-    const updateData: any = {};
-
-    if (data.reviewType === 'Self' && data.rating) {
-      updateData.self_rating = data.rating;
-    } else if (data.reviewType === 'Manager' && data.rating) {
-      updateData.manager_rating = data.rating;
-    } else if (data.reviewType === 'Peer' && data.rating) {
-      const peerRatings = review.peerRatings || [];
-      peerRatings.push(data.rating);
-      updateData.peer_ratings = JSON.stringify(peerRatings);
-    }
-
-    if (data.comments) {
-      updateData.comments = data.comments;
-    }
-
-    updateData.updated_at = new Date();
-
-    await this.db('performance_reviews').where('id', id).update(updateData);
-
-    return this.getPerformanceReviewById(id) as Promise<PerformanceReview>;
-  }
-
-  async updateReviewStatus(id: string, status: string): Promise<void> {
-    await this.db('performance_reviews').where('id', id).update({
-      status,
-      updated_at: new Date(),
-    });
-  }
-
-  async updateFinalRating(id: string, finalRating: number): Promise<void> {
-    await this.db('performance_reviews').where('id', id).update({
-      final_rating: finalRating,
-      status: 'Finalized',
-      completed_at: new Date(),
-      updated_at: new Date(),
-    });
-  }
-
-  async getReviewHistory(employeeId: string): Promise<PerformanceReview[]> {
-    const reviews = await this.db('performance_reviews')
-      .where('employee_id', employeeId)
-      .where('status', 'Finalized')
-      .orderBy('created_at', 'desc');
-    return reviews.map((review) => this.mapPerformanceReview(review));
+  async updatePerformanceReview(id: string, data: UpdateReviewInput): Promise<PerformanceReview> {
+    return this.updateReview(id, data);
   }
 
   async deletePerformanceReview(id: string): Promise<void> {
-    await this.db('performance_reviews').where('id', id).delete();
+    return this.deleteReview(id);
   }
 
-  private mapPerformanceReview(dbReview: any): PerformanceReview {
-    const result: PerformanceReview = {
-      id: dbReview.id,
-      employeeId: dbReview.employee_id,
-      cycleId: dbReview.cycle_id,
-      selfRating: dbReview.self_rating,
-      managerRating: dbReview.manager_rating,
-      peerRatings: dbReview.peer_ratings ? JSON.parse(dbReview.peer_ratings) : [],
-      finalRating: dbReview.final_rating,
-      comments: dbReview.comments,
-      status: dbReview.status,
-      createdAt: new Date(dbReview.created_at),
-      updatedAt: new Date(dbReview.updated_at),
+  async updateReviewStatus(id: string, status: string): Promise<void> {
+    await this.db('performance_reviews').where({ id }).update({ status, updated_at: new Date() });
+  }
+
+  async getReviewHistory(employeeId: string): Promise<PerformanceReview[]> {
+    const rows = await this.db('performance_reviews')
+      .where({ employee_id: employeeId })
+      .whereIn('status', ['approved', 'finalized'])
+      .orderBy('created_at', 'desc');
+    return rows.map((r: any) => this.mapReview(r));
+  }
+
+  private mapReview(row: any): PerformanceReview {
+    return {
+      id: row.id,
+      employee_id: row.employee_id,
+      cycle_id: row.review_cycle_id,
+      reviewer_id: row.reviewer_id,
+      review_type: row.review_type,
+      rating: row.rating,
+      comments: row.comments || '',
+      status: row.status,
+      submitted_at: row.submitted_at ? new Date(row.submitted_at) : undefined,
+      created_at: new Date(row.created_at),
+      updated_at: new Date(row.updated_at),
     };
-
-    if (dbReview.completed_at) {
-      result.completedAt = new Date(dbReview.completed_at);
-    }
-
-    return result;
   }
 }

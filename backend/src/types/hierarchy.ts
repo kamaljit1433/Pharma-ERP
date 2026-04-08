@@ -3,6 +3,7 @@ export interface Department {
   name: string;
   description?: string;
   parent_department_id?: string;
+  head_id?: string;
   created_at: string;
   updated_at: string;
 }
@@ -11,7 +12,7 @@ export interface Designation {
   id: string;
   name: string;
   description?: string;
-  level?: number;
+  level?: string;
   created_at: string;
   updated_at: string;
 }
@@ -31,24 +32,26 @@ export interface CreateDepartmentDTO {
   name: string;
   description?: string;
   parent_department_id?: string;
+  head_id?: string;
 }
 
 export interface UpdateDepartmentDTO {
   name?: string;
   description?: string;
   parent_department_id?: string;
+  head_id?: string;
 }
 
 export interface CreateDesignationDTO {
   name: string;
   description?: string;
-  level?: number;
+  level?: string;
 }
 
 export interface UpdateDesignationDTO {
   name?: string;
   description?: string;
-  level?: number;
+  level?: string;
 }
 
 export interface AssignEmployeePositionDTO {

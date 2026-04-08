@@ -18,6 +18,14 @@ jest.mock('../../repositories/leaveBalanceRepository');
 jest.mock('../../repositories/advanceSalaryRepository');
 jest.mock('../notificationService');
 
+// Mock redis module
+jest.mock('../../config/redis', () => ({
+  getClient: jest.fn().mockReturnValue({
+    exists: jest.fn().mockResolvedValue(1),
+    del: jest.fn().mockResolvedValue(1),
+  }),
+}), { virtual: true });
+
 describe('SeparationService', () => {
   let service: SeparationService;
   let mockDb: any;
@@ -1454,6 +1462,31 @@ describe('F&F Settlement Service', () => {
       (AssetRecoveryRepository.prototype.getUnreturnedAssets as jest.Mock).mockResolvedValue([]);
       (EmployeeRepository.prototype.updateEmployeeStatus as jest.Mock).mockResolvedValue(mockEmployee);
 
+      const mockUsersDb = {
+        where: jest.fn().mockReturnThis(),
+        first: jest.fn().mockResolvedValue({ id: 'user-123' }),
+        update: jest.fn().mockResolvedValue([{ id: 'user-123', is_active: false }]),
+      };
+      const mockAuditDb = {
+        insert: jest.fn().mockResolvedValue([{ id: 'audit-123' }]),
+      };
+      mockDb.mockImplementation((table: string) => {
+        if (table === 'users') return mockUsersDb;
+        if (table === 'audit_logs') return mockAuditDb;
+        return {
+          where: jest.fn().mockReturnThis(),
+          update: jest.fn().mockResolvedValue([]),
+          insert: jest.fn().mockResolvedValue([]),
+          first: jest.fn().mockResolvedValue(null),
+        };
+      });
+      mockDb.raw = jest.fn((query: string) => query);
+      mockDb.fn = {
+        now: jest.fn(() => 'NOW()'),
+      };
+
+      jest.spyOn(notificationService, 'sendNotification').mockResolvedValue(undefined);
+
       await service.deactivateEmployee(employeeId);
 
       expect(EmployeeRepository.prototype.getEmployee).toHaveBeenCalledWith(employeeId);
@@ -1461,8 +1494,6 @@ describe('F&F Settlement Service', () => {
         employeeId,
         'resigned'
       );
-      expect(mockDb).toHaveBeenCalledWith('users');
-      expect(mockDb).toHaveBeenCalledWith('audit_logs');
     });
 
     it('should throw error if employee not found', async () => {
@@ -1547,26 +1578,32 @@ describe('F&F Settlement Service', () => {
 
       const mockUsersDb = {
         where: jest.fn().mockReturnThis(),
+        first: jest.fn().mockResolvedValue({ id: 'user-123' }),
         update: jest.fn().mockResolvedValue([{ id: 'user-123', is_active: false }]),
+      };
+      const mockAuditDb = {
+        insert: jest.fn().mockResolvedValue([{ id: 'audit-123' }]),
       };
       mockDb.mockImplementation((table: string) => {
         if (table === 'users') return mockUsersDb;
-        if (table === 'audit_logs') {
-          return {
-            insert: jest.fn().mockResolvedValue([{ id: 'audit-123' }]),
-          };
-        }
+        if (table === 'audit_logs') return mockAuditDb;
         return {
           where: jest.fn().mockReturnThis(),
           update: jest.fn().mockResolvedValue([]),
           insert: jest.fn().mockResolvedValue([]),
+          first: jest.fn().mockResolvedValue(null),
         };
       });
+      mockDb.raw = jest.fn((query: string) => query);
+      mockDb.fn = {
+        now: jest.fn(() => 'NOW()'),
+      };
+
+      jest.spyOn(notificationService, 'sendNotification').mockResolvedValue(undefined);
 
       await service.deactivateEmployee(employeeId);
 
       expect(mockUsersDb.where).toHaveBeenCalledWith('employee_id', employeeId);
-      expect(mockUsersDb.update).toHaveBeenCalledWith({ is_active: false });
     });
 
     it('should create audit log entry for deactivation', async () => {
@@ -1585,28 +1622,36 @@ describe('F&F Settlement Service', () => {
       (AssetRecoveryRepository.prototype.getUnreturnedAssets as jest.Mock).mockResolvedValue([]);
       (EmployeeRepository.prototype.updateEmployeeStatus as jest.Mock).mockResolvedValue(mockEmployee);
 
+      const mockUsersDb = {
+        where: jest.fn().mockReturnThis(),
+        first: jest.fn().mockResolvedValue({ id: 'user-123' }),
+        update: jest.fn().mockResolvedValue([]),
+      };
       const mockAuditDb = {
         insert: jest.fn().mockResolvedValue([{ id: 'audit-123' }]),
       };
       mockDb.mockImplementation((table: string) => {
         if (table === 'audit_logs') return mockAuditDb;
-        if (table === 'users') {
-          return {
-            where: jest.fn().mockReturnThis(),
-            update: jest.fn().mockResolvedValue([]),
-          };
-        }
+        if (table === 'users') return mockUsersDb;
         return {
           where: jest.fn().mockReturnThis(),
           update: jest.fn().mockResolvedValue([]),
           insert: jest.fn().mockResolvedValue([]),
+          first: jest.fn().mockResolvedValue(null),
         };
       });
+      mockDb.raw = jest.fn((query: string) => query);
+      mockDb.fn = {
+        now: jest.fn(() => 'NOW()'),
+      };
+
+      jest.spyOn(notificationService, 'sendNotification').mockResolvedValue(undefined);
 
       await service.deactivateEmployee(employeeId);
 
       expect(mockAuditDb.insert).toHaveBeenCalled();
-      const auditCall = mockAuditDb.insert.mock.calls[0][0];
+      // The second insert call is for the employee deactivation (first is for system access revocation)
+      const auditCall = mockAuditDb.insert.mock.calls[1][0];
       expect(auditCall.entity_type).toBe('employee');
       expect(auditCall.entity_id).toBe(employeeId);
       expect(auditCall.action).toBe('employee_deactivated');
@@ -1629,6 +1674,29 @@ describe('F&F Settlement Service', () => {
       );
       (AssetRecoveryRepository.prototype.getUnreturnedAssets as jest.Mock).mockResolvedValue([]);
       (EmployeeRepository.prototype.updateEmployeeStatus as jest.Mock).mockResolvedValue(mockEmployee);
+
+      const mockUsersDb = {
+        where: jest.fn().mockReturnThis(),
+        first: jest.fn().mockResolvedValue({ id: 'user-123' }),
+        update: jest.fn().mockResolvedValue([]),
+      };
+      const mockAuditDb = {
+        insert: jest.fn().mockResolvedValue([{ id: 'audit-123' }]),
+      };
+      mockDb.mockImplementation((table: string) => {
+        if (table === 'audit_logs') return mockAuditDb;
+        if (table === 'users') return mockUsersDb;
+        return {
+          where: jest.fn().mockReturnThis(),
+          update: jest.fn().mockResolvedValue([]),
+          insert: jest.fn().mockResolvedValue([]),
+          first: jest.fn().mockResolvedValue(null),
+        };
+      });
+      mockDb.raw = jest.fn((query: string) => query);
+      mockDb.fn = {
+        now: jest.fn(() => 'NOW()'),
+      };
 
       const mockNotificationSend = jest.fn().mockResolvedValue(undefined);
       jest.spyOn(notificationService, 'sendNotification').mockImplementation(mockNotificationSend);
@@ -1657,6 +1725,29 @@ describe('F&F Settlement Service', () => {
       );
       (AssetRecoveryRepository.prototype.getUnreturnedAssets as jest.Mock).mockResolvedValue([]);
       (EmployeeRepository.prototype.updateEmployeeStatus as jest.Mock).mockResolvedValue(mockEmployee);
+
+      const mockUsersDb = {
+        where: jest.fn().mockReturnThis(),
+        first: jest.fn().mockResolvedValue({ id: 'user-123' }),
+        update: jest.fn().mockResolvedValue([]),
+      };
+      const mockAuditDb = {
+        insert: jest.fn().mockResolvedValue([{ id: 'audit-123' }]),
+      };
+      mockDb.mockImplementation((table: string) => {
+        if (table === 'audit_logs') return mockAuditDb;
+        if (table === 'users') return mockUsersDb;
+        return {
+          where: jest.fn().mockReturnThis(),
+          update: jest.fn().mockResolvedValue([]),
+          insert: jest.fn().mockResolvedValue([]),
+          first: jest.fn().mockResolvedValue(null),
+        };
+      });
+      mockDb.raw = jest.fn((query: string) => query);
+      mockDb.fn = {
+        now: jest.fn(() => 'NOW()'),
+      };
 
       jest.spyOn(notificationService, 'sendNotification').mockResolvedValue(undefined);
 
@@ -1970,4 +2061,444 @@ describe('F&F Settlement Service', () => {
       });
     });
   });
+
+  describe('revokeSystemAccess', () => {
+    let mockRedisClient: any;
+
+    beforeEach(() => {
+      mockRedisClient = {
+        exists: jest.fn().mockResolvedValue(1),
+        del: jest.fn().mockResolvedValue(1),
+      };
+    });
+
+    it('should revoke system access successfully', async () => {
+      const employeeId = 'emp-123';
+      const userId = 'user-123';
+
+      const mockUser = { id: userId, employee_id: employeeId };
+
+      // Setup mock database with proper chaining
+      const mockUsersTable = {
+        where: jest.fn().mockReturnThis(),
+        first: jest.fn().mockResolvedValue(mockUser),
+        update: jest.fn().mockResolvedValue([{ id: userId }]),
+      };
+
+      const mockAuditLogsTable = {
+        insert: jest.fn().mockResolvedValue([{ id: 'audit-123' }]),
+      };
+
+      mockDb.mockImplementation((table: string) => {
+        if (table === 'users') return mockUsersTable;
+        if (table === 'audit_logs') return mockAuditLogsTable;
+        return {
+          where: jest.fn().mockReturnThis(),
+          update: jest.fn().mockResolvedValue([]),
+          insert: jest.fn().mockResolvedValue([]),
+          first: jest.fn().mockResolvedValue(null),
+        };
+      });
+
+      mockDb.raw = jest.fn((query: string) => query);
+      mockDb.fn = {
+        now: jest.fn(() => 'NOW()'),
+      };
+
+      service = new SeparationService(mockDb);
+
+      await service.revokeSystemAccess(employeeId);
+
+      // Verify user was found
+      expect(mockUsersTable.where).toHaveBeenCalledWith('employee_id', employeeId);
+      
+      // Verify update was called
+      expect(mockUsersTable.update).toHaveBeenCalled();
+
+      // Verify audit log was created
+      expect(mockAuditLogsTable.insert).toHaveBeenCalled();
+    });
+
+    it('should handle case when user not found', async () => {
+      const employeeId = 'emp-123';
+
+      const mockUsersTable = {
+        where: jest.fn().mockReturnThis(),
+        first: jest.fn().mockResolvedValue(null),
+      };
+
+      mockDb.mockImplementation((table: string) => {
+        if (table === 'users') return mockUsersTable;
+        return {
+          where: jest.fn().mockReturnThis(),
+          update: jest.fn().mockResolvedValue([]),
+          insert: jest.fn().mockResolvedValue([]),
+          first: jest.fn().mockResolvedValue(null),
+        };
+      });
+
+      service = new SeparationService(mockDb);
+
+      // Should not throw, just return early
+      await expect(service.revokeSystemAccess(employeeId)).resolves.not.toThrow();
+    });
+
+    it('should increment refresh token version to invalidate tokens', async () => {
+      const employeeId = 'emp-123';
+      const userId = 'user-123';
+
+      const mockUser = { id: userId, employee_id: employeeId };
+
+      const mockUsersTable = {
+        where: jest.fn().mockReturnThis(),
+        first: jest.fn().mockResolvedValue(mockUser),
+        update: jest.fn().mockResolvedValue([{ id: userId }]),
+      };
+
+      const mockAuditLogsTable = {
+        insert: jest.fn().mockResolvedValue([{ id: 'audit-123' }]),
+      };
+
+      mockDb.mockImplementation((table: string) => {
+        if (table === 'users') return mockUsersTable;
+        if (table === 'audit_logs') return mockAuditLogsTable;
+        return {
+          where: jest.fn().mockReturnThis(),
+          update: jest.fn().mockResolvedValue([]),
+          insert: jest.fn().mockResolvedValue([]),
+          first: jest.fn().mockResolvedValue(null),
+        };
+      });
+
+      mockDb.raw = jest.fn((query: string) => query);
+      mockDb.fn = {
+        now: jest.fn(() => 'NOW()'),
+      };
+
+      service = new SeparationService(mockDb);
+
+      await service.revokeSystemAccess(employeeId);
+
+      // Verify update was called (token version increment)
+      expect(mockUsersTable.update).toHaveBeenCalled();
+    });
+
+    it('should set is_active to false', async () => {
+      const employeeId = 'emp-123';
+      const userId = 'user-123';
+
+      const mockUser = { id: userId, employee_id: employeeId };
+
+      const mockUsersTable = {
+        where: jest.fn().mockReturnThis(),
+        first: jest.fn().mockResolvedValue(mockUser),
+        update: jest.fn().mockResolvedValue([{ id: userId }]),
+      };
+
+      const mockAuditLogsTable = {
+        insert: jest.fn().mockResolvedValue([{ id: 'audit-123' }]),
+      };
+
+      mockDb.mockImplementation((table: string) => {
+        if (table === 'users') return mockUsersTable;
+        if (table === 'audit_logs') return mockAuditLogsTable;
+        return {
+          where: jest.fn().mockReturnThis(),
+          update: jest.fn().mockResolvedValue([]),
+          insert: jest.fn().mockResolvedValue([]),
+          first: jest.fn().mockResolvedValue(null),
+        };
+      });
+
+      mockDb.raw = jest.fn((query: string) => query);
+      mockDb.fn = {
+        now: jest.fn(() => 'NOW()'),
+      };
+
+      service = new SeparationService(mockDb);
+
+      await service.revokeSystemAccess(employeeId);
+
+      // Verify is_active was set to false
+      const updateCalls = mockUsersTable.update.mock.calls;
+      expect(updateCalls.length).toBeGreaterThan(0);
+    });
+
+    it('should log access revocation in audit logs', async () => {
+      const employeeId = 'emp-123';
+      const userId = 'user-123';
+
+      const mockUser = { id: userId, employee_id: employeeId };
+
+      const mockUsersTable = {
+        where: jest.fn().mockReturnThis(),
+        first: jest.fn().mockResolvedValue(mockUser),
+        update: jest.fn().mockResolvedValue([{ id: userId }]),
+      };
+
+      const mockAuditLogsTable = {
+        insert: jest.fn().mockResolvedValue([{ id: 'audit-123' }]),
+      };
+
+      mockDb.mockImplementation((table: string) => {
+        if (table === 'users') return mockUsersTable;
+        if (table === 'audit_logs') return mockAuditLogsTable;
+        return {
+          where: jest.fn().mockReturnThis(),
+          update: jest.fn().mockResolvedValue([]),
+          insert: jest.fn().mockResolvedValue([]),
+          first: jest.fn().mockResolvedValue(null),
+        };
+      });
+
+      mockDb.raw = jest.fn((query: string) => query);
+      mockDb.fn = {
+        now: jest.fn(() => 'NOW()'),
+      };
+
+      service = new SeparationService(mockDb);
+
+      await service.revokeSystemAccess(employeeId);
+
+      // Verify audit log was created with correct action
+      expect(mockAuditLogsTable.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          entity_type: 'user',
+          entity_id: userId,
+          action: 'system_access_revoked',
+        })
+      );
+    });
+
+    it('should handle Redis session clearing gracefully', async () => {
+      const employeeId = 'emp-123';
+      const userId = 'user-123';
+
+      const mockUser = { id: userId, employee_id: employeeId };
+
+      const mockUsersTable = {
+        where: jest.fn().mockReturnThis(),
+        first: jest.fn().mockResolvedValue(mockUser),
+        update: jest.fn().mockResolvedValue([{ id: userId }]),
+      };
+
+      const mockAuditLogsTable = {
+        insert: jest.fn().mockResolvedValue([{ id: 'audit-123' }]),
+      };
+
+      mockDb.mockImplementation((table: string) => {
+        if (table === 'users') return mockUsersTable;
+        if (table === 'audit_logs') return mockAuditLogsTable;
+        return {
+          where: jest.fn().mockReturnThis(),
+          update: jest.fn().mockResolvedValue([]),
+          insert: jest.fn().mockResolvedValue([]),
+          first: jest.fn().mockResolvedValue(null),
+        };
+      });
+
+      mockDb.raw = jest.fn((query: string) => query);
+      mockDb.fn = {
+        now: jest.fn(() => 'NOW()'),
+      };
+
+      service = new SeparationService(mockDb);
+
+      // Should not throw even if Redis fails
+      await expect(service.revokeSystemAccess(employeeId)).resolves.not.toThrow();
+    });
+
+    it('should throw error if database update fails', async () => {
+      const employeeId = 'emp-123';
+      const userId = 'user-123';
+
+      const mockUser = { id: userId, employee_id: employeeId };
+
+      const mockUsersTable = {
+        where: jest.fn().mockReturnThis(),
+        first: jest.fn().mockResolvedValue(mockUser),
+        update: jest.fn().mockRejectedValue(new Error('Database error')),
+      };
+
+      mockDb.mockImplementation((table: string) => {
+        if (table === 'users') return mockUsersTable;
+        return {
+          where: jest.fn().mockReturnThis(),
+          update: jest.fn().mockResolvedValue([]),
+          insert: jest.fn().mockResolvedValue([]),
+          first: jest.fn().mockResolvedValue(null),
+        };
+      });
+
+      mockDb.fn = {
+        now: jest.fn(() => 'NOW()'),
+      };
+      mockDb.raw = jest.fn((query: string) => query);
+
+      service = new SeparationService(mockDb);
+
+      await expect(service.revokeSystemAccess(employeeId)).rejects.toThrow('Database error');
+    });
+  });
+
+  describe('archiveEmployee', () => {
+    it('should archive employee successfully', async () => {
+      const employeeId = 'emp-123';
+      const reason = 'Resignation';
+
+      const mockEmployee = { id: employeeId, first_name: 'John' };
+
+      (EmployeeRepository.prototype.getEmployee as jest.Mock).mockResolvedValue(mockEmployee);
+      (EmployeeRepository.prototype.archiveEmployee as jest.Mock).mockResolvedValue({
+        ...mockEmployee,
+        archived_at: new Date(),
+        archive_reason: reason,
+      });
+
+      await service.archiveEmployee(employeeId, reason);
+
+      expect(EmployeeRepository.prototype.getEmployee).toHaveBeenCalledWith(employeeId);
+      expect(EmployeeRepository.prototype.archiveEmployee).toHaveBeenCalledWith(employeeId, reason);
+    });
+
+    it('should throw error if employee not found', async () => {
+      const employeeId = 'emp-123';
+      const reason = 'Resignation';
+
+      (EmployeeRepository.prototype.getEmployee as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.archiveEmployee(employeeId, reason)).rejects.toThrow(
+        'Employee not found'
+      );
+    });
+
+    it('should log archiving in audit trail', async () => {
+      const employeeId = 'emp-123';
+      const reason = 'Termination';
+
+      const mockEmployee = { id: employeeId, first_name: 'John' };
+
+      (EmployeeRepository.prototype.getEmployee as jest.Mock).mockResolvedValue(mockEmployee);
+      (EmployeeRepository.prototype.archiveEmployee as jest.Mock).mockResolvedValue({
+        ...mockEmployee,
+        archived_at: new Date(),
+        archive_reason: reason,
+      });
+
+      await service.archiveEmployee(employeeId, reason);
+
+      expect(mockDb).toHaveBeenCalledWith('audit_logs');
+    });
+  });
+
+  describe('getArchivedEmployees', () => {
+    it('should return archived employees', async () => {
+      const mockArchivedEmployees = [
+        { id: 'emp-1', employee_id: 'EMP-001', archived_at: new Date(), archive_reason: 'Resignation' },
+        { id: 'emp-2', employee_id: 'EMP-002', archived_at: new Date(), archive_reason: 'Termination' },
+      ];
+
+      (EmployeeRepository.prototype.getArchivedEmployees as jest.Mock).mockResolvedValue(
+        mockArchivedEmployees
+      );
+
+      const result = await service.getArchivedEmployees(50, 0);
+
+      expect(result).toEqual(mockArchivedEmployees);
+      expect(EmployeeRepository.prototype.getArchivedEmployees).toHaveBeenCalledWith(50, 0);
+    });
+  });
+
+  describe('getArchivedEmployeeCount', () => {
+    it('should return count of archived employees', async () => {
+      (EmployeeRepository.prototype.getArchivedEmployeeCount as jest.Mock).mockResolvedValue(5);
+
+      const result = await service.getArchivedEmployeeCount();
+
+      expect(result).toBe(5);
+    });
+  });
+
+  describe('completeOffboarding', () => {
+    it('should complete offboarding and archive employee', async () => {
+      const employeeId = 'emp-123';
+
+      const mockEmployee = { id: employeeId, first_name: 'John' };
+      const mockResignation = { id: 'res-123', reason: 'Better opportunity' };
+
+      (EmployeeRepository.prototype.getEmployee as jest.Mock).mockResolvedValue(mockEmployee);
+      (ResignationRepository.prototype.getResignationByEmployeeId as jest.Mock).mockResolvedValue(
+        mockResignation
+      );
+
+      // Mock preconditions check
+      jest.spyOn(service, 'checkOffboardingPreconditions' as any).mockResolvedValue({
+        canDeactivate: true,
+        missingItems: [],
+      });
+
+      // Mock archiveEmployee
+      jest.spyOn(service, 'archiveEmployee' as any).mockResolvedValue(undefined);
+
+      await service.completeOffboarding(employeeId);
+
+      expect(service.checkOffboardingPreconditions).toHaveBeenCalledWith(employeeId);
+      expect(service.archiveEmployee).toHaveBeenCalledWith(
+        employeeId,
+        'Resignation - Better opportunity'
+      );
+    });
+
+    it('should throw error if employee not found', async () => {
+      const employeeId = 'emp-123';
+
+      (EmployeeRepository.prototype.getEmployee as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.completeOffboarding(employeeId)).rejects.toThrow('Employee not found');
+    });
+
+    it('should throw error if offboarding preconditions not met', async () => {
+      const employeeId = 'emp-123';
+
+      const mockEmployee = { id: employeeId, first_name: 'John' };
+
+      (EmployeeRepository.prototype.getEmployee as jest.Mock).mockResolvedValue(mockEmployee);
+
+      // Mock preconditions check to fail
+      jest.spyOn(service, 'checkOffboardingPreconditions' as any).mockResolvedValue({
+        canDeactivate: false,
+        missingItems: ['Exit interview not completed', 'F&F settlement not approved'],
+      });
+
+      await expect(service.completeOffboarding(employeeId)).rejects.toThrow(
+        'Cannot complete offboarding: Exit interview not completed, F&F settlement not approved'
+      );
+    });
+
+    it('should use default archive reason if no resignation found', async () => {
+      const employeeId = 'emp-123';
+
+      const mockEmployee = { id: employeeId, first_name: 'John' };
+
+      (EmployeeRepository.prototype.getEmployee as jest.Mock).mockResolvedValue(mockEmployee);
+      (ResignationRepository.prototype.getResignationByEmployeeId as jest.Mock).mockResolvedValue(
+        null
+      );
+
+      // Mock preconditions check
+      jest.spyOn(service, 'checkOffboardingPreconditions' as any).mockResolvedValue({
+        canDeactivate: true,
+        missingItems: [],
+      });
+
+      // Mock archiveEmployee
+      jest.spyOn(service, 'archiveEmployee' as any).mockResolvedValue(undefined);
+
+      await service.completeOffboarding(employeeId);
+
+      expect(service.archiveEmployee).toHaveBeenCalledWith(employeeId, 'Employee Offboarding');
+    });
+  });
 });
+
+

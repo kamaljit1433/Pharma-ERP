@@ -219,7 +219,7 @@ describe('GeoTrackingService', () => {
       const anomalies = geoTrackingService.detectAnomalies(journey);
 
       expect(anomalies.length).toBeGreaterThan(0);
-      expect(anomalies[0].type).toBe('impossible_speed');
+      expect(anomalies[0]!.type).toBe('impossible_speed');
     });
 
     it('should detect location jumps', () => {

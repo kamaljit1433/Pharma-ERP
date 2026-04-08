@@ -74,10 +74,7 @@ describe('PIPService', () => {
       (pipRepository.createPIP as jest.Mock).mockResolvedValue(mockPIP);
 
       const result = await service.initiatePIP(
-        'emp-001',
-        ['goal-001'],
-        new Date('2026-01-01'),
-        new Date('2026-03-31'),
+        { employeeId: 'emp-001', goals: ['goal-001'], startDate: new Date('2026-01-01'), endDate: new Date('2026-03-31') },
         'user-001'
       );
 
@@ -87,7 +84,7 @@ describe('PIPService', () => {
 
     it('should throw error if no goals provided', async () => {
       await expect(
-        service.initiatePIP('emp-001', [], new Date('2026-01-01'), new Date('2026-03-31'), 'user-001')
+        service.initiatePIP({ employeeId: 'emp-001', goals: [], startDate: new Date('2026-01-01'), endDate: new Date('2026-03-31') }, 'user-001')
       ).rejects.toThrow('Employee ID and at least one goal are required');
     });
 
@@ -114,7 +111,7 @@ describe('PIPService', () => {
       (goalRepository.getGoalById as jest.Mock).mockResolvedValue(mockGoal);
 
       await expect(
-        service.initiatePIP('emp-001', ['goal-001'], new Date('2026-03-31'), new Date('2026-01-01'), 'user-001')
+        service.initiatePIP({ employeeId: 'emp-001', goals: ['goal-001'], startDate: new Date('2026-03-31'), endDate: new Date('2026-01-01') }, 'user-001')
       ).rejects.toThrow('Start date must be before end date');
     });
 
@@ -122,7 +119,7 @@ describe('PIPService', () => {
       (goalRepository.getGoalById as jest.Mock).mockResolvedValue(null);
 
       await expect(
-        service.initiatePIP('emp-001', ['goal-999'], new Date('2026-01-01'), new Date('2026-03-31'), 'user-001')
+        service.initiatePIP({ employeeId: 'emp-001', goals: ['goal-999'], startDate: new Date('2026-01-01'), endDate: new Date('2026-03-31') }, 'user-001')
       ).rejects.toThrow('Goal with ID goal-999 not found');
     });
   });
@@ -158,10 +155,7 @@ describe('PIPService', () => {
 
       const result = await service.recordCheckIn(
         'pip-001',
-        new Date('2026-02-01'),
-        'Making good progress',
-        'On track with goals',
-        'On Track',
+        { pipId: 'pip-001', checkInDate: new Date('2026-02-01'), progress: 'Making good progress', notes: 'On track with goals', status: 'On Track' },
         'user-001'
       );
 
@@ -187,10 +181,7 @@ describe('PIPService', () => {
       await expect(
         service.recordCheckIn(
           'pip-001',
-          new Date('2026-05-01'),
-          'Making good progress',
-          'On track with goals',
-          'On Track',
+          { pipId: 'pip-001', checkInDate: new Date('2026-05-01'), progress: 'Making good progress', notes: 'On track with goals', status: 'On Track' },
           'user-001'
         )
       ).rejects.toThrow('Check-in date must be within PIP timeline');

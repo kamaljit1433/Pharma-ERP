@@ -10,6 +10,7 @@ export interface SupplierBuyer {
   city?: string;
   state?: string;
   country?: string;
+  postal_code?: string;
   notes?: string;
   created_at: string;
   updated_at: string;
@@ -17,13 +18,16 @@ export interface SupplierBuyer {
 
 export interface Visit {
   id: string;
-  supplier_buyer_id: string;
-  employee_id: string;
-  visit_date: string;
+  record_id: string;
+  supplier_buyer_id?: string;
+  employee_id?: string;
+  visit_date: Date | string;
+  location?: { latitude: number; longitude: number };
   latitude?: number;
   longitude?: number;
   purpose?: string;
   notes?: string;
+  duration_minutes?: number;
   document_url?: string;
   created_at: string;
 }
@@ -37,6 +41,7 @@ export interface VisitDocument {
 }
 
 export interface CreateSupplierBuyerDTO {
+  employee_id?: string;
   name: string;
   type: 'supplier' | 'buyer';
   contact_person?: string;
@@ -46,6 +51,7 @@ export interface CreateSupplierBuyerDTO {
   city?: string;
   state?: string;
   country?: string;
+  postal_code?: string;
   notes?: string;
 }
 
@@ -59,15 +65,19 @@ export interface UpdateSupplierBuyerDTO {
   city?: string;
   state?: string;
   country?: string;
+  postal_code?: string;
   notes?: string;
 }
 
 export interface CreateVisitDTO {
-  visit_date: string;
+  record_id: string;
+  visit_date: Date | string;
+  location?: { latitude: number; longitude: number };
   latitude?: number;
   longitude?: number;
   purpose?: string;
   notes?: string;
+  duration_minutes?: number;
   document_url?: string;
 }
 

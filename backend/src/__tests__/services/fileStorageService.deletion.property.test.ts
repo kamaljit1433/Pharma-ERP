@@ -366,8 +366,8 @@ describe('FileStorageService - Deletion and Cleanup Property Tests', () => {
 
           // Property: timestamps should be in non-decreasing order
           for (let i = 1; i < loggedTimestamps.length; i++) {
-            const prevTime = new Date(loggedTimestamps[i - 1]).getTime();
-            const currTime = new Date(loggedTimestamps[i]).getTime();
+            const prevTime = new Date(loggedTimestamps[i - 1]!).getTime();
+            const currTime = new Date(loggedTimestamps[i]!).getTime();
             expect(currTime).toBeGreaterThanOrEqual(prevTime);
           }
 

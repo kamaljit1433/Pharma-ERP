@@ -3,10 +3,11 @@ export interface TrainingProgram {
   name: string;
   description?: string;
   provider?: string;
-  start_date: Date;
-  end_date: Date;
-  duration_hours: number;
-  status: 'draft' | 'active' | 'completed' | 'cancelled';
+  start_date?: Date;
+  end_date?: Date;
+  duration_hours?: number;
+  duration_days?: number;
+  status: 'draft' | 'active' | 'completed' | 'cancelled' | 'inactive' | 'archived';
   max_participants?: number;
   created_at: Date;
   updated_at: Date;
@@ -16,9 +17,11 @@ export interface CreateTrainingProgramDTO {
   name: string;
   description?: string;
   provider?: string;
-  start_date: Date;
-  end_date: Date;
-  duration_hours: number;
+  start_date?: Date;
+  end_date?: Date;
+  duration_hours?: number;
+  duration_days?: number;
+  status?: 'draft' | 'active' | 'completed' | 'cancelled' | 'inactive' | 'archived';
   max_participants?: number;
 }
 
@@ -29,15 +32,17 @@ export interface UpdateTrainingProgramDTO {
   start_date?: Date;
   end_date?: Date;
   duration_hours?: number;
-  status?: 'draft' | 'active' | 'completed' | 'cancelled';
+  duration_days?: number;
+  status?: 'draft' | 'active' | 'completed' | 'cancelled' | 'inactive' | 'archived';
   max_participants?: number;
 }
 
 export interface TrainingEnrollment {
   id: string;
   employee_id: string;
-  training_program_id: string;
-  status: 'enrolled' | 'in_progress' | 'completed' | 'cancelled';
+  program_id: string;
+  training_program_id?: string;
+  status: 'enrolled' | 'in_progress' | 'completed' | 'cancelled' | 'dropped';
   enrollment_date: Date;
   completion_date?: Date;
   score?: number;
@@ -48,12 +53,14 @@ export interface TrainingEnrollment {
 
 export interface CreateTrainingEnrollmentDTO {
   employee_id: string;
-  training_program_id: string;
+  program_id?: string;
+  training_program_id?: string;
   enrollment_date: Date;
+  status?: 'enrolled' | 'in_progress' | 'completed' | 'cancelled' | 'dropped';
 }
 
 export interface UpdateTrainingEnrollmentDTO {
-  status?: 'enrolled' | 'in_progress' | 'completed' | 'cancelled';
+  status?: 'enrolled' | 'in_progress' | 'completed' | 'cancelled' | 'dropped';
   completion_date?: Date;
   score?: number;
   passed?: boolean;
@@ -98,13 +105,23 @@ export interface Skill {
   name: string;
   category: string;
   description?: string;
+  proficiency_levels: string[];
   created_at: Date;
+  updated_at?: Date;
 }
 
 export interface CreateSkillDTO {
   name: string;
   category: string;
   description?: string;
+  proficiency_levels?: string[];
+}
+
+export interface UpdateSkillDTO {
+  name?: string;
+  category?: string;
+  description?: string;
+  proficiency_levels?: string[];
 }
 
 export interface EmployeeSkill {

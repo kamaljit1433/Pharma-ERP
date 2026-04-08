@@ -12,15 +12,16 @@ router.use(authenticateToken as any);
  * Resignation endpoints
  * POST /api/v1/separation/resignation - Submit resignation
  */
-router.post('/resignation', authorize(['HR Manager', 'Employee']) as any, async (req, res, next) => {
-  const { employeeId } = req.body;
+router.post('/resignation', authorize(['HR Manager', 'Employee']) as any, async (req, res, next): Promise<void> => {
+  const { employeeId } = req.body as { employeeId?: string };
   if (!employeeId) {
-    return res.status(400).json({
+    res.status(400).json({
       success: false,
       message: 'employeeId is required in request body',
     });
+    return;
   }
-  req.params.employeeId = employeeId;
+  (req.params as Record<string, string>)['employeeId'] = employeeId;
   separationController.submitResignation(req, res, next);
 });
 
@@ -45,15 +46,16 @@ router.put(
  * Termination endpoints
  * POST /api/v1/separation/termination - Initiate termination
  */
-router.post('/termination', authorize(['HR Manager', 'Super Admin']) as any, async (req, res, next) => {
-  const { employeeId } = req.body;
+router.post('/termination', authorize(['HR Manager', 'Super Admin']) as any, async (req, res, next): Promise<void> => {
+  const { employeeId } = req.body as { employeeId?: string };
   if (!employeeId) {
-    return res.status(400).json({
+    res.status(400).json({
       success: false,
       message: 'employeeId is required in request body',
     });
+    return;
   }
-  req.params.employeeId = employeeId;
+  (req.params as Record<string, string>)['employeeId'] = employeeId;
   separationController.initiateTermination(req, res, next);
 });
 
@@ -61,15 +63,16 @@ router.post('/termination', authorize(['HR Manager', 'Super Admin']) as any, asy
  * Exit Interview endpoints
  * POST /api/v1/separation/exit-interview - Schedule exit interview
  */
-router.post('/exit-interview', authorize(['HR Manager', 'Super Admin']) as any, async (req, res, next) => {
-  const { employeeId } = req.body;
+router.post('/exit-interview', authorize(['HR Manager', 'Super Admin']) as any, async (req, res, next): Promise<void> => {
+  const { employeeId } = req.body as { employeeId?: string };
   if (!employeeId) {
-    return res.status(400).json({
+    res.status(400).json({
       success: false,
       message: 'employeeId is required in request body',
     });
+    return;
   }
-  req.params.employeeId = employeeId;
+  (req.params as Record<string, string>)['employeeId'] = employeeId;
   separationController.scheduleExitInterview(req, res, next);
 });
 
@@ -96,8 +99,8 @@ router.get(
 router.put(
   '/fnf/:id/submit',
   authorize(['Finance / Payroll', 'HR Manager', 'Super Admin']) as any,
-  async (req, res, next) => {
-    req.params.fnfSettlementId = req.params.id;
+  async (req, res, next): Promise<void> => {
+    (req.params as Record<string, string>)['fnfSettlementId'] = req.params['id'];
     separationController.submitFnFSettlementForApproval(req, res, next);
   }
 );
@@ -105,8 +108,8 @@ router.put(
 router.put(
   '/fnf/:id/approve',
   authorize(['Finance / Payroll', 'Super Admin']) as any,
-  async (req, res, next) => {
-    req.params.fnfSettlementId = req.params.id;
+  async (req, res, next): Promise<void> => {
+    (req.params as Record<string, string>)['fnfSettlementId'] = req.params['id'];
     separationController.approveFnFSettlement(req, res, next);
   }
 );
@@ -114,8 +117,8 @@ router.put(
 router.put(
   '/fnf/:id/reject',
   authorize(['Finance / Payroll', 'Super Admin']) as any,
-  async (req, res, next) => {
-    req.params.fnfSettlementId = req.params.id;
+  async (req, res, next): Promise<void> => {
+    (req.params as Record<string, string>)['fnfSettlementId'] = req.params['id'];
     separationController.rejectFnFSettlement(req, res, next);
   }
 );

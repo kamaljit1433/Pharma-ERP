@@ -124,39 +124,45 @@ export class InsuranceService {
       throw new Error('Employee is already enrolled in this insurance plan');
     }
 
-    return this.insuranceEnrollmentRepository.createInsuranceEnrollment(data);
+    return this.insuranceEnrollmentRepository.createEnrollment({
+      employee_id: data.employee_id,
+      plan_id: data.insurance_plan_id,
+      enrollment_date: data.enrollment_date,
+      status: 'active',
+    }) as any;
   }
 
   async getEmployeeEnrollments(employeeId: string): Promise<InsuranceEnrollment[]> {
-    return this.insuranceEnrollmentRepository.getEmployeeEnrollments(employeeId);
+    return this.insuranceEnrollmentRepository.getEnrollmentsByEmployee(employeeId) as any;
   }
 
   async getActiveEmployeeEnrollments(employeeId: string): Promise<InsuranceEnrollment[]> {
-    return this.insuranceEnrollmentRepository.getActiveEmployeeEnrollments(employeeId);
+    const all = await this.insuranceEnrollmentRepository.getEnrollmentsByEmployee(employeeId);
+    return all.filter((e) => e.status === 'active') as any;
   }
 
   async getEnrollmentDetails(enrollmentId: string): Promise<InsuranceEnrollment> {
-    const enrollment = await this.insuranceEnrollmentRepository.getInsuranceEnrollmentById(enrollmentId);
+    const enrollment = await this.insuranceEnrollmentRepository.getEnrollmentById(enrollmentId);
     if (!enrollment) {
       throw new Error('Insurance enrollment not found');
     }
-    return enrollment;
+    return enrollment as any;
   }
 
   async updateEnrollment(
     enrollmentId: string,
     data: UpdateInsuranceEnrollmentDTO
   ): Promise<InsuranceEnrollment> {
-    const enrollment = await this.insuranceEnrollmentRepository.getInsuranceEnrollmentById(enrollmentId);
+    const enrollment = await this.insuranceEnrollmentRepository.getEnrollmentById(enrollmentId);
     if (!enrollment) {
       throw new Error('Insurance enrollment not found');
     }
 
-    return this.insuranceEnrollmentRepository.updateInsuranceEnrollment(enrollmentId, data);
+    return this.insuranceEnrollmentRepository.updateEnrollment(enrollmentId, data) as any;
   }
 
   async cancelEnrollment(enrollmentId: string, effectiveTo: Date): Promise<InsuranceEnrollment> {
-    const enrollment = await this.insuranceEnrollmentRepository.getInsuranceEnrollmentById(enrollmentId);
+    const enrollment = await this.insuranceEnrollmentRepository.getEnrollmentById(enrollmentId);
     if (!enrollment) {
       throw new Error('Insurance enrollment not found');
     }
@@ -165,7 +171,7 @@ export class InsuranceService {
       throw new Error('Enrollment is already cancelled');
     }
 
-    return this.insuranceEnrollmentRepository.cancelInsuranceEnrollment(enrollmentId, effectiveTo);
+    return this.insuranceEnrollmentRepository.updateEnrollment(enrollmentId, { status: 'cancelled' }) as any;
   }
 
   // Enrollment Window Validation
@@ -208,20 +214,9 @@ export class InsuranceService {
 
     // Calculate total premium for active enrollments
     for (const enrollment of enrollments) {
-      // Check if enrollment is effective for the given month/year
-      const enrollmentEffectiveFrom = new Date(enrollment.effective_from);
-      const enrollmentEffectiveTo = enrollment.effective_to ? new Date(enrollment.effective_to) : null;
-
-      const targetDate = new Date(year, month - 1, 1);
-
-      // Check if enrollment is active for this month
-      if (enrollmentEffectiveFrom <= targetDate) {
-        if (!enrollmentEffectiveTo || enrollmentEffectiveTo >= targetDate) {
-          const plan = await this.insurancePlanRepository.getInsurancePlanById(enrollment.insurance_plan_id);
-          if (plan) {
-            totalPremium += plan.premium_amount || 0;
-          }
-        }
+      const plan = await this.insurancePlanRepository.getInsurancePlanById((enrollment as any).plan_id);
+      if (plan) {
+        totalPremium += plan.premium_amount || 0;
       }
     }
 
@@ -233,7 +228,8 @@ export class InsuranceService {
     return enrollments.length;
   }
 
+
   async getPlanEnrollments(insurancePlanId: string): Promise<InsuranceEnrollment[]> {
-    return this.insuranceEnrollmentRepository.getPlanEnrollments(insurancePlanId);
+    return this.insuranceEnrollmentRepository.getEnrollmentsByPlan(insurancePlanId) as any;
   }
 }

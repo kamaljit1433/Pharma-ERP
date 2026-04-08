@@ -25,6 +25,8 @@ export interface Employee {
   status: 'active' | 'on_leave' | 'suspended' | 'resigned' | 'terminated';
   profile_photo_url?: string;
   notice_period_days?: number;
+  archived_at?: string;
+  archive_reason?: string;
   created_at: string;
   updated_at: string;
 }

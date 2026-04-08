@@ -99,7 +99,7 @@ export class EmployeeRepository {
   }
 
   async searchEmployees(filters: EmployeeFilters): Promise<Employee[]> {
-    let query = this.db('employees');
+    let query = this.db('employees').whereNull('archived_at');
 
     if (filters.department_id) {
       query = query.where('department_id', filters.department_id);
@@ -134,11 +134,15 @@ export class EmployeeRepository {
   }
 
   async getAllEmployees(limit: number = 50, offset: number = 0): Promise<Employee[]> {
-    return this.db('employees').limit(limit).offset(offset).orderBy('created_at', 'desc');
+    return this.db('employees')
+      .whereNull('archived_at')
+      .limit(limit)
+      .offset(offset)
+      .orderBy('created_at', 'desc');
   }
 
   async getEmployeeCount(filters?: EmployeeFilters): Promise<number> {
-    let query = this.db('employees');
+    let query = this.db('employees').whereNull('archived_at');
 
     if (filters) {
       if (filters.department_id) {
@@ -262,5 +266,47 @@ export class EmployeeRepository {
     return this.db('employment_history')
       .where('employee_id', employeeId)
       .orderBy('from_date', 'desc');
+  }
+
+  // Archiving
+  async archiveEmployee(id: string, reason: string): Promise<Employee> {
+    const result = await this.db('employees')
+      .where('id', id)
+      .update({
+        archived_at: this.db.fn.now(),
+        archive_reason: reason,
+        updated_at: this.db.fn.now(),
+      })
+      .returning('*');
+
+    if (!result.length) {
+      throw new Error('Employee not found or archive failed');
+    }
+
+    return result[0];
+  }
+
+  async getArchivedEmployees(limit: number = 50, offset: number = 0): Promise<Employee[]> {
+    return this.db('employees')
+      .whereNotNull('archived_at')
+      .limit(limit)
+      .offset(offset)
+      .orderBy('archived_at', 'desc');
+  }
+
+  async getArchivedEmployeeCount(): Promise<number> {
+    const result = await this.db('employees')
+      .whereNotNull('archived_at')
+      .count('id as count')
+      .first();
+    return Number(result?.['count'] || 0);
+  }
+
+  async isEmployeeArchived(id: string): Promise<boolean> {
+    const employee = await this.db('employees')
+      .where('id', id)
+      .whereNotNull('archived_at')
+      .first();
+    return !!employee;
   }
 }

@@ -42,9 +42,30 @@ export interface InterviewFeedback {
   interview_id: string;
   interviewer_id: string;
   rating: number;
-  comments: string;
+  technical_score: number;
+  communication_score: number;
+  cultural_fit_score: number;
+  overall_impression: string;
   recommendation: 'Strong Hire' | 'Hire' | 'Maybe' | 'No Hire';
   submitted_at: Date;
+}
+
+export interface CreateInterviewDTO {
+  applicant_id: string;
+  scheduled_at: Date;
+  mode: 'In-Person' | 'Video' | 'Phone';
+  interviewers: string[];
+  location?: string;
+  notes?: string;
+}
+
+export interface InterviewFeedbackDTO {
+  rating: number;
+  technical_score: number;
+  communication_score: number;
+  cultural_fit_score: number;
+  overall_impression: string;
+  recommendation: 'Strong Hire' | 'Hire' | 'Maybe' | 'No Hire';
 }
 
 export interface OfferLetter {
@@ -77,4 +98,21 @@ export interface OnboardingChecklist {
   created_at: Date;
   completed_at?: Date;
   items: OnboardingChecklistItem[];
+}
+
+export interface CandidateCommunication {
+  id: string;
+  applicant_id: string;
+  sender_id: string;
+  sender_name: string;
+  subject: string;
+  body: string;
+  sent_at: Date;
+  read_at?: Date;
+}
+
+export interface SendCommunicationDTO {
+  applicant_id: string;
+  subject: string;
+  body: string;
 }

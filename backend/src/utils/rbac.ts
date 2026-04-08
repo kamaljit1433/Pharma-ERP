@@ -119,7 +119,7 @@ export function getApprovalRoute(
 ): string[] {
   // For most approvals, route to direct manager (first in chain)
   if (reportingChain.length > 0) {
-    const directManager = reportingChain[0];
+    const directManager = reportingChain[0]!;
 
     // For high-value requests, add additional approvers
     if (approvalType === 'reimbursement') {

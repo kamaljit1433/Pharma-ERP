@@ -20,11 +20,13 @@ export interface BankAccount {
 }
 
 export interface BankAccountDTO {
+  employee_id?: string;
   account_holder_name: string;
   bank_name: string;
   account_number: string;
   ifsc_code: string;
   account_type: 'savings' | 'current' | 'salary';
+  is_primary?: boolean;
 }
 
 export interface UpdateBankAccountDTO {

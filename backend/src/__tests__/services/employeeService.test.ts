@@ -116,27 +116,202 @@ describe('EmployeeService', () => {
   });
 
   describe('updateEmployeeStatus', () => {
-    it('should update employee status', async () => {
+    it('should update employee status to resigned', async () => {
       const mockEmployee = {
         id: '123',
         employee_id: 'EMP001',
         first_name: 'John',
+        status: 'active',
+      };
+
+      const mockUpdatedEmployee = {
+        ...mockEmployee,
         status: 'resigned',
       };
 
-      const mockGet = jest.fn().mockResolvedValue({ id: '123' });
-      const mockUpdateStatus = jest.fn().mockResolvedValue(mockEmployee);
+      const mockGet = jest.fn().mockResolvedValue(mockEmployee);
+      const mockUpdateStatus = jest.fn().mockResolvedValue(mockUpdatedEmployee);
+      const mockInsert = jest.fn().mockResolvedValue(undefined);
+      const mockDbTable = jest.fn().mockReturnValue({
+        insert: mockInsert,
+      });
 
       (employeeService as any).employeeRepository = {
         getEmployee: mockGet,
         updateEmployeeStatus: mockUpdateStatus,
       };
+      (employeeService as any).db = mockDbTable;
 
       const result = await employeeService.updateEmployeeStatus('123', 'resigned');
 
       expect(mockGet).toHaveBeenCalledWith('123');
       expect(mockUpdateStatus).toHaveBeenCalledWith('123', 'resigned');
-      expect(result).toEqual(mockEmployee);
+      expect(result).toEqual(mockUpdatedEmployee);
+      expect(mockDbTable).toHaveBeenCalledWith('audit_logs');
+      expect(mockInsert).toHaveBeenCalled();
+    });
+
+    it('should update employee status to terminated', async () => {
+      const mockEmployee = {
+        id: '123',
+        employee_id: 'EMP001',
+        first_name: 'John',
+        status: 'active',
+      };
+
+      const mockUpdatedEmployee = {
+        ...mockEmployee,
+        status: 'terminated',
+      };
+
+      const mockGet = jest.fn().mockResolvedValue(mockEmployee);
+      const mockUpdateStatus = jest.fn().mockResolvedValue(mockUpdatedEmployee);
+      const mockInsert = jest.fn().mockResolvedValue(undefined);
+      const mockDbTable = jest.fn().mockReturnValue({
+        insert: mockInsert,
+      });
+
+      (employeeService as any).employeeRepository = {
+        getEmployee: mockGet,
+        updateEmployeeStatus: mockUpdateStatus,
+      };
+      (employeeService as any).db = mockDbTable;
+
+      const result = await employeeService.updateEmployeeStatus('123', 'terminated');
+
+      expect(mockGet).toHaveBeenCalledWith('123');
+      expect(mockUpdateStatus).toHaveBeenCalledWith('123', 'terminated');
+      expect(result).toEqual(mockUpdatedEmployee);
+    });
+
+    it('should update employee status to suspended', async () => {
+      const mockEmployee = {
+        id: '123',
+        employee_id: 'EMP001',
+        first_name: 'John',
+        status: 'active',
+      };
+
+      const mockUpdatedEmployee = {
+        ...mockEmployee,
+        status: 'suspended',
+      };
+
+      const mockGet = jest.fn().mockResolvedValue(mockEmployee);
+      const mockUpdateStatus = jest.fn().mockResolvedValue(mockUpdatedEmployee);
+      const mockInsert = jest.fn().mockResolvedValue(undefined);
+      const mockDbTable = jest.fn().mockReturnValue({
+        insert: mockInsert,
+      });
+
+      (employeeService as any).employeeRepository = {
+        getEmployee: mockGet,
+        updateEmployeeStatus: mockUpdateStatus,
+      };
+      (employeeService as any).db = mockDbTable;
+
+      const result = await employeeService.updateEmployeeStatus('123', 'suspended');
+
+      expect(mockGet).toHaveBeenCalledWith('123');
+      expect(mockUpdateStatus).toHaveBeenCalledWith('123', 'suspended');
+      expect(result).toEqual(mockUpdatedEmployee);
+    });
+
+    it('should update employee status to on_leave', async () => {
+      const mockEmployee = {
+        id: '123',
+        employee_id: 'EMP001',
+        first_name: 'John',
+        status: 'active',
+      };
+
+      const mockUpdatedEmployee = {
+        ...mockEmployee,
+        status: 'on_leave',
+      };
+
+      const mockGet = jest.fn().mockResolvedValue(mockEmployee);
+      const mockUpdateStatus = jest.fn().mockResolvedValue(mockUpdatedEmployee);
+      const mockInsert = jest.fn().mockResolvedValue(undefined);
+      const mockDbTable = jest.fn().mockReturnValue({
+        insert: mockInsert,
+      });
+
+      (employeeService as any).employeeRepository = {
+        getEmployee: mockGet,
+        updateEmployeeStatus: mockUpdateStatus,
+      };
+      (employeeService as any).db = mockDbTable;
+
+      const result = await employeeService.updateEmployeeStatus('123', 'on_leave');
+
+      expect(mockGet).toHaveBeenCalledWith('123');
+      expect(mockUpdateStatus).toHaveBeenCalledWith('123', 'on_leave');
+      expect(result).toEqual(mockUpdatedEmployee);
+    });
+
+    it('should update employee status to active', async () => {
+      const mockEmployee = {
+        id: '123',
+        employee_id: 'EMP001',
+        first_name: 'John',
+        status: 'suspended',
+      };
+
+      const mockUpdatedEmployee = {
+        ...mockEmployee,
+        status: 'active',
+      };
+
+      const mockGet = jest.fn().mockResolvedValue(mockEmployee);
+      const mockUpdateStatus = jest.fn().mockResolvedValue(mockUpdatedEmployee);
+      const mockInsert = jest.fn().mockResolvedValue(undefined);
+      const mockDbTable = jest.fn().mockReturnValue({
+        insert: mockInsert,
+      });
+
+      (employeeService as any).employeeRepository = {
+        getEmployee: mockGet,
+        updateEmployeeStatus: mockUpdateStatus,
+      };
+      (employeeService as any).db = mockDbTable;
+
+      const result = await employeeService.updateEmployeeStatus('123', 'active');
+
+      expect(mockGet).toHaveBeenCalledWith('123');
+      expect(mockUpdateStatus).toHaveBeenCalledWith('123', 'active');
+      expect(result).toEqual(mockUpdatedEmployee);
+    });
+
+    it('should throw error if employee not found', async () => {
+      const mockGet = jest.fn().mockResolvedValue(null);
+
+      (employeeService as any).employeeRepository = {
+        getEmployee: mockGet,
+      };
+
+      await expect(employeeService.updateEmployeeStatus('999', 'resigned')).rejects.toThrow(
+        'Employee not found'
+      );
+    });
+
+    it('should throw error if invalid status provided', async () => {
+      const mockEmployee = {
+        id: '123',
+        employee_id: 'EMP001',
+        first_name: 'John',
+        status: 'active',
+      };
+
+      const mockGet = jest.fn().mockResolvedValue(mockEmployee);
+
+      (employeeService as any).employeeRepository = {
+        getEmployee: mockGet,
+      };
+
+      await expect(employeeService.updateEmployeeStatus('123', 'invalid_status' as any)).rejects.toThrow(
+        'Invalid status'
+      );
     });
   });
 

@@ -2,16 +2,11 @@ import { PIPRepository } from '../repositories/pipRepository';
 import { GoalRepository } from '../repositories/goalRepository';
 import { PIP, CreatePIPDTO, CreatePIPCheckInDTO } from '../types/performance';
 
-import { Knex } from 'knex';
-
 export class PIPService {
-  private pipRepository: PIPRepository;
-  private goalRepository: GoalRepository;
-
-  constructor(private knex: Knex) {
-    this.pipRepository = new PIPRepository(knex);
-    this.goalRepository = new GoalRepository(knex);
-  }
+  constructor(
+    private pipRepository: PIPRepository,
+    private goalRepository: GoalRepository
+  ) {}
 
   async initiatePIP(
     data: CreatePIPDTO,

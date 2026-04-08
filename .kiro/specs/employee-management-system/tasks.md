@@ -260,7 +260,7 @@ Tasks are organized by implementation phase and module. Each task includes:
 - [x] Create EmploymentHistory repository
 - [x] Implement addEmploymentHistory
 - [x] Implement getEmploymentHistory
-- [-] Write unit tests
+- [ ] Write unit tests
 
 **Complexity:** Small
 **Dependencies:** 3.1
@@ -1106,20 +1106,20 @@ Tasks are organized by implementation phase and module. Each task includes:
 **Dependencies:** 2.9, 6.2, 8.2
 
 ### 11.4 Implement Asset Recovery Service
-- [ ] Create AssetRecovery repository
-- [ ] Generate asset recovery checklist from assigned assets
-- [ ] Track asset return status (returned/damaged/missing)
-- [ ] Flag unreturned assets for F&F deduction
+- [x] Create AssetRecovery repository
+- [x] Generate asset recovery checklist from assigned assets
+- [x] Track asset return status (returned/damaged/missing)
+- [x] Flag unreturned assets for F&F deduction
 - [ ] Write unit tests
 
 **Complexity:** Medium
 **Dependencies:** 2.9, 2.5
 
 ### 11.5 Implement Employee Deactivation
-- [ ] Implement deactivation precondition check (all checklist items complete)
-- [ ] Revoke system access
-- [ ] Update employee status
-- [ ] Archive employee data
+- [x] Implement deactivation precondition check (all checklist items complete)
+- [x] Revoke system access
+- [x] Update employee status
+- [x] Archive employee data
 - [ ] Write unit tests
 
 **Complexity:** Small
@@ -1756,9 +1756,9 @@ Tasks are organized by implementation phase and module. Each task includes:
 - [x] START PHASE 20
 
 ### 20.1 Complete Unit Test Coverage
-- [ ] Ensure all services have unit tests
-- [ ] Ensure all repositories have unit tests
-- [ ] Ensure all utilities have unit tests
+- [x] Ensure all services have unit tests
+- [x] Ensure all repositories have unit tests
+- [x] Ensure all utilities have unit tests
 - [ ] Achieve minimum 80% code coverage
 - [ ] Fix any failing tests
 

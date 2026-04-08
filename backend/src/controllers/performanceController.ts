@@ -20,10 +20,10 @@ export class PerformanceController {
   constructor(knex: Knex) {
     this.reviewCycleRepository = new ReviewCycleRepository(knex);
 
-    this.goalService = new GoalService(knex);
-    this.reviewService = new PerformanceReviewService(knex);
-    this.feedbackService = new FeedbackService(knex);
-    this.pipService = new PIPService(knex);
+    this.goalService = new GoalService(new GoalRepository(knex));
+    this.reviewService = new PerformanceReviewService(new PerformanceReviewRepository(knex));
+    this.feedbackService = new FeedbackService(new FeedbackRepository(knex));
+    this.pipService = new PIPService(new PIPRepository(knex), new GoalRepository(knex));
   }
 
   // ============ Goals ============
@@ -264,13 +264,11 @@ export class PerformanceController {
       }
 
       const feedback = await this.feedbackService.provideFeedback(
-        {
-          toEmployeeId,
-          type,
-          content,
-          isAnonymous,
-          visibility,
-        },
+        toEmployeeId,
+        type,
+        content,
+        isAnonymous,
+        visibility,
         (req as any).user.id
       );
 

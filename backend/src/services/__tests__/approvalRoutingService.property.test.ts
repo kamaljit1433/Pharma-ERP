@@ -61,11 +61,13 @@ describe('ApprovalRoutingService - Property Tests', () => {
 
           // Verify that approval chain would include all managers
           expect(sortedChain.length).toBeGreaterThan(0);
-          expect(sortedChain[0].level).toBe(1); // First manager is at level 1
+          // First entry has the minimum level in the chain
+          const minLevel = Math.min(...sortedChain.map((m) => m.level));
+          expect(sortedChain[0]!.level).toBe(minLevel);
 
-          // Verify levels are sequential
+          // Verify levels are sequential (non-decreasing after sort)
           for (let i = 1; i < sortedChain.length; i++) {
-            expect(sortedChain[i].level).toBeGreaterThanOrEqual(sortedChain[i - 1].level);
+            expect(sortedChain[i]!.level).toBeGreaterThanOrEqual(sortedChain[i - 1]!.level);
           }
         }
       )
@@ -105,7 +107,7 @@ describe('ApprovalRoutingService - Property Tests', () => {
 
           // Verify ordering
           for (let i = 1; i < approvalSteps.length; i++) {
-            expect(approvalSteps[i].level).toBeGreaterThan(approvalSteps[i - 1].level);
+            expect(approvalSteps[i]!.level).toBeGreaterThan(approvalSteps[i - 1]!.level);
           }
         }
       )
@@ -147,9 +149,9 @@ describe('ApprovalRoutingService - Property Tests', () => {
           // Verify structure is preserved
           expect(processedChain.length).toBe(initialChain.length);
           for (let i = 0; i < processedChain.length; i++) {
-            expect(processedChain[i].level).toBe(initialChain[i].level);
-            expect(processedChain[i].approverId).toBe(initialChain[i].approverId);
-            expect(processedChain[i].approverName).toBe(initialChain[i].approverName);
+            expect(processedChain[i]!.level).toBe(initialChain[i]!.level);
+            expect(processedChain[i]!.approverId).toBe(initialChain[i]!.approverId);
+            expect(processedChain[i]!.approverName).toBe(initialChain[i]!.approverName);
           }
         }
       )
@@ -261,7 +263,7 @@ describe('ApprovalRoutingService - Property Tests', () => {
    */
   it('Property: Approval timestamp is set and valid', () => {
     fc.assert(
-      fc.property(fc.date(), (createdAt) => {
+      fc.property(fc.date({ max: new Date(8640000000000000 - 1000) }), (createdAt) => {
         const approvedAt = new Date(createdAt.getTime() + 1000); // 1 second later
 
         expect(approvedAt.getTime()).toBeGreaterThan(createdAt.getTime());
@@ -294,7 +296,7 @@ describe('ApprovalRoutingService - Property Tests', () => {
 
           // Verify ordering
           for (let i = 1; i < approvalChain.length; i++) {
-            expect(approvalChain[i].level).toBeGreaterThan(approvalChain[i - 1].level);
+            expect(approvalChain[i]!.level).toBeGreaterThan(approvalChain[i - 1]!.level);
           }
         }
       )
