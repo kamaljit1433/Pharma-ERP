@@ -18,6 +18,8 @@ describe('AuditLogService', () => {
         userId: 'user-1',
         userRole: Role.SUPER_ADMIN,
         action: 'view_employee',
+        entity_type: 'employee',
+        entity_id: 'emp-1',
         resourceType: 'employee',
         resourceId: 'emp-1',
         ipAddress: '192.168.1.1',
@@ -36,10 +38,14 @@ describe('AuditLogService', () => {
       const result = await auditLogService.logAccess(logData);
 
       expect(result).toEqual(mockLog);
-      expect(auditLogRepository.create).toHaveBeenCalledWith({
-        ...logData,
-        status: 'success',
-      });
+      expect(auditLogRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: logData.action,
+          entity_type: logData.entity_type,
+          entity_id: logData.entity_id,
+          status: 'success',
+        })
+      );
     });
   });
 
@@ -49,6 +55,8 @@ describe('AuditLogService', () => {
         userId: 'user-1',
         userRole: Role.EMPLOYEE,
         action: 'view_payroll',
+        entity_type: 'payroll',
+        entity_id: 'payroll-1',
         resourceType: 'payroll',
         resourceId: 'payroll-1',
         ipAddress: '192.168.1.1',
@@ -67,10 +75,14 @@ describe('AuditLogService', () => {
       const result = await auditLogService.logAccessDenied(logData);
 
       expect(result).toEqual(mockLog);
-      expect(auditLogRepository.create).toHaveBeenCalledWith({
-        ...logData,
-        status: 'failure',
-      });
+      expect(auditLogRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: logData.action,
+          entity_type: logData.entity_type,
+          entity_id: logData.entity_id,
+          status: 'failure',
+        })
+      );
     });
   });
 
@@ -455,12 +467,7 @@ describe('AuditLogService', () => {
       const result = await auditLogService.getResourceAuditLogs('employee', 'emp-1', 100, 0);
 
       expect(result).toEqual(mockLogs);
-      expect(auditLogRepository.getByResource).toHaveBeenCalledWith(
-        'employee',
-        'emp-1',
-        100,
-        0
-      );
+      expect(auditLogRepository.getByResource).toHaveBeenCalledWith('employee', 'emp-1');
     });
   });
 

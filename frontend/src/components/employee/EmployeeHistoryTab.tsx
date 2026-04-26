@@ -4,6 +4,7 @@ import { Badge } from '../ui/badge';
 import { Skeleton } from '../ui/skeleton';
 import { Clock } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
+import employeeService, { AuditLogEntry } from '@/services/employeeService';
 
 interface EmployeeHistoryTabProps {
   employeeId: string;
@@ -11,13 +12,49 @@ interface EmployeeHistoryTabProps {
 
 interface HistoryEntry {
   id: string;
-  action: string;
+  action: 'created' | 'updated' | 'deleted';
   field?: string;
   old_value?: string;
   new_value?: string;
   changed_by?: string;
   changed_at: string;
 }
+
+function classifyAction(action: string): HistoryEntry['action'] {
+  if (action.includes('creat')) return 'created';
+  if (action.includes('archiv') || action.includes('delet')) return 'deleted';
+  return 'updated';
+}
+
+function formatActionLabel(action: string): string {
+  return action
+    .replace(/^employee_/, '')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function mapAuditEntry(log: AuditLogEntry): HistoryEntry {
+  const changes = log.changes ?? {};
+  const oldKey = Object.keys(changes).find((k) => k.startsWith('old_'));
+  const newKey = Object.keys(changes).find((k) => k.startsWith('new_'));
+
+  const entry: HistoryEntry = {
+    id: log.id,
+    action: classifyAction(log.action),
+    field: formatActionLabel(log.action),
+    changed_at: typeof log.created_at === 'string' ? log.created_at : new Date(log.created_at).toISOString(),
+  };
+  if (oldKey !== undefined) entry.old_value = String(changes[oldKey]);
+  if (newKey !== undefined) entry.new_value = String(changes[newKey]);
+  if (log.performed_by !== undefined) entry.changed_by = log.performed_by;
+  return entry;
+}
+
+const ACTION_COLORS: Record<HistoryEntry['action'], string> = {
+  created: 'bg-success text-success-foreground',
+  updated: 'bg-blue-100 text-blue-800',
+  deleted: 'bg-destructive text-destructive-foreground',
+};
 
 export const EmployeeHistoryTab: React.FC<EmployeeHistoryTabProps> = ({ employeeId }) => {
   const { toast } = useToast();
@@ -28,14 +65,10 @@ export const EmployeeHistoryTab: React.FC<EmployeeHistoryTabProps> = ({ employee
     const fetchHistory = async () => {
       try {
         setLoading(true);
-        // Note: This endpoint may need to be created in the backend
-        // For now, we'll show a placeholder
-        setHistory([]);
+        const logs = await employeeService.getAuditLogs(employeeId);
+        setHistory(logs.map(mapAuditEntry));
       } catch (error) {
-        toast({
-          type: 'error',
-          message: 'Failed to load history',
-        });
+        toast({ type: 'error', message: 'Failed to load history' });
       } finally {
         setLoading(false);
       }
@@ -43,19 +76,6 @@ export const EmployeeHistoryTab: React.FC<EmployeeHistoryTabProps> = ({ employee
 
     fetchHistory();
   }, [employeeId, toast]);
-
-  const getActionColor = (action: string) => {
-    switch (action) {
-      case 'created':
-        return 'bg-success text-success-foreground';
-      case 'updated':
-        return 'bg-info text-info-foreground';
-      case 'deleted':
-        return 'bg-destructive text-destructive-foreground';
-      default:
-        return 'bg-muted text-muted-foreground';
-    }
-  };
 
   if (loading) {
     return (
@@ -86,9 +106,7 @@ export const EmployeeHistoryTab: React.FC<EmployeeHistoryTabProps> = ({ employee
       </CardHeader>
       <CardContent>
         {history.length === 0 ? (
-          <p className="text-center text-muted-foreground py-4">
-            No change history available
-          </p>
+          <p className="text-center text-muted-foreground py-4">No change history available</p>
         ) : (
           <div className="space-y-3">
             {history.map((entry) => (
@@ -98,7 +116,7 @@ export const EmployeeHistoryTab: React.FC<EmployeeHistoryTabProps> = ({ employee
               >
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <Badge className={getActionColor(entry.action)}>
+                    <Badge className={ACTION_COLORS[entry.action]}>
                       {entry.action}
                     </Badge>
                     {entry.field && (
@@ -107,7 +125,8 @@ export const EmployeeHistoryTab: React.FC<EmployeeHistoryTabProps> = ({ employee
                   </div>
                   {entry.old_value && entry.new_value && (
                     <p className="text-sm text-muted-foreground mt-1">
-                      Changed from <span className="font-mono">{entry.old_value}</span> to{' '}
+                      Changed from{' '}
+                      <span className="font-mono">{entry.old_value}</span> to{' '}
                       <span className="font-mono">{entry.new_value}</span>
                     </p>
                   )}

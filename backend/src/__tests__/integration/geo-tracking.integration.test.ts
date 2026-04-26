@@ -19,6 +19,7 @@ describe('Geo Tracking API Endpoints', () => {
     await knex('employees').insert([
       {
         id: employeeId,
+        employee_id: 'EMP000001',
         first_name: 'John',
         last_name: 'Doe',
         email: 'john@example.com',
@@ -31,6 +32,7 @@ describe('Geo Tracking API Endpoints', () => {
       },
       {
         id: managerId,
+        employee_id: 'EMP000002',
         first_name: 'Jane',
         last_name: 'Manager',
         email: 'jane@example.com',

@@ -92,7 +92,15 @@ apiClient.interceptors.response.use(
     // Handle specific error codes after retries exhausted
     if (error.response) {
       const status = error.response.status;
-      const errorData = error.response.data as any;
+      // When responseType is 'blob', error data arrives as a Blob — parse it back to JSON
+      let errorData: any = error.response.data;
+      if (errorData instanceof Blob && errorData.type.includes('application/json')) {
+        try {
+          errorData = JSON.parse(await errorData.text());
+        } catch {
+          errorData = {};
+        }
+      }
 
       switch (status) {
         case 401:

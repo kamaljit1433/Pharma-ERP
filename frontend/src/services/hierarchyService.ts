@@ -29,6 +29,7 @@ export interface HierarchyNode {
   departmentName: string;
   managerId?: string;
   managerName?: string;
+  profilePhotoUrl?: string;
   startDate: Date;
   endDate?: Date;
   isActive: boolean;
@@ -85,9 +86,9 @@ class HierarchyService {
   }
 
   // Hierarchy operations
-  async getOrgChart(rootEmployeeId?: string): Promise<OrgChartData> {
+  async getOrgChart(rootEmployeeId?: string, departmentId?: string): Promise<OrgChartData> {
     const response = await apiClient.get('/hierarchy/org-chart', {
-      params: { rootEmployeeId },
+      params: { rootEmployeeId, departmentId },
     });
     return response.data;
   }

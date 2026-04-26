@@ -1,8 +1,9 @@
-﻿import { Router, Request, Response } from 'express';
+import { Router, Request, Response } from 'express';
 import { Knex } from 'knex';
 import { BenefitsController } from '../controllers/benefitsController';
 import { authenticateToken } from '../middleware/auth';
 import { authorize } from '../middleware/authorize';
+import { UserRole } from '../types/auth';
 
 export function createBenefitsRoutes(knex: Knex): Router {
   const router = Router();
@@ -14,7 +15,7 @@ export function createBenefitsRoutes(knex: Knex): Router {
   // ============ Insurance Plans ============
 
   // Create insurance plan (Admin only)
-  router.post('/insurance-plans', authorize(['Super Admin', 'HR Manager']) as any, (req: Request, res: Response) =>
+  router.post('/insurance-plans', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER]) as any, (req: Request, res: Response) =>
     controller.createInsurancePlan(req, res)
   );
 
@@ -29,12 +30,12 @@ export function createBenefitsRoutes(knex: Knex): Router {
   );
 
   // Update insurance plan (Admin only)
-  router.put('/insurance-plans/:id', authorize(['Super Admin', 'HR Manager']) as any, (req: Request, res: Response) =>
+  router.put('/insurance-plans/:id', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER]) as any, (req: Request, res: Response) =>
     controller.updateInsurancePlan(req, res)
   );
 
   // Delete insurance plan (Admin only)
-  router.delete('/insurance-plans/:id', authorize(['Super Admin', 'HR Manager']) as any, (req: Request, res: Response) =>
+  router.delete('/insurance-plans/:id', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER]) as any, (req: Request, res: Response) =>
     controller.deleteInsurancePlan(req, res)
   );
 
@@ -92,19 +93,19 @@ export function createBenefitsRoutes(knex: Knex): Router {
   );
 
   // Approve reimbursement claim (Manager/Finance)
-  router.put('/reimbursements/:id/approve', authorize(['Department Manager', 'Finance / Payroll', 'HR Manager']) as any, (req: Request, res: Response) =>
+  router.put('/reimbursements/:id/approve', authorize([UserRole.DEPARTMENT_MANAGER, UserRole.FINANCE, UserRole.HR_MANAGER]) as any, (req: Request, res: Response) =>
     controller.approveClaim(req, res)
   );
 
   // Reject reimbursement claim (Manager/Finance)
-  router.put('/reimbursements/:id/reject', authorize(['Department Manager', 'Finance / Payroll', 'HR Manager']) as any, (req: Request, res: Response) =>
+  router.put('/reimbursements/:id/reject', authorize([UserRole.DEPARTMENT_MANAGER, UserRole.FINANCE, UserRole.HR_MANAGER]) as any, (req: Request, res: Response) =>
     controller.rejectClaim(req, res)
   );
 
   // ============ Rewards ============
 
   // Award reward (Admin/Manager)
-  router.post('/rewards', authorize(['Super Admin', 'HR Manager', 'Department Manager']) as any, (req: Request, res: Response) =>
+  router.post('/rewards', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER, UserRole.DEPARTMENT_MANAGER]) as any, (req: Request, res: Response) =>
     controller.awardReward(req, res)
   );
 
@@ -124,12 +125,12 @@ export function createBenefitsRoutes(knex: Knex): Router {
   );
 
   // Update reward (Admin/Manager)
-  router.put('/rewards/:id', authorize(['Super Admin', 'HR Manager', 'Department Manager']) as any, (req: Request, res: Response) =>
+  router.put('/rewards/:id', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER, UserRole.DEPARTMENT_MANAGER]) as any, (req: Request, res: Response) =>
     controller.updateReward(req, res)
   );
 
   // Delete reward (Admin)
-  router.delete('/rewards/:id', authorize(['Super Admin', 'HR Manager']) as any, (req: Request, res: Response) =>
+  router.delete('/rewards/:id', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER]) as any, (req: Request, res: Response) =>
     controller.deleteReward(req, res)
   );
 

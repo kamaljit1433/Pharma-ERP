@@ -38,6 +38,7 @@ interface LeaveState {
 
   // Leave Requests
   leaves: Leave[];
+  pendingLeaves: Leave[];
   loadingLeaves: boolean;
   fetchLeaves: (filters?: any) => Promise<void>;
   fetchPendingLeaves: () => Promise<void>;
@@ -61,7 +62,7 @@ export const useLeaveStore = create<LeaveState>()(
         set({ loadingLeaveTypes: true, error: null });
         try {
           const data = await leaveService.getLeaveTypes(activeOnly);
-          set({ leaveTypes: data });
+          set({ leaveTypes: Array.isArray(data) ? data : (data as any)?.data ?? [] });
         } catch (error) {
           set({ error: (error as Error).message });
         } finally {
@@ -107,7 +108,7 @@ export const useLeaveStore = create<LeaveState>()(
         set({ loadingHolidays: true, error: null });
         try {
           const data = await leaveService.getHolidays(year, type as any);
-          set({ holidays: data });
+          set({ holidays: Array.isArray(data) ? data : (data as any)?.data ?? [] });
         } catch (error) {
           set({ error: (error as Error).message });
         } finally {
@@ -153,7 +154,7 @@ export const useLeaveStore = create<LeaveState>()(
         set({ loadingBalances: true, error: null });
         try {
           const data = await leaveService.getLeaveBalance(employeeId, year);
-          set({ leaveBalances: data });
+          set({ leaveBalances: Array.isArray(data) ? data : (data as any)?.data ?? [] });
         } catch (error) {
           set({ error: (error as Error).message });
         } finally {
@@ -168,7 +169,7 @@ export const useLeaveStore = create<LeaveState>()(
         set({ loadingTeamCalendar: true, error: null });
         try {
           const data = await leaveService.getTeamLeaveCalendar();
-          set({ teamCalendar: data });
+          set({ teamCalendar: Array.isArray(data) ? data : (data as any)?.data ?? [] });
         } catch (error) {
           set({ error: (error as Error).message });
         } finally {
@@ -178,12 +179,13 @@ export const useLeaveStore = create<LeaveState>()(
 
       // Leave Requests
       leaves: [],
+      pendingLeaves: [],
       loadingLeaves: false,
       fetchLeaves: async (filters) => {
         set({ loadingLeaves: true, error: null });
         try {
           const data = await leaveService.getLeaves(filters);
-          set({ leaves: data });
+          set({ leaves: Array.isArray(data) ? data : (data as any)?.data ?? [] });
         } catch (error) {
           set({ error: (error as Error).message });
         } finally {
@@ -194,7 +196,7 @@ export const useLeaveStore = create<LeaveState>()(
         set({ loadingLeaves: true, error: null });
         try {
           const data = await leaveService.getPendingLeaves();
-          set({ leaves: data });
+          set({ pendingLeaves: Array.isArray(data) ? data : (data as any)?.data ?? [] });
         } catch (error) {
           set({ error: (error as Error).message });
         } finally {
@@ -213,9 +215,9 @@ export const useLeaveStore = create<LeaveState>()(
         set({ error: null });
         try {
           await leaveService.approveLeave(id);
-          // Refresh leaves after approval
-          const data = await leaveService.getLeaves();
-          set({ leaves: data });
+          set((state) => ({
+            pendingLeaves: state.pendingLeaves.filter((l) => l.id !== id),
+          }));
         } catch (error) {
           set({ error: (error as Error).message });
         }
@@ -224,9 +226,9 @@ export const useLeaveStore = create<LeaveState>()(
         set({ error: null });
         try {
           await leaveService.rejectLeave(id, reason);
-          // Refresh leaves after rejection
-          const data = await leaveService.getLeaves();
-          set({ leaves: data });
+          set((state) => ({
+            pendingLeaves: state.pendingLeaves.filter((l) => l.id !== id),
+          }));
         } catch (error) {
           set({ error: (error as Error).message });
         }
@@ -235,9 +237,11 @@ export const useLeaveStore = create<LeaveState>()(
         set({ error: null });
         try {
           await leaveService.cancelLeave(id);
-          // Refresh leaves after cancellation
-          const data = await leaveService.getLeaves();
-          set({ leaves: data });
+          set((state) => ({
+            leaves: state.leaves.map((l) =>
+              l.id === id ? { ...l, status: 'cancelled' as const } : l
+            ),
+          }));
         } catch (error) {
           set({ error: (error as Error).message });
         }

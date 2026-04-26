@@ -104,10 +104,11 @@ describe('LeaveApprovalPanel Component', () => {
     vi.clearAllMocks();
 
     vi.mocked(useLeaveStore).mockReturnValue({
-      leaves: mockPendingLeaves,
+      pendingLeaves: mockPendingLeaves,
       leaveTypes: mockLeaveTypes,
       loadingLeaves: false,
       fetchPendingLeaves: mockFetchPendingLeaves,
+      fetchLeaveTypes: vi.fn(),
       // ... other store methods
     } as any);
 

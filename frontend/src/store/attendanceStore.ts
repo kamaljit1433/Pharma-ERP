@@ -67,7 +67,8 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
   fetchRecords: async (filters) => {
     set({ loading: true, error: null });
     try {
-      const records = await attendanceService.getRecords(filters);
+      const result = await attendanceService.getRecords(filters);
+      const records = Array.isArray(result) ? result : [];
       set({
         records,
         loading: false,

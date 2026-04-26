@@ -144,10 +144,25 @@ export default defineConfig({
               },
             },
           },
+          {
+            // Cache face-api.js model weights from CDN (~6 MB total, rarely changes)
+            urlPattern: /^https:\/\/cdn\.jsdelivr\.net\/npm\/@vladmandic\/face-api\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'face-api-models',
+              expiration: {
+                maxEntries: 20,
+                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
         ],
       },
       devOptions: {
-        enabled: true,
+        enabled: false, // Disable service worker in development
         type: 'module',
       },
     }),
@@ -172,6 +187,10 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+      '/uploads': {
         target: 'http://localhost:3000',
         changeOrigin: true,
       },

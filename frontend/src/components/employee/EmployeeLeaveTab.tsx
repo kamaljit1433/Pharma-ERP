@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { Badge } from '../ui/badge';
 import { Skeleton } from '../ui/skeleton';
-import { Calendar, AlertCircle } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import { leaveService } from '@/services/leaveService';
 import { useToast } from '@/hooks/useToast';
-import { Leave, LeaveBalance } from '@/types/leave';
+import { LeaveBalance } from '@/types/leave';
 
 interface EmployeeLeaveTabProps {
   employeeId: string;
@@ -13,7 +12,6 @@ interface EmployeeLeaveTabProps {
 
 export const EmployeeLeaveTab: React.FC<EmployeeLeaveTabProps> = ({ employeeId }) => {
   const { toast } = useToast();
-  const [leaveRequests, setLeaveRequests] = useState<Leave[]>([]);
   const [leaveBalances, setLeaveBalances] = useState<LeaveBalance[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -24,7 +22,7 @@ export const EmployeeLeaveTab: React.FC<EmployeeLeaveTabProps> = ({ employeeId }
         // Note: These endpoints may need to be adjusted based on actual backend API
         // For now, we'll fetch leave balance which is available
         const balances = await leaveService.getLeaveBalance(employeeId);
-        setLeaveBalances(balances);
+        setLeaveBalances(Array.isArray(balances) ? balances : (balances as any).data || []);
       } catch (error) {
         toast({
           type: 'error',
@@ -36,22 +34,7 @@ export const EmployeeLeaveTab: React.FC<EmployeeLeaveTabProps> = ({ employeeId }
     };
 
     fetchLeaveData();
-  }, [employeeId, toast]);
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'approved':
-        return 'bg-success text-success-foreground';
-      case 'rejected':
-        return 'bg-destructive text-destructive-foreground';
-      case 'pending':
-        return 'bg-warning text-warning-foreground';
-      case 'cancelled':
-        return 'bg-muted text-muted-foreground';
-      default:
-        return 'bg-muted text-muted-foreground';
-    }
-  };
+  }, [employeeId]);
 
   if (loading) {
     return (
@@ -91,7 +74,7 @@ export const EmployeeLeaveTab: React.FC<EmployeeLeaveTabProps> = ({ employeeId }
                   key={balance.leave_type_id}
                   className="p-3 border rounded-lg"
                 >
-                  <p className="font-medium text-sm">{balance.leave_type_name}</p>
+                  <p className="font-medium text-sm">{balance.leave_type_name ?? balance.leave_type_id}</p>
                   <div className="flex justify-between mt-2 text-sm">
                     <span className="text-muted-foreground">
                       Available: <span className="font-semibold">{balance.available_balance}</span>

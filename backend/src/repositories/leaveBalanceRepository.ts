@@ -23,11 +23,13 @@ export class LeaveBalanceRepository {
     year: number
   ): Promise<LeaveBalance[]> {
     return this.knex('leave_balances')
+      .leftJoin('leave_types', 'leave_balances.leave_type_id', 'leave_types.id')
+      .select('leave_balances.*', 'leave_types.name as leave_type_name')
       .where({
-        employee_id: employeeId,
-        year,
+        'leave_balances.employee_id': employeeId,
+        'leave_balances.year': year,
       })
-      .orderBy('created_at');
+      .orderBy('leave_balances.created_at');
   }
 
   async createBalance(data: Partial<LeaveBalance>): Promise<LeaveBalance> {

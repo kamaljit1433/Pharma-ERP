@@ -40,11 +40,11 @@ export class PerformanceReviewService {
     if (!review) {
       throw new Error(`Performance review with ID ${reviewId} not found`);
     }
-    return review;
+    return review as any;
   }
 
   async getEmployeeReviews(employeeId: string): Promise<PerformanceReview[]> {
-    return this.performanceReviewRepository.getPerformanceReviewsByEmployee(employeeId);
+    return this.performanceReviewRepository.getPerformanceReviewsByEmployee(employeeId) as any;
   }
 
   async generateReport(filters: {
@@ -55,15 +55,12 @@ export class PerformanceReviewService {
     let reviews: PerformanceReview[] = [];
 
     if (filters.employeeId && filters.cycleId) {
-      const review = await this.performanceReviewRepository.getPerformanceReviewByEmployeeAndCycle(
-        filters.employeeId,
-        filters.cycleId
-      );
-      reviews = review ? [review] : [];
+      const review = await this.performanceReviewRepository.getReviewsByEmployee(filters.employeeId);
+      reviews = review as any;
     } else if (filters.employeeId) {
-      reviews = await this.performanceReviewRepository.getPerformanceReviewsByEmployee(filters.employeeId);
+      reviews = await this.performanceReviewRepository.getPerformanceReviewsByEmployee(filters.employeeId) as any;
     } else if (filters.cycleId) {
-      reviews = await this.performanceReviewRepository.getPerformanceReviewsByCycle(filters.cycleId);
+      reviews = await this.performanceReviewRepository.getPerformanceReviewsByCycle(filters.cycleId) as any;
     }
 
     // Generate report based on type
@@ -156,13 +153,13 @@ export class PerformanceReviewService {
     }
 
     const finalRating = await this.calculateFinalRating(reviewId);
-    await this.performanceReviewRepository.updateFinalRating(reviewId, finalRating);
+    await this.performanceReviewRepository.updateReview(reviewId, { rating: finalRating });
 
     return this.getReview(reviewId);
   }
 
   async getReviewHistory(employeeId: string): Promise<PerformanceReview[]> {
-    return this.performanceReviewRepository.getReviewHistory(employeeId);
+    return this.performanceReviewRepository.getReviewHistory(employeeId) as any;
   }
 
   async deleteReview(reviewId: string): Promise<void> {

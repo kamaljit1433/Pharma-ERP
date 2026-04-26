@@ -116,18 +116,17 @@ export class TravelAllowanceService {
     rate: number;
     currency: string;
   }> {
-    const journeys = await this.journeyRepository.getByEmployeeAndMonth(
-      employeeId,
-      month,
-      year
+    const journeys = await this.journeyRepository.getJourneysByDateRange(
+      new Date(year, month - 1, 1),
+      new Date(year, month, 0)
     );
 
     let totalDistance = 0;
     let totalAllowance = 0;
 
     for (const journey of journeys) {
-      totalDistance += journey.totalDistance;
-      totalAllowance += this.calculateJourneyAllowance(journey.totalDistance);
+      totalDistance += journey.distance || 0;
+      totalAllowance += this.calculateJourneyAllowance(journey.distance || 0);
     }
 
     return {

@@ -37,7 +37,7 @@ export class RewardService {
   // Reward Management
   async awardReward(data: CreateRewardDTO): Promise<Reward> {
     // Validate category
-    if (!this.getRewardCategories().includes(data.category)) {
+    if (!this.getRewardCategories().includes(data.category as any)) {
       throw new Error(`Invalid reward category: ${data.category}`);
     }
 
@@ -112,7 +112,7 @@ export class RewardService {
       throw new Error(`Reward not found: ${id}`);
     }
 
-    if (data.category && !this.getRewardCategories().includes(data.category)) {
+    if (data.category && !this.getRewardCategories().includes(data.category as any)) {
       throw new Error(`Invalid reward category: ${data.category}`);
     }
 

@@ -60,10 +60,15 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ onCl
   };
 
   return (
-    <div className="absolute right-0 top-12 z-50 w-80 rounded-md border bg-card shadow-lg sm:w-96">
+    <div 
+      className="absolute right-0 top-12 z-50 w-80 rounded-md border bg-card shadow-lg sm:w-96"
+      role="dialog"
+      aria-label="Notifications"
+      aria-modal="false"
+    >
       {/* Header */}
       <div className="flex items-center justify-between border-b p-4">
-        <h3 className="font-semibold">Notifications</h3>
+        <h3 className="font-semibold" id="notifications-title">Notifications</h3>
         <div className="flex items-center gap-2">
           {unreadCount > 0 && (
             <Button
@@ -71,21 +76,35 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ onCl
               size="sm"
               onClick={handleMarkAllAsRead}
               className="h-8 text-xs"
+              aria-label={`Mark all ${unreadCount} notifications as read`}
             >
-              <CheckCheck className="mr-1 h-3 w-3" />
+              <CheckCheck className="mr-1 h-3 w-3" aria-hidden="true" />
               Mark all read
             </Button>
           )}
-          <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
-            <X className="h-4 w-4" />
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={onClose} 
+            className="h-8 w-8"
+            aria-label="Close notifications"
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
           </Button>
         </div>
       </div>
 
       {/* Notification list */}
-      <div className="max-h-96 overflow-y-auto">
+      <div 
+        className="max-h-96 overflow-y-auto"
+        role="list"
+        aria-label="Notification list"
+      >
         {notifications.length === 0 ? (
-          <div className="p-8 text-center text-sm text-muted-foreground">
+          <div 
+            className="p-8 text-center text-sm text-muted-foreground"
+            role="status"
+          >
             No notifications
           </div>
         ) : (
@@ -98,6 +117,15 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ onCl
                   !notification.is_read && 'bg-accent/50'
                 )}
                 onClick={(e) => handleMarkAsRead(notification.id, e)}
+                role="listitem"
+                aria-label={`${notification.title}, ${notification.is_read ? 'read' : 'unread'}`}
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleMarkAsRead(notification.id, e as any);
+                  }
+                }}
               >
                 <div className="flex items-start gap-3">
                   <div
@@ -105,6 +133,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ onCl
                       'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-accent',
                       getNotificationColor(notification.type)
                     )}
+                    aria-hidden="true"
                   >
                     <span className="text-sm font-bold">
                       {getNotificationIcon(notification.type)}
@@ -116,16 +145,21 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ onCl
                         {notification.title}
                       </p>
                       {!notification.is_read && (
-                        <div className="h-2 w-2 flex-shrink-0 rounded-full bg-primary" />
+                        <div 
+                          className="h-2 w-2 flex-shrink-0 rounded-full bg-primary"
+                          aria-label="Unread"
+                        />
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground line-clamp-2">
                       {notification.message}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(notification.created_at), {
-                        addSuffix: true,
-                      })}
+                      <time dateTime={notification.created_at}>
+                        {formatDistanceToNow(new Date(notification.created_at), {
+                          addSuffix: true,
+                        })}
+                      </time>
                     </p>
                   </div>
                 </div>
@@ -148,6 +182,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ onCl
                 // Navigate to notifications page (will be implemented in routing)
                 window.location.href = '/notifications';
               }}
+              aria-label="View all notifications"
             >
               View all notifications
             </Button>

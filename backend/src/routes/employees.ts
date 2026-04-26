@@ -4,28 +4,40 @@ import { authenticateToken, requireRole } from '../middleware/auth';
 
 const router = Router();
 
+// requireRole uses AuthenticatedRequest which is not directly assignable to RequestHandler
+const role = (...roles: string[]) => requireRole(roles) as unknown as RequestHandler;
+
 // All routes require authentication
-router.use(authenticateToken);
+router.use(authenticateToken as RequestHandler);
 
 // ⚠️  Route ordering matters: /search MUST come before /:id or Express will route
 //    "GET /search" into the /:id handler with id='search'. Do not reorder.
-router.post('/', requireRole(['super_admin', 'hr_manager']) as unknown as RequestHandler, employeeController.createEmployee as unknown as RequestHandler);
-router.get('/', employeeController.getAllEmployees as unknown as RequestHandler);
+router.post('/', role('super_admin', 'hr_manager'), employeeController.createEmployee);
+router.get('/', employeeController.getAllEmployees);
 
-// /search before /:id — see ordering note above
-router.get('/search', employeeController.searchEmployees as unknown as RequestHandler);
-router.get('/:id', employeeController.getEmployee as unknown as RequestHandler);
-router.put('/:id', requireRole(['super_admin', 'hr_manager']) as unknown as RequestHandler, employeeController.updateEmployee as unknown as RequestHandler);
-router.put('/:id/status', requireRole(['super_admin', 'hr_manager', 'department_manager']) as unknown as RequestHandler, employeeController.updateEmployeeStatus as unknown as RequestHandler);
+// /search, /import, /export before /:id — see ordering note above
+router.get('/search', employeeController.searchEmployees);
+router.post('/import', role('super_admin', 'hr_manager'), employeeController.upload.single('file'), employeeController.importEmployees);
+router.get('/export', role('super_admin', 'hr_manager'), employeeController.exportEmployees);
+// Photo upload — must come before /:id to avoid being swallowed by it
+router.post('/:id/photo', role('super_admin', 'hr_manager'), employeeController.upload.single('photo'), employeeController.uploadEmployeePhoto);
+
+// ⚠️  /audit-logs must precede /:id — see ordering note at top
+router.get('/:id/audit-logs', employeeController.getEmployeeAuditLogs);
+
+router.get('/:id', employeeController.getEmployee);
+router.put('/:id', role('super_admin', 'hr_manager'), employeeController.updateEmployee);
+router.put('/:id/status', role('super_admin', 'hr_manager', 'department_manager'), employeeController.updateEmployeeStatus);
+router.delete('/:id', role('super_admin', 'hr_manager'), employeeController.deleteEmployee);
 
 // Emergency Contact endpoints — contactId nested under employeeId for ownership enforcement
-router.post('/:employeeId/emergency-contacts', employeeController.addEmergencyContact as unknown as RequestHandler);
-router.get('/:employeeId/emergency-contacts', employeeController.getEmergencyContacts as unknown as RequestHandler);
-router.put('/:employeeId/emergency-contacts/:contactId', employeeController.updateEmergencyContact as unknown as RequestHandler);
-router.delete('/:employeeId/emergency-contacts/:contactId', requireRole(['super_admin', 'hr_manager']) as unknown as RequestHandler, employeeController.deleteEmergencyContact as unknown as RequestHandler);
+router.post('/:employeeId/emergency-contacts', employeeController.addEmergencyContact);
+router.get('/:employeeId/emergency-contacts', employeeController.getEmergencyContacts);
+router.put('/:employeeId/emergency-contacts/:contactId', employeeController.updateEmergencyContact);
+router.delete('/:employeeId/emergency-contacts/:contactId', role('super_admin', 'hr_manager'), employeeController.deleteEmergencyContact);
 
 // Employment History endpoints
-router.post('/:employeeId/employment-history', requireRole(['super_admin', 'hr_manager']) as unknown as RequestHandler, employeeController.addEmploymentHistory as unknown as RequestHandler);
-router.get('/:employeeId/employment-history', employeeController.getEmploymentHistory as unknown as RequestHandler);
+router.post('/:employeeId/employment-history', role('super_admin', 'hr_manager'), employeeController.addEmploymentHistory);
+router.get('/:employeeId/employment-history', employeeController.getEmploymentHistory);
 
 export default router;

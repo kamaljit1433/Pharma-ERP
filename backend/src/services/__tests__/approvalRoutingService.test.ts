@@ -5,17 +5,17 @@ describe('ApprovalRoutingService', () => {
   let mockKnex: any;
 
   beforeEach(() => {
-    // Create a comprehensive mock Knex instance
-    mockKnex = {
-      insert: jest.fn().mockReturnThis(),
-      where: jest.fn().mockReturnThis(),
-      whereRaw: jest.fn().mockReturnThis(),
-      orderBy: jest.fn().mockReturnThis(),
-      first: jest.fn().mockResolvedValue(null),
-      select: jest.fn().mockResolvedValue([]),
-      update: jest.fn().mockResolvedValue(undefined),
-      raw: jest.fn((sql: string) => sql),
-    };
+    // Create a comprehensive mock Knex instance — must be callable as knex('table')
+    // Return `mockKnex` itself so that per-test mockReturnValue overrides on mockKnex.where etc. work
+    mockKnex = jest.fn().mockImplementation(() => mockKnex) as any;
+    mockKnex.insert = jest.fn().mockReturnValue(mockKnex);
+    mockKnex.where = jest.fn().mockReturnValue(mockKnex);
+    mockKnex.whereRaw = jest.fn().mockReturnValue(mockKnex);
+    mockKnex.orderBy = jest.fn().mockReturnValue(mockKnex);
+    mockKnex.first = jest.fn().mockResolvedValue(null);
+    mockKnex.select = jest.fn().mockResolvedValue([]);
+    mockKnex.update = jest.fn().mockResolvedValue(undefined);
+    mockKnex.raw = jest.fn((sql: string) => sql);
 
     // Mock the HierarchyService
     jest.mock('../hierarchyService', () => ({

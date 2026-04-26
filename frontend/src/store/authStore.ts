@@ -14,6 +14,7 @@ interface AuthState {
   // Actions
   login: (email: string, password: string, mfaToken?: string) => Promise<void>;
   logout: () => Promise<void>;
+  validateSession: () => Promise<void>;
   refreshSession: () => Promise<void>;
   updateUser: (user: Partial<User>) => void;
   clearError: () => void;
@@ -34,13 +35,14 @@ export const useAuthStore = create<AuthState>()(
       login: async (email, password, mfaToken) => {
         set({ isLoading: true, error: null });
         try {
-          const response = await authService.login({ email, password, mfaToken });
+          const credentials = mfaToken ? { email, password, mfaToken } : { email, password };
+          const response = await authService.login(credentials);
           
           // Only set authenticated if MFA is not required
-          if (!response.data.requiresMfa) {
+          if (!response.requiresMfa) {
             const expiresAt = Date.now() + 30 * 60 * 1000; // 30 minutes from now
             set({
-              user: response.data.user,
+              user: response.user,
               isAuthenticated: true,
               sessionExpiresAt: expiresAt,
               isLoading: false,
@@ -52,8 +54,37 @@ export const useAuthStore = create<AuthState>()(
           set({
             error: (error as Error).message,
             isLoading: false,
+            isAuthenticated: false,
+            user: null,
           });
           throw error;
+        }
+      },
+
+      // Validate persisted session on app startup
+      validateSession: async () => {
+        const { isAuthenticated } = get();
+        if (!isAuthenticated) return;
+
+        set({ isLoading: true });
+        try {
+          const user = await authService.getCurrentUser();
+          const expiresAt = Date.now() + 30 * 60 * 1000;
+          set({
+            user,
+            isAuthenticated: true,
+            sessionExpiresAt: expiresAt,
+            isLoading: false,
+          });
+        } catch (error) {
+          // Token is invalid or expired, clear auth state
+          set({
+            user: null,
+            isAuthenticated: false,
+            sessionExpiresAt: null,
+            isLoading: false,
+            error: 'Session expired. Please login again.',
+          });
         }
       },
 
@@ -89,7 +120,7 @@ export const useAuthStore = create<AuthState>()(
           const response = await authService.refreshSession();
           const expiresAt = Date.now() + 30 * 60 * 1000; // 30 minutes from now
           set({
-            user: response.data.user,
+            user: response.user,
             sessionExpiresAt: expiresAt,
           });
         } catch (error) {

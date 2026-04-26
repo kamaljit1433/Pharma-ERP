@@ -50,7 +50,7 @@ export class OfferLetterService {
       {
         candidateName: `${applicant.first_name} ${applicant.last_name}`,
         jobTitle: offerLetter.position,
-        department: offerLetter.department,
+        department: offerLetter.department || 'N/A',
         salary: offerLetter.salary.toString(),
         startDate: new Date(offerLetter.start_date).toLocaleDateString(),
         reportingManager: 'HR Team',
@@ -60,7 +60,7 @@ export class OfferLetterService {
     );
 
     // Update status to Sent
-    return this.offerLetterRepository.updateOfferLetterStatus(offerLetterId, 'Sent');
+    return this.offerLetterRepository.updateOfferLetterStatus(offerLetterId, 'sent');
   }
 
   async acceptOfferLetter(offerLetterId: string): Promise<OfferLetter> {
@@ -69,8 +69,18 @@ export class OfferLetterService {
       throw new Error('Offer letter not found');
     }
 
+    if (offerLetter.status === 'accepted') {
+      throw new Error('Offer letter has already been accepted');
+    }
+    if (offerLetter.status === 'rejected') {
+      throw new Error("Cannot accept a rejected offer letter");
+    }
+    if (offerLetter.status === 'draft') {
+      throw new Error("Cannot accept an offer letter that has not been sent yet");
+    }
+
     // Update status to Accepted
-    const updated = await this.offerLetterRepository.updateOfferLetterStatus(offerLetterId, 'Accepted');
+    const updated = await this.offerLetterRepository.updateOfferLetterStatus(offerLetterId, 'accepted');
 
     // Move applicant to Hired stage
     await this.applicantRepository.updateApplicant(offerLetter.applicant_id, {
@@ -102,7 +112,7 @@ export class OfferLetterService {
     }
 
     // Update status to Rejected
-    const updated = await this.offerLetterRepository.updateOfferLetterStatus(offerLetterId, 'Rejected');
+    const updated = await this.offerLetterRepository.updateOfferLetterStatus(offerLetterId, 'rejected');
 
     // Move applicant to Rejected stage
     await this.applicantRepository.updateApplicant(offerLetter.applicant_id, {

@@ -1,7 +1,8 @@
-﻿import { Router } from 'express';
+import { Router } from 'express';
 import * as separationController from '../controllers/separationController';
 import { authenticateToken } from '../middleware/auth';
 import { authorize } from '../middleware/authorize';
+import { UserRole } from '../types/auth';
 
 const router = Router();
 
@@ -12,7 +13,7 @@ router.use(authenticateToken as any);
  * Resignation endpoints
  * POST /api/v1/separation/resignation - Submit resignation
  */
-router.post('/resignation', authorize(['HR Manager', 'Employee']) as any, async (req, res, next): Promise<void> => {
+router.post('/resignation', authorize([UserRole.HR_MANAGER, UserRole.EMPLOYEE]) as any, async (req, res, next): Promise<void> => {
   const { employeeId } = req.body as { employeeId?: string };
   if (!employeeId) {
     res.status(400).json({
@@ -26,19 +27,19 @@ router.post('/resignation', authorize(['HR Manager', 'Employee']) as any, async 
 });
 
 // Get resignation
-router.get('/resignation/:resignationId', authorize(['HR Manager', 'Super Admin']) as any, separationController.getResignation);
+router.get('/resignation/:resignationId', authorize([UserRole.HR_MANAGER, UserRole.SUPER_ADMIN]) as any, separationController.getResignation);
 
 // Accept resignation
 router.put(
   '/resignation/:resignationId/accept',
-  authorize(['HR Manager', 'Super Admin']) as any,
+  authorize([UserRole.HR_MANAGER, UserRole.SUPER_ADMIN]) as any,
   separationController.acceptResignation
 );
 
 // Reject resignation
 router.put(
   '/resignation/:resignationId/reject',
-  authorize(['HR Manager', 'Super Admin']) as any,
+  authorize([UserRole.HR_MANAGER, UserRole.SUPER_ADMIN]) as any,
   separationController.rejectResignation
 );
 
@@ -46,7 +47,7 @@ router.put(
  * Termination endpoints
  * POST /api/v1/separation/termination - Initiate termination
  */
-router.post('/termination', authorize(['HR Manager', 'Super Admin']) as any, async (req, res, next): Promise<void> => {
+router.post('/termination', authorize([UserRole.HR_MANAGER, UserRole.SUPER_ADMIN]) as any, async (req, res, next): Promise<void> => {
   const { employeeId } = req.body as { employeeId?: string };
   if (!employeeId) {
     res.status(400).json({
@@ -63,7 +64,7 @@ router.post('/termination', authorize(['HR Manager', 'Super Admin']) as any, asy
  * Exit Interview endpoints
  * POST /api/v1/separation/exit-interview - Schedule exit interview
  */
-router.post('/exit-interview', authorize(['HR Manager', 'Super Admin']) as any, async (req, res, next): Promise<void> => {
+router.post('/exit-interview', authorize([UserRole.HR_MANAGER, UserRole.SUPER_ADMIN]) as any, async (req, res, next): Promise<void> => {
   const { employeeId } = req.body as { employeeId?: string };
   if (!employeeId) {
     res.status(400).json({
@@ -79,7 +80,7 @@ router.post('/exit-interview', authorize(['HR Manager', 'Super Admin']) as any, 
 // Complete exit interview
 router.put(
   '/exit-interview/:exitInterviewId/complete',
-  authorize(['HR Manager', 'Super Admin']) as any,
+  authorize([UserRole.HR_MANAGER, UserRole.SUPER_ADMIN]) as any,
   separationController.completeExitInterview
 );
 
@@ -92,13 +93,13 @@ router.put(
  */
 router.get(
   '/fnf/:employeeId',
-  authorize(['Finance / Payroll', 'HR Manager', 'Super Admin']) as any,
+  authorize(['Finance / Payroll', UserRole.HR_MANAGER, UserRole.SUPER_ADMIN]) as any,
   separationController.calculateFnFSettlement
 );
 
 router.put(
   '/fnf/:id/submit',
-  authorize(['Finance / Payroll', 'HR Manager', 'Super Admin']) as any,
+  authorize(['Finance / Payroll', UserRole.HR_MANAGER, UserRole.SUPER_ADMIN]) as any,
   async (req, res, next): Promise<void> => {
     (req.params as Record<string, string>)['fnfSettlementId'] = req.params['id'];
     separationController.submitFnFSettlementForApproval(req, res, next);
@@ -107,7 +108,7 @@ router.put(
 
 router.put(
   '/fnf/:id/approve',
-  authorize(['Finance / Payroll', 'Super Admin']) as any,
+  authorize(['Finance / Payroll', UserRole.SUPER_ADMIN]) as any,
   async (req, res, next): Promise<void> => {
     (req.params as Record<string, string>)['fnfSettlementId'] = req.params['id'];
     separationController.approveFnFSettlement(req, res, next);
@@ -116,7 +117,7 @@ router.put(
 
 router.put(
   '/fnf/:id/reject',
-  authorize(['Finance / Payroll', 'Super Admin']) as any,
+  authorize(['Finance / Payroll', UserRole.SUPER_ADMIN]) as any,
   async (req, res, next): Promise<void> => {
     (req.params as Record<string, string>)['fnfSettlementId'] = req.params['id'];
     separationController.rejectFnFSettlement(req, res, next);
@@ -129,14 +130,14 @@ router.put(
  */
 router.get(
   '/asset-recovery/:employeeId',
-  authorize(['HR Manager', 'Super Admin']) as any,
+  authorize([UserRole.HR_MANAGER, UserRole.SUPER_ADMIN]) as any,
   separationController.getAssetRecoveryChecklist
 );
 
 // Update asset recovery status
 router.put(
   '/asset-recovery/:assetRecoveryId',
-  authorize(['HR Manager', 'Super Admin']) as any,
+  authorize([UserRole.HR_MANAGER, UserRole.SUPER_ADMIN]) as any,
   separationController.updateAssetRecoveryStatus
 );
 
@@ -147,7 +148,7 @@ router.put(
 // Check offboarding preconditions
 router.get(
   '/offboarding-check/:employeeId',
-  authorize(['HR Manager', 'Super Admin']) as any,
+  authorize([UserRole.HR_MANAGER, UserRole.SUPER_ADMIN]) as any,
   separationController.checkOffboardingPreconditions
 );
 
@@ -157,7 +158,7 @@ router.get(
  */
 router.put(
   '/deactivate/:employeeId',
-  authorize(['HR Manager', 'Super Admin']) as any,
+  authorize([UserRole.HR_MANAGER, UserRole.SUPER_ADMIN]) as any,
   separationController.deactivateEmployee
 );
 
@@ -172,37 +173,37 @@ router.put(
  */
 router.post(
   '/questionnaire-templates',
-  authorize(['HR Manager', 'Super Admin']) as any,
+  authorize([UserRole.HR_MANAGER, UserRole.SUPER_ADMIN]) as any,
   separationController.createQuestionnaireTemplate
 );
 
 router.get(
   '/questionnaire-templates/active',
-  authorize(['HR Manager', 'Employee', 'Super Admin']) as any,
+  authorize([UserRole.HR_MANAGER, UserRole.EMPLOYEE, UserRole.SUPER_ADMIN]) as any,
   separationController.getActiveQuestionnaireTemplates
 );
 
 router.get(
   '/questionnaire-templates',
-  authorize(['HR Manager', 'Super Admin']) as any,
+  authorize([UserRole.HR_MANAGER, UserRole.SUPER_ADMIN]) as any,
   separationController.getAllQuestionnaireTemplates
 );
 
 router.get(
   '/questionnaire-templates/:id',
-  authorize(['HR Manager', 'Employee', 'Super Admin']) as any,
+  authorize([UserRole.HR_MANAGER, UserRole.EMPLOYEE, UserRole.SUPER_ADMIN]) as any,
   separationController.getQuestionnaireTemplate
 );
 
 router.put(
   '/questionnaire-templates/:id',
-  authorize(['HR Manager', 'Super Admin']) as any,
+  authorize([UserRole.HR_MANAGER, UserRole.SUPER_ADMIN]) as any,
   separationController.updateQuestionnaireTemplate
 );
 
 router.delete(
   '/questionnaire-templates/:id',
-  authorize(['HR Manager', 'Super Admin']) as any,
+  authorize([UserRole.HR_MANAGER, UserRole.SUPER_ADMIN]) as any,
   separationController.deleteQuestionnaireTemplate
 );
 
@@ -214,19 +215,19 @@ router.delete(
  */
 router.post(
   '/questionnaire-templates/:id/questions',
-  authorize(['HR Manager', 'Super Admin']) as any,
+  authorize([UserRole.HR_MANAGER, UserRole.SUPER_ADMIN]) as any,
   separationController.addQuestionToTemplate
 );
 
 router.put(
   '/questionnaire-templates/:id/questions/:questionId',
-  authorize(['HR Manager', 'Super Admin']) as any,
+  authorize([UserRole.HR_MANAGER, UserRole.SUPER_ADMIN]) as any,
   separationController.updateQuestionInTemplate
 );
 
 router.delete(
   '/questionnaire-templates/:id/questions/:questionId',
-  authorize(['HR Manager', 'Super Admin']) as any,
+  authorize([UserRole.HR_MANAGER, UserRole.SUPER_ADMIN]) as any,
   separationController.removeQuestionFromTemplate
 );
 

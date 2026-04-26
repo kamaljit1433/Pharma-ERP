@@ -16,7 +16,7 @@ import {
 import { Badge } from '../ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { AlertCircle, Users, Calendar } from 'lucide-react';
+import { AlertCircle, Users } from 'lucide-react';
 import attendanceService, { AttendanceRecord } from '../../services/attendanceService';
 
 interface ManagerAttendanceViewProps {
@@ -48,32 +48,34 @@ const getStatusColor = (status: string) => {
   }
 };
 
-const formatTime = (timeString?: string) => {
+// PostgreSQL TIME columns return plain "HH:MM:SS" strings; new Date() on those
+// produces Invalid Date. Detect and parse directly.
+const formatTime = (timeString?: string | null) => {
   if (!timeString) return '-';
   try {
+    if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(timeString)) {
+      const parts = timeString.split(':');
+      const hours = parseInt(parts[0] ?? '0', 10);
+      const minutes = parseInt(parts[1] ?? '0', 10);
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      const h12 = hours % 12 || 12;
+      return `${String(h12).padStart(2, '0')}:${String(minutes).padStart(2, '0')} ${ampm}`;
+    }
     const date = new Date(timeString);
-    return date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-    });
+    if (!isNaN(date.getTime())) {
+      return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    }
+    return timeString;
   } catch {
     return timeString;
   }
 };
 
-const formatDate = (dateString: string) => {
-  try {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-    });
-  } catch {
-    return dateString;
-  }
+const timeToMinutes = (t: string) => {
+  const parts = t.split(':');
+  return parseInt(parts[0] ?? '0', 10) * 60 + parseInt(parts[1] ?? '0', 10);
 };
+
 
 export const ManagerAttendanceView: React.FC<ManagerAttendanceViewProps> = ({
   managerId,
@@ -106,10 +108,12 @@ export const ManagerAttendanceView: React.FC<ManagerAttendanceViewProps> = ({
         on_leave: teamRecords.filter((r) => r.status === 'on_leave').length,
         late_arrivals: teamRecords.filter((r) => {
           if (!r.check_in_time) return false;
-          const checkInTime = new Date(r.check_in_time);
-          const nineAM = new Date(r.date);
-          nineAM.setHours(9, 0, 0, 0);
-          return checkInTime > nineAM;
+          // Compare as minutes-since-midnight; works for both "HH:MM:SS" and ISO strings
+          const t = String(r.check_in_time);
+          const mins = /^\d{1,2}:\d{2}/.test(t)
+            ? timeToMinutes(t)
+            : timeToMinutes(new Date(t).toTimeString().slice(0, 5));
+          return mins > 9 * 60; // after 09:00
         }).length,
       };
 
@@ -275,7 +279,12 @@ export const ManagerAttendanceView: React.FC<ManagerAttendanceViewProps> = ({
                   {records.map((record) => (
                     <TableRow key={record.id}>
                       <TableCell className="font-medium">
-                        {record.employee_id}
+                        {(record as any).employee_name || record.employee_id}
+                        {(record as any).employee_code && (
+                          <span className="block text-xs text-muted-foreground">
+                            {(record as any).employee_code}
+                          </span>
+                        )}
                       </TableCell>
                       <TableCell>{formatTime(record.check_in_time)}</TableCell>
                       <TableCell>{formatTime(record.check_out_time)}</TableCell>

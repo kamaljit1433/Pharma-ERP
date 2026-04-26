@@ -204,7 +204,7 @@ export class InsuranceService {
   // Premium Deduction Integration with Payroll
   async calculatePremiumDeduction(employeeId: string, month: number, year: number): Promise<number> {
     // Get active enrollments for the employee
-    const enrollments = await this.insuranceEnrollmentRepository.getActiveEmployeeEnrollments(employeeId);
+    const enrollments = await this.insuranceEnrollmentRepository.getEnrollmentsByEmployee(employeeId);
 
     if (enrollments.length === 0) {
       return 0;

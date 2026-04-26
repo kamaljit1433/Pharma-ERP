@@ -47,8 +47,8 @@ export function requirePermission(permission: Permission | Permission[]) {
           userId: req.user.id,
           userRole: req.user.role as Role,
           action: `Attempted to access ${permissions.join(', ')}`,
-          resourceType: 'permission',
-          resourceId: permissions.join(','),
+          entity_type: 'permission',
+          entity_id: permissions.join(','),
           ipAddress: req.ip || 'unknown',
           userAgent: req.get('user-agent') || 'unknown',
           reason: 'Insufficient permissions'
@@ -100,8 +100,8 @@ export function requireRole(role: Role | Role[]) {
           userId: req.user.id,
           userRole: req.user.role as Role,
           action: `Attempted to access resource requiring role: ${roles.join(', ')}`,
-          resourceType: 'role',
-          resourceId: roles.join(','),
+          entity_type: 'role',
+          entity_id: roles.join(','),
           ipAddress: req.ip || 'unknown',
           userAgent: req.get('user-agent') || 'unknown',
           reason: 'Insufficient role'
@@ -169,8 +169,8 @@ export function requireResourceAccess(
           userId: req.user.id,
           userRole: req.user.role as Role,
           action: `Attempted to access ${resourceContext.targetResourceType} ${resourceContext.targetResourceId}`,
-          resourceType: resourceContext.targetResourceType,
-          resourceId: resourceContext.targetResourceId,
+          entity_type: resourceContext.targetResourceType,
+          entity_id: resourceContext.targetResourceId,
           ipAddress: req.ip || 'unknown',
           userAgent: req.get('user-agent') || 'unknown',
           reason: result.reason || 'Access denied'
@@ -239,8 +239,8 @@ export function requireActionPermission(
           userId: req.user.id,
           userRole: req.user.role as Role,
           action: `Attempted to perform ${permission} on ${resourceContext.targetResourceType} ${resourceContext.targetResourceId}`,
-          resourceType: resourceContext.targetResourceType,
-          resourceId: resourceContext.targetResourceId,
+          entity_type: resourceContext.targetResourceType,
+          entity_id: resourceContext.targetResourceId,
           ipAddress: req.ip || 'unknown',
           userAgent: req.get('user-agent') || 'unknown',
           reason: result.reason || 'Access denied'
@@ -281,8 +281,8 @@ export function logApiAccess() {
           userId: req.user.id,
           userRole: req.user.role as Role,
           action: `${req.method} ${req.path}`,
-          resourceType: 'api',
-          resourceId: req.path,
+          entity_type: 'api',
+          entity_id: req.path,
           ipAddress: req.ip || 'unknown',
           userAgent: req.get('user-agent') || 'unknown'
         }).catch(err => console.error('Failed to log API access:', err));

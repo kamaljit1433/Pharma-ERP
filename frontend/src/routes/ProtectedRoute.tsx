@@ -19,8 +19,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRoles
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Check if user has required role
-  if (requiredRoles && requiredRoles.length > 0) {
+  // Check if user has required role (super_admin bypasses all role checks)
+  if (requiredRoles && requiredRoles.length > 0 && user.role !== UserRole.SUPER_ADMIN) {
     const hasRequiredRole = requiredRoles.includes(user.role);
     
     if (!hasRequiredRole) {

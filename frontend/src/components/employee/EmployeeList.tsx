@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Table,
@@ -12,10 +12,10 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
 import { Card, CardContent } from '../ui/card';
-import { Pencil, Trash2, Search, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { Pencil, Trash2, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useAuthStore } from '@/store/authStore';
-import { canManageEmployees, canCreateEmployees, canEditEmployees, canDeleteEmployees } from '@/utils/permissions';
+import { canEditEmployees, canDeleteEmployees } from '@/utils/permissions';
 
 export interface Employee {
   id: string;
@@ -50,7 +50,6 @@ export const EmployeeList: React.FC<EmployeeListProps> = ({
   loading = false,
   onEdit,
   onDelete,
-  onAdd,
   onFilterChange,
 }) => {
   const navigate = useNavigate();
@@ -65,8 +64,6 @@ export const EmployeeList: React.FC<EmployeeListProps> = ({
 
   // Check permissions
   const userRole = user?.role;
-  const canManage = userRole ? canManageEmployees(userRole) : false;
-  const canCreate = userRole ? canCreateEmployees(userRole) : false;
   const canEdit = userRole ? canEditEmployees(userRole) : false;
   const canDelete = userRole ? canDeleteEmployees(userRole) : false;
 
@@ -75,11 +72,10 @@ export const EmployeeList: React.FC<EmployeeListProps> = ({
 
   // Notify parent of filter changes
   useEffect(() => {
-    onFilterChange?.({
-      search: debouncedSearchTerm,
-      status: filterStatus !== 'all' ? filterStatus : undefined,
-      employment_type: filterEmploymentType !== 'all' ? filterEmploymentType : undefined,
-    });
+    const filters: EmployeeFilters = { search: debouncedSearchTerm };
+    if (filterStatus !== 'all') filters.status = filterStatus;
+    if (filterEmploymentType !== 'all') filters.employment_type = filterEmploymentType;
+    onFilterChange?.(filters);
   }, [debouncedSearchTerm, filterStatus, filterEmploymentType, onFilterChange]);
 
   // Filter and sort employees

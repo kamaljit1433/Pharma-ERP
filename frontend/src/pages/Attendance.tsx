@@ -9,35 +9,49 @@ import { useAttendanceStore } from '../store/attendanceStore';
 import { useAuth } from '../hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
-import { Button } from '../components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { AttendanceMarker } from '../components/attendance/AttendanceMarker';
 import { AttendanceHistory } from '../components/attendance/AttendanceHistory';
 import { RegularizationRequest } from '../components/attendance/RegularizationRequest';
 import { ManagerAttendanceView } from '../components/attendance/ManagerAttendanceView';
 import { AttendanceReports } from '../components/attendance/AttendanceReports';
-import { Clock, CheckCircle2, XCircle, AlertCircle, Calendar } from 'lucide-react';
+import { Clock, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 import { UserRole } from '../types/auth';
+import employeeService from '../services/employeeService';
 
 export const Attendance: React.FC = () => {
   const { user } = useAuth();
   const { currentStatus, stats, fetchCurrentStatus, fetchStats } = useAttendanceStore();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [employeePhotoUrl, setEmployeePhotoUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user?.id) {
+    if (user?.employeeId) {
       loadAttendanceData();
+      loadEmployeePhoto();
     }
-  }, [user?.id]);
+  }, [user?.employeeId]);
+
+  const loadEmployeePhoto = async () => {
+    if (!user?.employeeId) return;
+    try {
+      const results = await employeeService.search(user.employeeId, 5);
+      // Find the exact match by employee_id (business string like "EMP001")
+      const emp = results.find(e => e.employee_id === user.employeeId) ?? results[0];
+      setEmployeePhotoUrl(emp?.profile_photo_url ?? null);
+    } catch {
+      // keep employeePhotoUrl null; the modal will block verification and show an error
+    }
+  };
 
   const loadAttendanceData = async () => {
     try {
       setIsLoading(true);
       setError(null);
-      if (user?.id) {
-        await fetchCurrentStatus(user.id);
-        await fetchStats(user.id);
+      if (user?.employeeId) {
+        await fetchCurrentStatus(user.employeeId);
+        await fetchStats(user.employeeId);
       }
     } catch (err: any) {
       setError(err.message || 'Failed to load attendance data');
@@ -70,15 +84,22 @@ export const Attendance: React.FC = () => {
     }
   };
 
-  const formatTime = (timeString?: string) => {
+  const formatTime = (timeString?: string | null) => {
     if (!timeString) return '-';
     try {
+      if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(timeString)) {
+        const parts = timeString.split(':');
+        const hours = parseInt(parts[0] ?? '0', 10);
+        const minutes = parseInt(parts[1] ?? '0', 10);
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        const h12 = hours % 12 || 12;
+        return `${String(h12).padStart(2, '0')}:${String(minutes).padStart(2, '0')} ${ampm}`;
+      }
       const date = new Date(timeString);
-      return date.toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true,
-      });
+      if (!isNaN(date.getTime())) {
+        return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+      }
+      return timeString;
     } catch {
       return timeString;
     }
@@ -103,14 +124,18 @@ export const Attendance: React.FC = () => {
       {/* Manager View */}
       {isManager && (
         <>
-          <ManagerAttendanceView managerId={user?.id || ''} />
+          <ManagerAttendanceView managerId={user?.employeeId || ''} />
           <hr className="my-8" />
         </>
       )}
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Attendance</h1>
-        <AttendanceMarker employeeId={user?.id || ''} onSuccess={loadAttendanceData} />
+        <AttendanceMarker
+          employeeId={user?.employeeId || ''}
+          employeePhotoUrl={employeePhotoUrl}
+          onSuccess={loadAttendanceData}
+        />
       </div>
       {error && (
         <div className="flex gap-2 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
@@ -149,20 +174,27 @@ export const Attendance: React.FC = () => {
             {/* Check-in Time */}
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground">Check-in Time</p>
-              <p className="text-lg font-semibold">{formatTime(currentStatus?.check_in_time)}</p>
+              <p className="text-lg font-semibold">
+                {formatTime((currentStatus as any)?.check_in_time ?? (currentStatus as any)?.checkInTime)}
+              </p>
             </div>
 
             {/* Check-out Time */}
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground">Check-out Time</p>
-              <p className="text-lg font-semibold">{formatTime(currentStatus?.check_out_time)}</p>
+              <p className="text-lg font-semibold">
+                {formatTime((currentStatus as any)?.check_out_time ?? (currentStatus as any)?.checkOutTime)}
+              </p>
             </div>
 
             {/* Working Hours */}
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground">Working Hours</p>
               <p className="text-lg font-semibold">
-                {currentStatus?.working_hours ? `${currentStatus.working_hours.toFixed(1)}h` : '-'}
+                {(() => {
+                  const wh = (currentStatus as any)?.working_hours ?? (currentStatus as any)?.workingHours;
+                  return wh ? `${Number(wh).toFixed(1)}h` : '-';
+                })()}
               </p>
             </div>
           </div>
@@ -219,15 +251,15 @@ export const Attendance: React.FC = () => {
         </TabsList>
 
         <TabsContent value="history" className="space-y-4">
-          <AttendanceHistory employeeId={user?.id || ''} />
+          <AttendanceHistory employeeId={user?.employeeId || ''} />
         </TabsContent>
 
         <TabsContent value="reports" className="space-y-4">
-          <AttendanceReports employeeId={user?.id || ''} />
+          <AttendanceReports employeeId={user?.employeeId || ''} />
         </TabsContent>
 
         <TabsContent value="regularization">
-          <RegularizationRequest employeeId={user?.id || ''} onSuccess={loadAttendanceData} />
+          <RegularizationRequest employeeId={user?.employeeId || ''} onSuccess={loadAttendanceData} />
         </TabsContent>
       </Tabs>
     </div>

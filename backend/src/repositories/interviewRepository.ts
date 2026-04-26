@@ -6,13 +6,7 @@ export class InterviewRepository {
   constructor(private knex: Knex) {}
 
   async createInterview(data: CreateInterviewDTO): Promise<Interview> {
-    // Map mode to type if needed
-    let type: 'phone' | 'video' | 'in_person' = 'in_person';
-    if (data.type) {
-      type = data.type;
-    } else if (data.mode) {
-      type = data.mode === 'Phone' ? 'phone' : data.mode === 'Video' ? 'video' : 'in_person';
-    }
+    const type: 'phone' | 'video' | 'in_person' = data.type ?? 'in_person';
 
     const interview: any = {
       id: uuidv4(),
@@ -27,6 +21,8 @@ export class InterviewRepository {
 
     if (data.interviewer_id) {
       interview.interviewer_id = data.interviewer_id;
+    } else if (data.interviewers && data.interviewers.length > 0) {
+      interview.interviewer_id = data.interviewers[0]!;
     }
 
     await this.knex('interviews').insert(interview);
@@ -39,6 +35,10 @@ export class InterviewRepository {
 
   async getInterviewsByApplicant(applicantId: string): Promise<Interview[]> {
     return this.knex('interviews').where({ applicant_id: applicantId });
+  }
+
+  async getAllInterviews(): Promise<Interview[]> {
+    return this.knex('interviews').orderBy('scheduled_at', 'desc');
   }
 
   async updateInterviewStatus(id: string, status: 'scheduled' | 'completed' | 'cancelled' | 'rescheduled'): Promise<Interview> {

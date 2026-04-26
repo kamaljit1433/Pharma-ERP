@@ -1,6 +1,16 @@
-import apiClient, { createCancelToken } from './api';
+import apiClient from './api';
 
 // Types
+export interface AuditLogEntry {
+  id: string;
+  entity_type: string;
+  entity_id: string;
+  action: string;
+  performed_by?: string;
+  changes?: Record<string, any>;
+  created_at: string;
+}
+
 export interface Employee {
   id: string;
   employee_id: string;
@@ -69,10 +79,10 @@ const employeeService = {
    * Get all employees with optional filters
    */
   getAll: async (filters?: EmployeeFilters, signal?: AbortSignal): Promise<PaginatedResponse<Employee>> => {
-    const response = await apiClient.get('/employees', {
-      params: filters,
-      signal,
-    });
+    const config: Record<string, unknown> = {};
+    if (filters !== undefined) config['params'] = filters;
+    if (signal !== undefined) config['signal'] = signal;
+    const response = await apiClient.get('/employees', config);
     return response.data;
   },
 
@@ -80,8 +90,10 @@ const employeeService = {
    * Get employee by ID
    */
   getById: async (id: string, signal?: AbortSignal): Promise<Employee> => {
-    const response = await apiClient.get(`/employees/${id}`, { signal });
-    return response.data;
+    const config: Record<string, unknown> = {};
+    if (signal !== undefined) config['signal'] = signal;
+    const response = await apiClient.get(`/employees/${id}`, config);
+    return response.data.data ?? response.data;
   },
 
   /**
@@ -89,7 +101,7 @@ const employeeService = {
    */
   create: async (data: CreateEmployeeDTO): Promise<Employee> => {
     const response = await apiClient.post('/employees', data);
-    return response.data;
+    return response.data.data ?? response.data;
   },
 
   /**
@@ -97,7 +109,7 @@ const employeeService = {
    */
   update: async (id: string, data: UpdateEmployeeDTO): Promise<Employee> => {
     const response = await apiClient.put(`/employees/${id}`, data);
-    return response.data;
+    return response.data.data ?? response.data;
   },
 
   /**
@@ -123,6 +135,17 @@ const employeeService = {
   },
 
   /**
+   * Find employees matching a search string (uses the /search endpoint which supports filtering)
+   */
+  search: async (query: string, limit = 10, signal?: AbortSignal): Promise<Employee[]> => {
+    const config: Record<string, unknown> = { params: { search: query, limit } };
+    if (signal !== undefined) config['signal'] = signal;
+    const response = await apiClient.get('/employees/search', config);
+    const payload = response.data;
+    return payload?.data ?? (Array.isArray(payload) ? payload : []);
+  },
+
+  /**
    * Import employees from CSV
    */
   importCSV: async (file: File): Promise<{ success: number; failed: number; errors?: any[] }> => {
@@ -138,11 +161,27 @@ const employeeService = {
   },
 
   /**
-   * Export employees to CSV
+   * Export employees — format: 'csv' | 'excel' | 'pdf'
    */
+  exportEmployees: async (format: 'csv' | 'excel' | 'pdf' = 'csv', filters?: EmployeeFilters): Promise<Blob> => {
+    const response = await apiClient.get('/employees/export', {
+      params: { ...filters, format },
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
+  getAuditLogs: async (id: string, limit = 50, offset = 0): Promise<AuditLogEntry[]> => {
+    const response = await apiClient.get(`/employees/${id}/audit-logs`, {
+      params: { limit, offset },
+    });
+    return response.data?.data ?? [];
+  },
+
+  /** @deprecated use exportEmployees instead */
   exportCSV: async (filters?: EmployeeFilters): Promise<Blob> => {
     const response = await apiClient.get('/employees/export', {
-      params: filters,
+      params: { ...filters, format: 'csv' },
       responseType: 'blob',
     });
     return response.data;

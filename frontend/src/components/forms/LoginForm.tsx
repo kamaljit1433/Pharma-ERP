@@ -58,50 +58,46 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onMFASuccess, showMFA 
 
     try {
       if (showMFA) {
-        // Verify MFA token
-        const response = await authService.verifyMFA(mfaToken);
-        if (response.success) {
-          toast({
-            title: 'Success',
-            description: 'Login successful',
-            variant: 'default',
-          });
-          onMFASuccess();
-        }
+        // Verify MFA token with stored credentials
+        await login(email, password, mfaToken);
+        toast({
+          title: 'Success',
+          description: 'Login successful',
+          variant: 'default',
+        });
+        onMFASuccess();
       } else {
         // Regular login
-        const response = await authService.login({ email, password });
-        
-        if (response.data.requiresMfa) {
-          toast({
-            title: 'MFA Required',
-            description: 'Please enter your verification code',
-            variant: 'default',
-          });
-          onSuccess(true);
-        } else {
-          // Update auth store with user data
-          await login(email, password);
-          toast({
-            title: 'Success',
-            description: 'Login successful',
-            variant: 'default',
-          });
-          onSuccess(false);
-        }
+        await login(email, password);
+        toast({
+          title: 'Success',
+          description: 'Login successful',
+          variant: 'default',
+        });
+        onSuccess(false);
       }
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || error.message || 'Login failed';
-      
-      toast({
-        title: 'Error',
-        description: errorMessage,
-        variant: 'destructive',
-      });
+      // Check if MFA is required
+      if (error.response?.data?.requiresMfa || error.message?.includes('MFA')) {
+        toast({
+          title: 'MFA Required',
+          description: 'Please enter your verification code',
+          variant: 'default',
+        });
+        onSuccess(true);
+      } else {
+        const errorMessage = error.response?.data?.message || error.message || 'Login failed';
+        
+        toast({
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive',
+        });
 
-      // Set field-specific errors if available
-      if (error.response?.data?.errors) {
-        setErrors(error.response.data.errors);
+        // Set field-specific errors if available
+        if (error.response?.data?.errors) {
+          setErrors(error.response.data.errors);
+        }
       }
     }
   };
@@ -110,27 +106,30 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onMFASuccess, showMFA 
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmail(e.target.value);
     if (errors.email) {
-      setErrors({ ...errors, email: undefined });
+      const { email: _, ...rest } = errors;
+      setErrors(rest);
     }
   };
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPassword(e.target.value);
     if (errors.password) {
-      setErrors({ ...errors, password: undefined });
+      const { password: _, ...rest } = errors;
+      setErrors(rest);
     }
   };
 
   const handleMfaTokenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setMfaToken(e.target.value);
     if (errors.mfaToken) {
-      setErrors({ ...errors, mfaToken: undefined });
+      const { mfaToken: _, ...rest } = errors;
+      setErrors(rest);
     }
   };
 
   if (showMFA) {
     return (
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4" aria-label="Multi-factor authentication form">
         <div className="space-y-2">
           <Label htmlFor="mfaToken">Verification Code</Label>
           <Input
@@ -143,13 +142,18 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onMFASuccess, showMFA 
             className={errors.mfaToken ? 'border-red-500' : ''}
             disabled={isLoading}
             autoFocus
+            aria-required="true"
+            aria-invalid={!!errors.mfaToken}
+            aria-describedby={errors.mfaToken ? 'mfaToken-error' : undefined}
           />
           {errors.mfaToken && (
-            <p className="text-sm text-red-500">{errors.mfaToken}</p>
+            <p id="mfaToken-error" className="text-sm text-red-500" role="alert">
+              {errors.mfaToken}
+            </p>
           )}
         </div>
 
-        <Button type="submit" className="w-full" disabled={isLoading}>
+        <Button type="submit" className="w-full" disabled={isLoading} loading={isLoading}>
           {isLoading ? 'Verifying...' : 'Verify'}
         </Button>
       </form>
@@ -157,7 +161,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onMFASuccess, showMFA 
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4" aria-label="Login form">
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
         <Input
@@ -170,9 +174,14 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onMFASuccess, showMFA 
           disabled={isLoading}
           autoComplete="email"
           autoFocus
+          aria-required="true"
+          aria-invalid={!!errors.email}
+          aria-describedby={errors.email ? 'email-error' : undefined}
         />
         {errors.email && (
-          <p className="text-sm text-red-500">{errors.email}</p>
+          <p id="email-error" className="text-sm text-red-500" role="alert">
+            {errors.email}
+          </p>
         )}
       </div>
 
@@ -187,13 +196,18 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onMFASuccess, showMFA 
           className={errors.password ? 'border-red-500' : ''}
           disabled={isLoading}
           autoComplete="current-password"
+          aria-required="true"
+          aria-invalid={!!errors.password}
+          aria-describedby={errors.password ? 'password-error' : undefined}
         />
         {errors.password && (
-          <p className="text-sm text-red-500">{errors.password}</p>
+          <p id="password-error" className="text-sm text-red-500" role="alert">
+            {errors.password}
+          </p>
         )}
       </div>
 
-      <Button type="submit" className="w-full" disabled={isLoading}>
+      <Button type="submit" className="w-full" disabled={isLoading} loading={isLoading}>
         {isLoading ? 'Signing in...' : 'Sign In'}
       </Button>
     </form>

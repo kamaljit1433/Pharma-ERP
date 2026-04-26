@@ -33,6 +33,7 @@ interface EmployeeState {
   uploadPhoto: (id: string, file: File) => Promise<string>;
   importCSV: (file: File) => Promise<{ success: number; failed: number; errors?: any[] }>;
   exportCSV: (filters?: EmployeeFilters) => Promise<Blob>;
+  exportEmployees: (format: 'csv' | 'excel' | 'pdf', filters?: EmployeeFilters) => Promise<Blob>;
   setPage: (page: number) => void;
   setLimit: (limit: number) => void;
   setFilters: (filters: EmployeeFilters) => void;
@@ -231,7 +232,7 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
     }
   },
 
-  // Export CSV
+  // Export CSV (legacy)
   exportCSV: async (filters) => {
     set({ loading: true, error: null });
     try {
@@ -239,10 +240,20 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
       set({ loading: false });
       return blob;
     } catch (error) {
-      set({
-        error: (error as Error).message,
-        loading: false,
-      });
+      set({ error: (error as Error).message, loading: false });
+      throw error;
+    }
+  },
+
+  // Export in any format
+  exportEmployees: async (format, filters) => {
+    set({ loading: true, error: null });
+    try {
+      const blob = await employeeService.exportEmployees(format, filters || get().filters);
+      set({ loading: false });
+      return blob;
+    } catch (error) {
+      set({ error: (error as Error).message, loading: false });
       throw error;
     }
   },

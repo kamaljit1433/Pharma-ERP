@@ -11,8 +11,17 @@ export class AuditLogService {
    * Log a successful operation
    */
   async logAccess(data: Omit<CreateAuditLogDTO, 'status'>): Promise<AuditLog> {
+    const mappedData: any = {
+      user_id: data.userId || data.user_id,
+      entity_type: data.entity_type || data.resourceType || 'unknown',
+      entity_id: data.entity_id || data.resourceId || 'unknown',
+      action: data.action,
+      changes: data.changes,
+      ip_address: data.ipAddress || data.ip_address,
+      user_agent: data.userAgent || data.user_agent,
+    };
     return auditLogRepository.create({
-      ...data,
+      ...mappedData,
       status: 'success'
     });
   }
@@ -21,8 +30,18 @@ export class AuditLogService {
    * Log a failed access attempt
    */
   async logAccessDenied(data: Omit<CreateAuditLogDTO, 'status'>): Promise<AuditLog> {
+    const mappedData: any = {
+      user_id: data.userId || data.user_id,
+      entity_type: data.entity_type || data.resourceType || 'unknown',
+      entity_id: data.entity_id || data.resourceId || 'unknown',
+      action: data.action,
+      changes: data.changes,
+      ip_address: data.ipAddress || data.ip_address,
+      user_agent: data.userAgent || data.user_agent,
+      reason: data.reason,
+    };
     return auditLogRepository.create({
-      ...data,
+      ...mappedData,
       status: 'failure'
     });
   }
@@ -308,7 +327,7 @@ export class AuditLogService {
     limit: number = 100,
     offset: number = 0
   ): Promise<AuditLog[]> {
-    return auditLogRepository.getByResource(resourceType, resourceId, limit, offset);
+    return auditLogRepository.getByResource(resourceType, resourceId);
   }
 
   /**

@@ -45,10 +45,9 @@ export class DashboardService {
     });
 
     const departmentCounts = await this.knex('employees')
-      .join('hierarchy_nodes', 'employees.id', 'hierarchy_nodes.employee_id')
-      .select('hierarchy_nodes.department_id')
+      .select('department_id')
       .count('* as count')
-      .groupBy('hierarchy_nodes.department_id');
+      .groupBy('department_id');
 
     const byDepartment: Record<string, number> = {};
     departmentCounts.forEach((row: any) => {
@@ -56,10 +55,9 @@ export class DashboardService {
     });
 
     const designationCounts = await this.knex('employees')
-      .join('hierarchy_nodes', 'employees.id', 'hierarchy_nodes.employee_id')
-      .select('hierarchy_nodes.designation_id')
+      .select('designation_id')
       .count('* as count')
-      .groupBy('hierarchy_nodes.designation_id');
+      .groupBy('designation_id');
 
     const byDesignation: Record<string, number> = {};
     designationCounts.forEach((row: any) => {
@@ -234,11 +232,13 @@ export class DashboardService {
 
     const leaveTypeStats = await this.knex('leaves')
       .join('leave_types', 'leaves.leave_type_id', 'leave_types.id')
-      .select('leave_types.name')
-      .count('* as total')
-      .sum(this.knex.raw('CASE WHEN leaves.status = ? THEN 1 ELSE 0 END as approved', ['approved']))
-      .sum(this.knex.raw('CASE WHEN leaves.status = ? THEN 1 ELSE 0 END as pending', ['pending']))
-      .sum(this.knex.raw('CASE WHEN leaves.status = ? THEN 1 ELSE 0 END as rejected', ['rejected']))
+      .select(
+        'leave_types.name',
+        this.knex.raw('COUNT(*) as total'),
+        this.knex.raw('SUM(CASE WHEN leaves.status = ? THEN 1 ELSE 0 END) as approved', ['approved']),
+        this.knex.raw('SUM(CASE WHEN leaves.status = ? THEN 1 ELSE 0 END) as pending', ['pending']),
+        this.knex.raw('SUM(CASE WHEN leaves.status = ? THEN 1 ELSE 0 END) as rejected', ['rejected'])
+      )
       .groupBy('leave_types.name');
 
     const leaveTypeBreakdown: Record<string, any> = {};
@@ -256,8 +256,8 @@ export class DashboardService {
 
     const employeesOnLeaveTodayResult = await this.knex('leaves')
       .where('status', 'approved')
-      .where('start_date', '<=', today)
-      .where('end_date', '>=', today)
+      .where('from_date', '<=', today)
+      .where('to_date', '>=', today)
       .count('* as count')
       .first();
     const employeesOnLeaveToday = Number(employeesOnLeaveTodayResult?.['count'] ?? 0);
@@ -270,13 +270,13 @@ export class DashboardService {
         'employees.first_name',
         'employees.last_name',
         'leave_types.name as leaveType',
-        'leaves.start_date as startDate',
-        'leaves.end_date as endDate',
+        'leaves.from_date as startDate',
+        'leaves.to_date as endDate',
         'leaves.status'
       )
       .where('leaves.status', 'approved')
-      .where('leaves.start_date', '>=', today)
-      .orderBy('leaves.start_date', 'asc')
+      .where('leaves.from_date', '>=', today)
+      .orderBy('leaves.from_date', 'asc')
       .limit(10);
 
     return {
@@ -438,17 +438,7 @@ export class DashboardService {
       .first();
     const averageTimeToHire = Math.round(Number(timeToHireResult?.['avg_days'] ?? 0));
 
-    const topSourceResult = await this.knex('applicants')
-      .select('source')
-      .count('* as count')
-      .groupBy('source')
-      .orderBy('count', 'desc')
-      .limit(5);
-
     const topSourceOfApplicants: Record<string, number> = {};
-    topSourceResult.forEach((row: any) => {
-      topSourceOfApplicants[row.source] = Number(row['count'] ?? 0);
-    });
 
     const currentMonth = new Date();
     const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
@@ -461,8 +451,7 @@ export class DashboardService {
         'designations.name as designation',
         'employees.date_of_joining as joinDate'
       )
-      .join('hierarchy_nodes', 'employees.id', 'hierarchy_nodes.employee_id')
-      .join('designations', 'hierarchy_nodes.designation_id', 'designations.id')
+      .leftJoin('designations', 'employees.designation_id', 'designations.id')
       .where('employees.date_of_joining', '>=', monthStart)
       .orderBy('employees.date_of_joining', 'desc')
       .limit(10);

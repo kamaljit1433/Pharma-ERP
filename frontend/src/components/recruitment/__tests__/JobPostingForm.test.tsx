@@ -333,5 +333,132 @@ describe('JobPostingForm', () => {
         expect(mockOnSuccess).toHaveBeenCalled();
       });
     });
+
+    it('submits form with all valid data', async () => {
+      const user = userEvent.setup();
+      vi.mocked(recruitmentService.recruitmentService.createJobPosting).mockResolvedValue({
+        id: 'job-1',
+      });
+
+      render(<JobPostingForm onSuccess={mockOnSuccess} />);
+
+      const titleInput = screen.getByLabelText(/job title/i);
+      const locationInput = screen.getByLabelText(/location/i);
+      const departmentInput = screen.getByLabelText(/department/i);
+      const descriptionInput = screen.getByLabelText(/job description/i);
+      const minExpInput = screen.getByLabelText(/min experience/i);
+      const maxExpInput = screen.getByLabelText(/max experience/i);
+      const skillInput = screen.getByPlaceholderText(/add a skill/i);
+
+      await user.type(titleInput, 'Senior Developer');
+      await user.type(locationInput, 'San Francisco');
+      await user.type(departmentInput, 'eng-1');
+      await user.type(descriptionInput, 'Develop and maintain backend services for our platform');
+      await user.clear(minExpInput);
+      await user.type(minExpInput, '3');
+      await user.clear(maxExpInput);
+      await user.type(maxExpInput, '8');
+
+      const addButtons = screen.getAllByRole('button').filter(btn => btn.querySelector('svg'));
+      await user.type(skillInput, 'Node.js');
+      if (addButtons[0]) await user.click(addButtons[0]);
+
+      const submitButton = screen.getByRole('button', { name: /create job posting/i });
+      await user.click(submitButton);
+
+      await waitFor(() => {
+        expect(recruitmentService.recruitmentService.createJobPosting).toHaveBeenCalled();
+      });
+    });
+
+    it('handles network errors gracefully', async () => {
+      const user = userEvent.setup();
+      vi.mocked(recruitmentService.recruitmentService.createJobPosting).mockRejectedValue(
+        new Error('Network error')
+      );
+
+      render(<JobPostingForm onSuccess={mockOnSuccess} />);
+
+      const titleInput = screen.getByLabelText(/job title/i);
+      const locationInput = screen.getByLabelText(/location/i);
+      const departmentInput = screen.getByLabelText(/department/i);
+      const descriptionInput = screen.getByLabelText(/job description/i);
+      const skillInput = screen.getByPlaceholderText(/add a skill/i);
+
+      await user.type(titleInput, 'Developer');
+      await user.type(locationInput, 'NYC');
+      await user.type(departmentInput, 'eng-1');
+      await user.type(descriptionInput, 'Develop backend services');
+
+      const addButtons = screen.getAllByRole('button').filter(btn => btn.querySelector('svg'));
+      await user.type(skillInput, 'JS');
+      if (addButtons[0]) await user.click(addButtons[0]);
+
+      const submitButton = screen.getByRole('button', { name: /create job posting/i });
+      await user.click(submitButton);
+
+      await waitFor(() => {
+        expect(screen.getByText(/network error/i)).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Edit Mode', () => {
+    it('renders in edit mode with initial data', () => {
+      const initialData = {
+        title: 'Senior Developer',
+        location: 'New York',
+        department_id: 'eng-1',
+        description: 'This is a detailed job description',
+        required_skills: ['JavaScript', 'React'],
+        experience_min: 3,
+        experience_max: 8,
+        application_deadline: '2025-12-31',
+      };
+
+      render(
+        <JobPostingForm
+          onSuccess={mockOnSuccess}
+          initialData={initialData}
+          isEditing={true}
+        />
+      );
+
+      expect(screen.getByDisplayValue('Senior Developer')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('New York')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /edit job posting/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /update job posting/i })).toBeInTheDocument();
+    });
+  });
+
+  describe('Deadline Validation', () => {
+    it('validates application deadline is in the future', async () => {
+      const user = userEvent.setup();
+      render(<JobPostingForm onSuccess={mockOnSuccess} />);
+
+      const titleInput = screen.getByLabelText(/job title/i);
+      const locationInput = screen.getByLabelText(/location/i);
+      const departmentInput = screen.getByLabelText(/department/i);
+      const descriptionInput = screen.getByLabelText(/job description/i);
+      const deadlineInput = screen.getByLabelText(/application deadline/i);
+      const skillInput = screen.getByPlaceholderText(/add a skill/i);
+
+      await user.type(titleInput, 'Developer');
+      await user.type(locationInput, 'NYC');
+      await user.type(departmentInput, 'eng-1');
+      await user.type(descriptionInput, 'Develop backend services');
+      await user.type(deadlineInput, '2020-01-01'); // Past date
+
+      const addButtons = screen.getAllByRole('button').filter(btn => btn.querySelector('svg'));
+      await user.type(skillInput, 'JS');
+      if (addButtons[0]) await user.click(addButtons[0]);
+
+      const submitButton = screen.getByRole('button', { name: /create job posting/i });
+      await user.click(submitButton);
+
+      await waitFor(() => {
+        expect(screen.getByText(/deadline must be in the future/i)).toBeInTheDocument();
+      });
+    });
   });
 });

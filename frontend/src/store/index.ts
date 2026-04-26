@@ -14,6 +14,8 @@ export { useBenefitsStore } from './benefitsStore';
 export { useSeparationStore } from './separationStore';
 export { useNotificationStore } from './notificationStore';
 export { useGeoTrackingStore } from './geoTrackingStore';
+export { useExportStore } from './exportStore';
 
 // Types
 export type { Toast, Modal } from './uiStore';
+export type { ExportJob, ExportStoreState } from './exportStore';

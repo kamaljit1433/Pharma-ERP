@@ -11,6 +11,9 @@ import {
   LeaveCalendarEntry,
 } from '../types/leave';
 
+// Request deduplication cache for GET requests
+const requestCache = new Map<string, Promise<any>>();
+
 export const leaveService = {
   // Leave Type operations
   createLeaveType: async (data: CreateLeaveTypeDTO): Promise<LeaveType> => {
@@ -97,10 +100,32 @@ export const leaveService = {
     employeeId: string,
     year?: number
   ): Promise<LeaveBalance[]> => {
-    const response = await apiClient.get(`/leaves/leaves/balance/${employeeId}`, {
-      params: { year },
-    });
-    return response.data;
+    const cacheKey = `balance:${employeeId}:${year || 'current'}`;
+    
+    // Return cached promise if request is already in flight
+    if (requestCache.has(cacheKey)) {
+      return requestCache.get(cacheKey)!;
+    }
+
+    // Create new request promise
+    const promise = apiClient
+      .get(`/leaves/leaves/balance/${employeeId}`, {
+        params: { year },
+      })
+      .then((response) => {
+        // Clear cache after successful response
+        requestCache.delete(cacheKey);
+        return response.data;
+      })
+      .catch((error) => {
+        // Clear cache on error
+        requestCache.delete(cacheKey);
+        throw error;
+      });
+
+    // Store promise in cache
+    requestCache.set(cacheKey, promise);
+    return promise;
   },
 
   getTeamLeaveCalendar: async (): Promise<LeaveCalendarEntry[]> => {

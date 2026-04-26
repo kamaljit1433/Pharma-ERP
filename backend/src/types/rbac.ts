@@ -84,7 +84,11 @@ export enum Permission {
 
   // Geo Tracking
   VIEW_GEO_LOGS = 'view_geo_logs',
-  APPROVE_TRAVEL = 'approve_travel'
+  APPROVE_TRAVEL = 'approve_travel',
+
+  // Dashboard & Reports
+  VIEW_DASHBOARD = 'view_dashboard',
+  GENERATE_REPORTS = 'generate_reports'
 }
 
 /**
@@ -138,7 +142,9 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.SIGN_DOCUMENT,
     Permission.MANAGE_NOTIFICATIONS,
     Permission.VIEW_GEO_LOGS,
-    Permission.APPROVE_TRAVEL
+    Permission.APPROVE_TRAVEL,
+    Permission.VIEW_DASHBOARD,
+    Permission.GENERATE_REPORTS
   ],
 
   [Role.HR_MANAGER]: [
@@ -170,7 +176,9 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.UPLOAD_DOCUMENT,
     Permission.MANAGE_DOCUMENTS,
     Permission.SIGN_DOCUMENT,
-    Permission.MANAGE_NOTIFICATIONS
+    Permission.MANAGE_NOTIFICATIONS,
+    Permission.VIEW_DASHBOARD,
+    Permission.GENERATE_REPORTS
   ],
 
   [Role.DEPARTMENT_MANAGER]: [
@@ -190,7 +198,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.UPLOAD_DOCUMENT,
     Permission.SIGN_DOCUMENT,
     Permission.APPROVE_TRAVEL,
-    Permission.APPROVE_REIMBURSEMENT
+    Permission.APPROVE_REIMBURSEMENT,
+    Permission.VIEW_DASHBOARD
   ],
 
   [Role.FINANCE_PAYROLL]: [
@@ -205,11 +214,12 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.LOCK_PAYROLL,
     Permission.EXPORT_PAYROLL,
     Permission.APPROVE_REIMBURSEMENT,
-    Permission.VIEW_PAYROLL,
     Permission.VIEW_ORG_CHART,
     Permission.VIEW_AUDIT_LOGS,
     Permission.UPLOAD_DOCUMENT,
-    Permission.SIGN_DOCUMENT
+    Permission.SIGN_DOCUMENT,
+    Permission.VIEW_DASHBOARD,
+    Permission.GENERATE_REPORTS
   ],
 
   [Role.EMPLOYEE]: [

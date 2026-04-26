@@ -40,8 +40,14 @@ export const UserMenu: React.FC = () => {
   }, [isOpen]);
 
   const handleLogout = async () => {
-    await logout();
-    window.location.href = '/login';
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      // Always redirect to login, even if logout API call fails
+      window.location.href = '/login';
+    }
   };
 
   const getUserInitials = () => {
@@ -65,6 +71,8 @@ export const UserMenu: React.FC = () => {
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 px-2"
         aria-label="User menu"
+        aria-expanded={isOpen}
+        aria-haspopup="true"
       >
         <Avatar className="h-8 w-8">
           <div className="flex h-full w-full items-center justify-center bg-primary text-primary-foreground">
@@ -79,13 +87,18 @@ export const UserMenu: React.FC = () => {
             'hidden h-4 w-4 transition-transform md:inline-block',
             isOpen && 'rotate-180'
           )}
+          aria-hidden="true"
         />
       </Button>
 
       {isOpen && (
-        <div className="absolute right-0 top-12 z-50 w-64 rounded-md border bg-card shadow-lg">
+        <div 
+          className="absolute right-0 top-12 z-50 w-64 rounded-md border bg-card shadow-lg"
+          role="menu"
+          aria-label="User menu options"
+        >
           {/* User info */}
-          <div className="p-4">
+          <div className="p-4" role="presentation">
             <div className="flex items-center gap-3">
               <Avatar className="h-10 w-10">
                 <div className="flex h-full w-full items-center justify-center bg-primary text-primary-foreground">
@@ -104,7 +117,7 @@ export const UserMenu: React.FC = () => {
           <Separator />
 
           {/* Menu items */}
-          <div className="p-2">
+          <div className="p-2" role="group">
             <Button
               variant="ghost"
               className="w-full justify-start"
@@ -112,8 +125,9 @@ export const UserMenu: React.FC = () => {
                 setIsOpen(false);
                 window.location.href = '/profile';
               }}
+              role="menuitem"
             >
-              <User className="mr-2 h-4 w-4" />
+              <User className="mr-2 h-4 w-4" aria-hidden="true" />
               Profile
             </Button>
             <Button
@@ -123,8 +137,9 @@ export const UserMenu: React.FC = () => {
                 setIsOpen(false);
                 window.location.href = '/settings';
               }}
+              role="menuitem"
             >
-              <Settings className="mr-2 h-4 w-4" />
+              <Settings className="mr-2 h-4 w-4" aria-hidden="true" />
               Settings
             </Button>
           </div>
@@ -132,13 +147,14 @@ export const UserMenu: React.FC = () => {
           <Separator />
 
           {/* Logout */}
-          <div className="p-2">
+          <div className="p-2" role="group">
             <Button
               variant="ghost"
               className="w-full justify-start text-destructive hover:bg-destructive/10 hover:text-destructive"
               onClick={handleLogout}
+              role="menuitem"
             >
-              <LogOut className="mr-2 h-4 w-4" />
+              <LogOut className="mr-2 h-4 w-4" aria-hidden="true" />
               Logout
             </Button>
           </div>

@@ -122,7 +122,7 @@ describe('InsuranceService - Property-Based Tests', () => {
           });
 
           (insuranceService as any).insuranceEnrollmentRepository = {
-            getActiveEmployeeEnrollments: mockGetEnrollments,
+            getEnrollmentsByEmployee: mockGetEnrollments,
           };
 
           (insuranceService as any).insurancePlanRepository = {
@@ -271,7 +271,7 @@ describe('InsuranceService - Property-Based Tests', () => {
           });
 
           (insuranceService as any).insuranceEnrollmentRepository = {
-            getActiveEmployeeEnrollments: mockGetEnrollments,
+            getEnrollmentsByEmployee: mockGetEnrollments,
           };
 
           (insuranceService as any).insurancePlanRepository = {

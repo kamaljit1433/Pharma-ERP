@@ -447,9 +447,8 @@ describe('BankDetailsService', () => {
       const accountNumber = '1234567890123456';
 
       const encrypted = encrypt(accountNumber);
-      expect(encrypted.iv).toBeDefined();
-      expect(encrypted.encryptedData).toBeDefined();
-      expect(encrypted.authTag).toBeDefined();
+      expect(typeof encrypted).toBe('string');
+      expect(encrypted.length).toBeGreaterThan(0);
 
       const decrypted = decrypt(encrypted);
       expect(decrypted).toBe(accountNumber);
@@ -472,8 +471,7 @@ describe('BankDetailsService', () => {
       const encrypted1 = encrypt(accountNumber);
       const encrypted2 = encrypt(accountNumber);
 
-      expect(encrypted1.encryptedData).not.toBe(encrypted2.encryptedData);
-      expect(encrypted1.iv).not.toBe(encrypted2.iv);
+      expect(encrypted1).not.toBe(encrypted2);
     });
   });
 

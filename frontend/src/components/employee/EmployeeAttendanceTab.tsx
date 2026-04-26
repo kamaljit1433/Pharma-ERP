@@ -1,41 +1,58 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Skeleton } from '../ui/skeleton';
-import { Calendar, Clock, AlertCircle } from 'lucide-react';
+import { AlertCircle, Calendar, Clock } from 'lucide-react';
 import attendanceService, { AttendanceRecord } from '@/services/attendanceService';
-import { useToast } from '@/hooks/useToast';
 
 interface EmployeeAttendanceTabProps {
   employeeId: string;
 }
 
 export const EmployeeAttendanceTab: React.FC<EmployeeAttendanceTabProps> = ({ employeeId }) => {
-  const { toast } = useToast();
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
+    if (!employeeId) {
+      setLoading(false);
+      return;
+    }
+
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     const fetchAttendance = async () => {
+      setLoading(true);
+      setError(null);
       try {
-        setLoading(true);
-        const data = await attendanceService.getRecords({
-          employee_id: employeeId,
-          limit: 10,
-        });
-        setRecords(data);
-      } catch (error) {
-        toast({
-          type: 'error',
-          message: 'Failed to load attendance records',
-        });
+        const data = await attendanceService.getRecords(
+          { employee_id: employeeId, limit: 10 },
+          controller.signal
+        );
+        if (!controller.signal.aborted) {
+          setRecords(Array.isArray(data) ? data : (data as any).data || []);
+        }
+      } catch (err: any) {
+        if (!controller.signal.aborted) {
+          setError(err?.message || 'Failed to load attendance records');
+        }
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchAttendance();
-  }, [employeeId, toast]);
+
+    return () => {
+      controller.abort();
+    };
+  }, [employeeId]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -80,7 +97,12 @@ export const EmployeeAttendanceTab: React.FC<EmployeeAttendanceTabProps> = ({ em
         <CardDescription>Last 10 attendance records</CardDescription>
       </CardHeader>
       <CardContent>
-        {records.length === 0 ? (
+        {error ? (
+          <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+            <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0" />
+            <p className="text-sm text-destructive">{error}</p>
+          </div>
+        ) : records.length === 0 ? (
           <p className="text-center text-muted-foreground py-4">No attendance records found</p>
         ) : (
           <div className="space-y-3">

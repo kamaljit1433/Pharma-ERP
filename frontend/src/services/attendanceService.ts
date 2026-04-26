@@ -66,7 +66,8 @@ const attendanceService = {
    */
   markAttendance: async (data: MarkAttendanceDTO): Promise<AttendanceRecord> => {
     const response = await apiClient.post('/attendance/mark', data);
-    return response.data;
+    const payload = response.data;
+    return payload?.data ?? payload;
   },
 
   /**
@@ -77,7 +78,10 @@ const attendanceService = {
       params: filters,
       signal,
     });
-    return response.data;
+    // Backend wraps in { success, data: [] }
+    const payload = response.data;
+    const records = Array.isArray(payload) ? payload : (payload?.data ?? []);
+    return records;
   },
 
   /**
@@ -93,17 +97,23 @@ const attendanceService = {
    */
   getCurrentStatus: async (employeeId: string): Promise<AttendanceRecord | null> => {
     const response = await apiClient.get(`/attendance/current/${employeeId}`);
-    return response.data;
+    const payload = response.data;
+    return payload?.data ?? payload ?? null;
   },
 
   /**
    * Get attendance statistics
    */
   getStats: async (employeeId: string, fromDate?: string, toDate?: string): Promise<AttendanceStats> => {
-    const response = await apiClient.get(`/attendance/stats/${employeeId}`, {
-      params: { from_date: fromDate, to_date: toDate },
+    // Backend expects month (1-12) and year; derive from fromDate when provided
+    const ref = fromDate ? new Date(fromDate) : new Date();
+    const month = ref.getMonth() + 1;
+    const year = ref.getFullYear();
+    const response = await apiClient.get(`/attendance/monthly/${employeeId}`, {
+      params: { month, year },
     });
-    return response.data;
+    const payload = response.data;
+    return payload?.data ?? payload;
   },
 
   /**
@@ -122,7 +132,8 @@ const attendanceService = {
       params: { date },
       signal,
     });
-    return response.data;
+    const payload = response.data;
+    return Array.isArray(payload) ? payload : (payload?.data ?? []);
   },
 
   /**

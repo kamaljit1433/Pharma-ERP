@@ -1,6 +1,16 @@
 import { FileStorageService } from '../fileStorageService';
 import { FileCategory } from '../../types/fileStorage';
 
+// Mock the logger to avoid config dependency
+jest.mock('../../utils/logger', () => ({
+  default: {
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn(),
+  },
+}));
+
 // Mock the S3StorageProvider
 jest.mock('../storage/s3StorageProvider', () => ({
   S3StorageProvider: jest.fn().mockImplementation(() => ({

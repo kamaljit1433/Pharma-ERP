@@ -167,6 +167,28 @@ export class EmployeeService {
     return this.employeeRepository.deleteEmergencyContact(contactId);
   }
 
+  async archiveEmployee(id: string, reason: string = 'Archived by admin'): Promise<void> {
+    const employee = await this.employeeRepository.getEmployee(id);
+    if (!employee) {
+      throw new Error('Employee not found');
+    }
+
+    const isArchived = await this.employeeRepository.isEmployeeArchived(id);
+    if (isArchived) {
+      throw new Error('Employee is already archived');
+    }
+
+    await this.employeeRepository.archiveEmployee(id, reason);
+
+    await logAuditEvent(
+      this.db,
+      'employee',
+      id,
+      'employee_archived',
+      { reason, timestamp: new Date().toISOString() }
+    );
+  }
+
   // Employment History
   async addEmploymentHistory(
     employeeId: string,

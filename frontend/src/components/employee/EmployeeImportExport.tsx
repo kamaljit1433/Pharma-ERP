@@ -1,7 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Badge } from '../ui/badge';
 import { Upload, Download, AlertCircle, CheckCircle, Loader } from 'lucide-react';
 import { parseCSV, validateEmployeeCSV, generateEmployeeCSV, downloadCSV } from '@/utils/csvParser';
 import employeeService from '@/services/employeeService';
@@ -102,18 +101,23 @@ export const EmployeeImportExport: React.FC<EmployeeImportExportProps> = ({
       // Upload to server
       const result = await employeeService.importCSV(file);
 
-      setImportResult({
+      const mappedResult: ImportResult = {
         success: result.success,
         failed: result.failed,
-        errors: result.errors || [],
-      });
+        errors: (result.errors ?? []).map((e: any) => ({
+          row: e.row ?? 0,
+          column: e.column ?? 'general',
+          message: e.message ?? String(e),
+        })),
+      };
+      setImportResult(mappedResult);
       setShowImportResult(true);
 
       if (result.failed === 0) {
         setImportError(null);
       }
 
-      onImportComplete?.(result);
+      onImportComplete?.(mappedResult);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Import failed';
       setImportError(message);

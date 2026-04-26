@@ -15,15 +15,19 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAttendanceStore } from '../../store/attendanceStore';
+import { useNotificationStore } from '../../store/notificationStore';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Badge } from '../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { MapPin, CheckCircle2, AlertCircle, Loader2, Globe, Smartphone, Fingerprint } from 'lucide-react';
+import { MapPin, CheckCircle2, AlertCircle, Loader2, Globe, Fingerprint } from 'lucide-react';
+import { FaceVerificationModal } from './FaceVerificationModal';
 
 interface AttendanceMarkerProps {
   employeeId: string;
+  employeePhotoUrl?: string | null;
+  currentStatus?: any | null;
   onSuccess?: () => void;
   onError?: (error: string) => void;
 }
@@ -44,9 +48,16 @@ interface AccuracyLevel {
 
 export const AttendanceMarker: React.FC<AttendanceMarkerProps> = ({
   employeeId,
+  employeePhotoUrl,
+  currentStatus,
   onSuccess,
   onError,
 }) => {
+  const checkedIn = !!(currentStatus?.check_in_time ?? currentStatus?.checkInTime);
+  const checkedOut = !!(currentStatus?.check_out_time ?? currentStatus?.checkOutTime);
+  const actionType: 'check_in' | 'check_out' = checkedIn && !checkedOut ? 'check_out' : 'check_in';
+
+  const [faceVerifyOpen, setFaceVerifyOpen] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [mode, setMode] = useState<'web' | 'gps' | 'biometric'>('web');
   const [isLoading, setIsLoading] = useState(false);
@@ -56,6 +67,7 @@ export const AttendanceMarker: React.FC<AttendanceMarkerProps> = ({
   const [accuracy, setAccuracy] = useState<number | null>(null);
   const [permissionStatus, setPermissionStatus] = useState<'prompt' | 'granted' | 'denied'>('prompt');
   const { markAttendance } = useAttendanceStore();
+  const { fetchNotifications } = useNotificationStore();
 
   // Check geolocation permission status on mount
   useEffect(() => {
@@ -81,16 +93,15 @@ export const AttendanceMarker: React.FC<AttendanceMarkerProps> = ({
       setError(null);
       setIsLoading(true);
 
-      const timestamp = new Date();
-
-      const record = await markAttendance({
+      await markAttendance({
         employee_id: employeeId,
-        type: 'check_in',
+        type: actionType,
         mode: 'web',
       });
 
       setSuccess(true);
       onSuccess?.();
+      fetchNotifications();
 
       setTimeout(() => {
         setIsOpen(false);
@@ -145,9 +156,9 @@ export const AttendanceMarker: React.FC<AttendanceMarkerProps> = ({
       setPermissionStatus('granted');
 
       // Mark attendance with GPS location
-      const record = await markAttendance({
+      await markAttendance({
         employee_id: employeeId,
-        type: 'check_in',
+        type: actionType,
         location: {
           latitude: locationData.latitude,
           longitude: locationData.longitude,
@@ -237,21 +248,35 @@ export const AttendanceMarker: React.FC<AttendanceMarkerProps> = ({
 
   return (
     <>
+      {/* Step 1 — Face verification gate */}
+      <FaceVerificationModal
+        open={faceVerifyOpen}
+        employeePhotoUrl={employeePhotoUrl}
+        onVerified={() => {
+          setFaceVerifyOpen(false);
+          setIsOpen(true);
+        }}
+        onCancel={() => setFaceVerifyOpen(false)}
+      />
+
       <Button
-        onClick={() => setIsOpen(true)}
+        onClick={() => setFaceVerifyOpen(true)}
+        disabled={checkedIn && checkedOut}
         className="gap-2"
+        variant={actionType === 'check_out' ? 'destructive' : 'default'}
       >
         <CheckCircle2 className="w-4 h-4" />
-        Mark Attendance
+        {checkedIn && checkedOut ? 'Checked Out' : actionType === 'check_out' ? 'Check Out' : 'Check In'}
       </Button>
 
+      {/* Step 2 — Attendance mode dialog (only reached after verification) */}
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Mark Attendance</DialogTitle>
+            <DialogTitle>{actionType === 'check_out' ? 'Check Out' : 'Check In'}</DialogTitle>
           </DialogHeader>
 
-          <Tabs value={mode} onValueChange={(v) => setMode(v as 'web' | 'gps' | 'biometric')}>
+          <Tabs value={mode} onValueChange={(v: string) => setMode(v as 'web' | 'gps' | 'biometric')}>
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="web" className="gap-1">
                 <Globe className="w-4 h-4" />
@@ -278,7 +303,9 @@ export const AttendanceMarker: React.FC<AttendanceMarkerProps> = ({
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <p className="text-sm text-muted-foreground">
-                    Mark your attendance using web check-in. Your timestamp will be recorded.
+                    {actionType === 'check_out'
+                      ? 'Record your check-out time. Your working hours will be calculated automatically.'
+                      : 'Mark your attendance using web check-in. Your timestamp will be recorded.'}
                   </p>
 
                   {error && (
@@ -291,7 +318,9 @@ export const AttendanceMarker: React.FC<AttendanceMarkerProps> = ({
                   {success && (
                     <div className="flex gap-2 p-3 bg-green-500/10 border border-green-500/20 rounded-md">
                       <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
-                      <p className="text-sm text-green-500">Check-in successful!</p>
+                      <p className="text-sm text-green-500">
+                        {actionType === 'check_out' ? 'Check-out successful!' : 'Check-in successful!'}
+                      </p>
                     </div>
                   )}
 
@@ -323,7 +352,7 @@ export const AttendanceMarker: React.FC<AttendanceMarkerProps> = ({
                         Checked In
                       </>
                     ) : (
-                      'Check In Now'
+                      actionType === 'check_out' ? 'Check Out Now' : 'Check In Now'
                     )}
                   </Button>
                 </CardContent>
@@ -363,7 +392,9 @@ export const AttendanceMarker: React.FC<AttendanceMarkerProps> = ({
                   {success && (
                     <div className="flex gap-2 p-3 bg-green-500/10 border border-green-500/20 rounded-md">
                       <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
-                      <p className="text-sm text-green-500">Check-in successful with GPS!</p>
+                      <p className="text-sm text-green-500">
+                        {actionType === 'check_out' ? 'Check-out successful with GPS!' : 'Check-in successful with GPS!'}
+                      </p>
                     </div>
                   )}
 

@@ -8,7 +8,21 @@
       "Bash(node:*)",
       "Bash(npx jest:*)",
       "Bash(grep -n \"FileCleanupOptions\\\\|getSignedUrl\" backend/src/types/*.ts)",
-      "Bash(npx knex:*)"
+      "Bash(npx knex:*)",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(grep -v \"^C:\\\\\\\\\")",
+      "Bash(grep -E \"^C:.*\\\\.ts$\")",
+      "Read(//tmp/**)",
+      "Bash(grep -v \"^--$\")",
+      "Bash(grep -v \"^$\")",
+      "Bash(PGPASSWORD=Root psql -h localhost -U postgres -d employee_management_system -c \"SELECT id, email, is_active, LENGTH\\(password_hash\\) as hash_len, LEFT\\(password_hash, 10\\) as hash_prefix FROM users WHERE email='admin@company.com';\")",
+      "Bash(curl *)",
+      "Bash(PGPASSWORD=Root psql -h localhost -U postgres -d employee_management_system -c \"\\\\dt\")",
+      "Bash(PGPASSWORD=Root psql *)",
+      "Bash(xargs grep *)",
+      "Bash(xargs ls *)",
+      "Bash(grep -E \"\\\\.\\(tsx?|jsx?\\)$\")",
+      "Bash(grep -E \"\\\\.\\(ts|tsx|js|jsx|json\\)$\")"
     ]
   }
 }

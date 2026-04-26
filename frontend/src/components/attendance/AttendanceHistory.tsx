@@ -18,6 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Clock, CalendarCheck, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAttendanceStore } from '../../store/attendanceStore';
+import { AttendanceFilters } from '../../services/attendanceService';
 import { useAuth } from '../../hooks/useAuth';
 
 interface AttendanceHistoryProps {
@@ -66,30 +67,49 @@ const getStatusLabel = (status: string) => {
   }
 };
 
-const formatTime = (timeString: string | undefined) => {
+const formatTime = (timeString: string | undefined | null) => {
   if (!timeString) return '-';
   try {
+    // PostgreSQL TIME columns return plain "HH:MM:SS" strings — parse directly
+    // to avoid new Date("HH:MM:SS") producing an Invalid Date.
+    if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(timeString)) {
+      const parts = timeString.split(':');
+      const hours = parseInt(parts[0] ?? '0', 10);
+      const minutes = parseInt(parts[1] ?? '0', 10);
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      const h12 = hours % 12 || 12;
+      return `${String(h12).padStart(2, '0')}:${String(minutes).padStart(2, '0')} ${ampm}`;
+    }
+    // Full ISO datetime string
     const date = new Date(timeString);
-    return date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-    });
+    if (!isNaN(date.getTime())) {
+      return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    }
+    return timeString;
   } catch {
     return timeString;
   }
 };
 
-const formatDate = (dateString: string) => {
+// PostgreSQL DATE columns can come back as JS Date objects. Normalise to YYYY-MM-DD.
+const toDateStr = (d: any): string => {
+  if (!d) return '';
+  if (d instanceof Date) return d.toISOString().split('T')[0]!;
+  const s = String(d);
+  // If it looks like an ISO datetime, strip the time part
+  return s.includes('T') ? s.split('T')[0]! : s;
+};
+
+const formatDate = (dateString: any) => {
   try {
-    const date = new Date(dateString);
+    const date = new Date(toDateStr(dateString));
     return date.toLocaleDateString('en-US', {
       weekday: 'short',
       month: 'short',
       day: 'numeric',
     });
   } catch {
-    return dateString;
+    return String(dateString);
   }
 };
 
@@ -118,7 +138,7 @@ export const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({
   const [filteredRecords, setFilteredRecords] = useState<any[]>([]);
   const [viewMode, setViewMode] = useState<'calendar' | 'table'>('calendar');
 
-  const employeeId = propEmployeeId || user?.id || '';
+  const employeeId = propEmployeeId || user?.employeeId || '';
 
   useEffect(() => {
     if (employeeId) {
@@ -131,14 +151,11 @@ export const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({
       const monthStart = new Date(currentYear, currentMonth - 1, 1);
       const monthEnd = new Date(currentYear, currentMonth, 0);
       
-      const from = monthStart.toISOString().split('T')[0];
-      const to = monthEnd.toISOString().split('T')[0];
+      const from = monthStart.toISOString().split('T')[0]!;
+      const to = monthEnd.toISOString().split('T')[0]!;
 
-      await fetchRecords({
-        employee_id: employeeId,
-        from_date: from,
-        to_date: to,
-      });
+      const filters: AttendanceFilters = { employee_id: employeeId, from_date: from, to_date: to };
+      await fetchRecords(filters);
 
       await fetchStats(employeeId, from, to);
     } catch (err) {
@@ -150,10 +167,10 @@ export const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({
     let filtered = records;
 
     if (fromDate) {
-      filtered = filtered.filter(r => new Date(r.date) >= new Date(fromDate));
+      filtered = filtered.filter(r => toDateStr(r.date) >= fromDate);
     }
     if (toDate) {
-      filtered = filtered.filter(r => new Date(r.date) <= new Date(toDate));
+      filtered = filtered.filter(r => toDateStr(r.date) <= toDate);
     }
 
     setFilteredRecords(filtered);
@@ -172,7 +189,7 @@ export const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({
     // Days of the month
     for (let day = 1; day <= daysInMonth; day++) {
       const dateStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      const record = records.find(r => r.date === dateStr);
+      const record = records.find(r => toDateStr(r.date) === dateStr);
       
       days.push({
         date: day,

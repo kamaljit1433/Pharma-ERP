@@ -68,7 +68,7 @@ export class PayslipService {
       year,
       payslip_number: payslipNumber,
       earnings: this.extractEarnings(payroll, earningsComponents),
-      deductions: this.extractDeductions(payroll, deductionsComponents),
+      deductions: this.extractDeductions({ total_deductions: payroll.total_deductions || 0 }, deductionsComponents),
       gross_salary: payroll.gross_salary,
       net_salary: payroll.net_salary,
     });

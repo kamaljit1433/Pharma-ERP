@@ -1,8 +1,14 @@
 /**
  * Face Detection Service
- * Client-side face detection using TensorFlow.js and BlazeFace
- * No facial data is stored - only boolean detection result
+ * Client-side face detection using TensorFlow.js/BlazeFace for presence detection
+ * and face-api.js for identity verification against stored employee photos.
  */
+
+// CDN base for face-api.js model weights (no local binary files required)
+const FACE_API_MODELS_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
+
+/** How close two face descriptors must be to count as the same person (lower = stricter) */
+const RECOGNITION_THRESHOLD = 0.45;
 
 interface DetectionResult {
   detected: boolean;
@@ -42,9 +48,10 @@ class FaceDetectionService {
 
   private async _initializeModelInternal(): Promise<void> {
     try {
-      // Dynamically import TensorFlow.js
-      const tf = await import('@tensorflow/tfjs');
-      const blazeface = await import('@tensorflow-models/blazeface');
+      // Dynamically import TensorFlow.js (side-effect only – registers backend)
+      await import('@tensorflow/tfjs');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const blazeface: any = await import('@tensorflow-models/blazeface');
 
       // Load the BlazeFace model
       this.model = await blazeface.load();
@@ -194,7 +201,80 @@ class FaceDetectionService {
       this.isInitialized = false;
     }
   }
+
+  // ─── Face Recognition ────────────────────────────────────────────────────
+
+  private faceApiLoaded = false;
+  private faceApiLoadPromise: Promise<void> | null = null;
+
+  /** Lazily loads face-api.js models from CDN (called once, cached). */
+  async loadFaceApiModels(): Promise<void> {
+    if (this.faceApiLoaded) return;
+    if (this.faceApiLoadPromise) return this.faceApiLoadPromise;
+
+    this.faceApiLoadPromise = (async () => {
+      const faceapi = await import('face-api.js');
+      await Promise.all([
+        faceapi.nets.ssdMobilenetv1.loadFromUri(FACE_API_MODELS_URL),
+        faceapi.nets.faceLandmark68Net.loadFromUri(FACE_API_MODELS_URL),
+        faceapi.nets.faceRecognitionNet.loadFromUri(FACE_API_MODELS_URL),
+      ]);
+      this.faceApiLoaded = true;
+    })();
+
+    return this.faceApiLoadPromise;
+  }
+
+  /**
+   * Extracts a 128-d face descriptor from an image URL.
+   * Returns null if no face is detected in the image.
+   */
+  async getDescriptorFromUrl(imageUrl: string): Promise<Float32Array | null> {
+    await this.loadFaceApiModels();
+    const faceapi = await import('face-api.js');
+
+    const img = await faceapi.fetchImage(imageUrl);
+    const detection = await faceapi
+      .detectSingleFace(img)
+      .withFaceLandmarks()
+      .withFaceDescriptor();
+
+    return detection ? detection.descriptor : null;
+  }
+
+  /**
+   * Extracts a 128-d face descriptor from a live video element.
+   * Returns null if no face is detected in the current frame.
+   */
+  async getDescriptorFromVideo(
+    videoElement: HTMLVideoElement
+  ): Promise<Float32Array | null> {
+    await this.loadFaceApiModels();
+    const faceapi = await import('face-api.js');
+
+    const detection = await faceapi
+      .detectSingleFace(videoElement)
+      .withFaceLandmarks()
+      .withFaceDescriptor();
+
+    return detection ? detection.descriptor : null;
+  }
+
+  /**
+   * Compares two face descriptors.
+   * Returns true when the Euclidean distance is below RECOGNITION_THRESHOLD.
+   */
+  compareFaces(ref: Float32Array, live: Float32Array): { match: boolean; distance: number } {
+    let sum = 0;
+    for (let i = 0; i < ref.length; i++) {
+      const diff = (ref[i] ?? 0) - (live[i] ?? 0);
+      sum += diff * diff;
+    }
+    const distance = Math.sqrt(sum);
+    return { match: distance < RECOGNITION_THRESHOLD, distance };
+  }
 }
 
 export const faceDetectionService = new FaceDetectionService();
 export type { DetectionResult, LivenessCheckResult };
+export { RECOGNITION_THRESHOLD };

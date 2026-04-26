@@ -78,13 +78,6 @@ export interface InterviewFeedback {
   created_at: Date;
 }
 
-export interface ApplicantNote {
-  id: string;
-  applicant_id: string;
-  note: string;
-  created_by: string;
-  created_at: Date;
-}
 
 export interface OnboardingChecklist {
   id: string;
@@ -137,7 +130,6 @@ export interface CreateInterviewDTO {
   applicant_id: string;
   scheduled_at: Date;
   type?: 'phone' | 'video' | 'in_person';
-  mode?: 'In-Person' | 'Video' | 'Phone';
   interviewer_id?: string;
   interviewers?: string[];
   duration_minutes?: number;

@@ -73,7 +73,7 @@ const formatDate = (dateString: string): string => {
 };
 
 export const LeaveHistory: React.FC<LeaveHistoryProps> = ({ leaves, loading }) => {
-  const { cancelLeave } = useLeaveStore();
+  const { cancelLeave, leaveTypes } = useLeaveStore();
   const { toast } = useToast();
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -157,7 +157,11 @@ export const LeaveHistory: React.FC<LeaveHistoryProps> = ({ leaves, loading }) =
                         <Badge variant="outline">{leave.days_count}</Badge>
                       </TableCell>
                       <TableCell>
-                        <span className="text-sm">{leave.leave_type_id}</span>
+                        <span className="text-sm">
+                          {leave.leave_type_name ||
+                            leaveTypes.find((lt) => lt.id === leave.leave_type_id)?.name ||
+                            leave.leave_type_id}
+                        </span>
                       </TableCell>
                       <TableCell>{getStatusBadge(leave.status)}</TableCell>
                       <TableCell className="text-sm text-muted-foreground max-w-xs truncate">

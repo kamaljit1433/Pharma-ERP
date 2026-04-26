@@ -6,19 +6,53 @@ describe('DashboardService', () => {
   let mockKnex: any;
 
   beforeEach(() => {
-    mockKnex = {
-      select: jest.fn().mockReturnThis(),
-      count: jest.fn().mockReturnThis(),
-      where: jest.fn().mockReturnThis(),
-      join: jest.fn().mockReturnThis(),
-      groupBy: jest.fn().mockReturnThis(),
-      orderBy: jest.fn().mockReturnThis(),
-      limit: jest.fn().mockReturnThis(),
-      sum: jest.fn().mockReturnThis(),
-      avg: jest.fn().mockReturnThis(),
-      whereNull: jest.fn().mockReturnThis(),
-      first: jest.fn(),
-    };
+    // Must be callable as mockKnex('tableName') returning itself for chaining
+    // All chained methods return mockKnex (self) so that .first() can be overridden per-test
+    // Create a thenable mock that resolves to [] by default when awaited,
+    // but all chainable methods return itself for further chaining.
+    // .first() is overridden per-test to return specific values.
+    const thenableMock: any = Object.assign(
+      jest.fn().mockImplementation(() => thenableMock),
+      {
+        then: (resolve: Function) => resolve([]),
+        catch: (reject: Function) => Promise.resolve([]),
+        select: null as any,
+        count: null as any,
+        where: null as any,
+        whereNot: null as any,
+        whereIn: null as any,
+        join: null as any,
+        leftJoin: null as any,
+        groupBy: null as any,
+        orderBy: null as any,
+        limit: null as any,
+        sum: null as any,
+        avg: null as any,
+        whereNull: null as any,
+        max: null as any,
+        min: null as any,
+        raw: null as any,
+        first: null as any,
+      }
+    );
+    thenableMock.select = jest.fn().mockReturnValue(thenableMock);
+    thenableMock.count = jest.fn().mockReturnValue(thenableMock);
+    thenableMock.where = jest.fn().mockReturnValue(thenableMock);
+    thenableMock.whereNot = jest.fn().mockReturnValue(thenableMock);
+    thenableMock.whereIn = jest.fn().mockReturnValue(thenableMock);
+    thenableMock.join = jest.fn().mockReturnValue(thenableMock);
+    thenableMock.leftJoin = jest.fn().mockReturnValue(thenableMock);
+    thenableMock.groupBy = jest.fn().mockReturnValue(thenableMock);
+    thenableMock.orderBy = jest.fn().mockReturnValue(thenableMock);
+    thenableMock.limit = jest.fn().mockReturnValue(thenableMock);
+    thenableMock.sum = jest.fn().mockReturnValue(thenableMock);
+    thenableMock.avg = jest.fn().mockReturnValue(thenableMock);
+    thenableMock.whereNull = jest.fn().mockReturnValue(thenableMock);
+    thenableMock.max = jest.fn().mockReturnValue(thenableMock);
+    thenableMock.min = jest.fn().mockReturnValue(thenableMock);
+    thenableMock.raw = jest.fn().mockReturnValue(thenableMock);
+    thenableMock.first = jest.fn();
+    mockKnex = thenableMock;
 
     dashboardService = new DashboardService(mockKnex as Knex);
   });
@@ -72,10 +106,10 @@ describe('DashboardService', () => {
   describe('getAttendanceStatistics', () => {
     it('should calculate attendance statistics correctly', async () => {
       mockKnex.first.mockResolvedValueOnce({ count: 100 }); // total employees
-      mockKnex.first.mockResolvedValueOnce({ count: 80 }); // late check-ins
-      mockKnex.first.mockResolvedValueOnce({ count: 5 }); // incomplete check-outs
       mockKnex.first.mockResolvedValueOnce({ count: 70 }); // monthly present
       mockKnex.first.mockResolvedValueOnce({ count: 100 }); // monthly total
+      mockKnex.first.mockResolvedValueOnce({ count: 80 }); // late check-ins
+      mockKnex.first.mockResolvedValueOnce({ count: 5 }); // incomplete check-outs
 
       const stats = await dashboardService['getAttendanceStatistics']();
 
@@ -91,10 +125,10 @@ describe('DashboardService', () => {
 
     it('should calculate attendance rate correctly', async () => {
       mockKnex.first.mockResolvedValueOnce({ count: 100 }); // total employees
-      mockKnex.first.mockResolvedValueOnce({ count: 80 }); // late check-ins
-      mockKnex.first.mockResolvedValueOnce({ count: 5 }); // incomplete check-outs
       mockKnex.first.mockResolvedValueOnce({ count: 70 }); // monthly present
       mockKnex.first.mockResolvedValueOnce({ count: 100 }); // monthly total
+      mockKnex.first.mockResolvedValueOnce({ count: 80 }); // late check-ins
+      mockKnex.first.mockResolvedValueOnce({ count: 5 }); // incomplete check-outs
 
       const stats = await dashboardService['getAttendanceStatistics']();
 

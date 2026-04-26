@@ -49,88 +49,120 @@ export default function EmployeeDashboard() {
   const [stats, setStats] = useState<PersonalStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const isFetching = React.useRef(false);
+  const employeeId = user?.employeeId;
 
-  const handleManualRefresh = () => {
-    if (user) {
-      fetchPersonalStats();
+  const fetchPersonalStats = React.useCallback(async () => {
+    if (!employeeId || isFetching.current) {
+      console.log('[Dashboard] Skipping fetch - already fetching or no user');
+      return;
     }
-  };
-
-  useEffect(() => {
-    const fetchPersonalStats = async () => {
-      if (!user) return;
+    
+    console.log('[Dashboard] Starting fetch');
+    isFetching.current = true;
+    try {
+      setLoading(true);
+      
+      const today = new Date();
+      const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      
+      // Fetch data with error handling for each endpoint
+      let attendanceStatus = null;
+      let attendanceStats = { present_days: 0, absent_days: 0, total_days: 0 };
+      let leaveBalances: any[] = [];
+      let leaveTypes: any[] = [];
       
       try {
-        setLoading(true);
-        
-        // Fetch attendance status and stats
-        const attendanceStatus = await attendanceService.getCurrentStatus(user.employeeId);
-        const today = new Date();
-        const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-        const attendanceStats = await attendanceService.getStats(
-          user.employeeId,
+        attendanceStatus = await attendanceService.getCurrentStatus(employeeId);
+      } catch (err) {
+        console.warn('Failed to fetch attendance status:', err);
+      }
+      
+      try {
+        attendanceStats = await attendanceService.getStats(
+          employeeId,
           firstDayOfMonth.toISOString().split('T')[0],
           today.toISOString().split('T')[0]
         );
-        
-        // Fetch leave balances
-        const leaveBalances = await leaveService.getLeaveBalance(user.employeeId, today.getFullYear());
-        
-        // Fetch leave types to get names
-        const leaveTypes = await leaveService.getLeaveTypes();
-        const leaveTypeMap = new Map(leaveTypes.map(lt => [lt.id, lt.name]));
-
-        // Mock data for pending requests and upcoming leaves
-        // In a real implementation, these would come from the backend
-        const mockPendingRequests = 0;
-        const mockUpcomingLeaves: Array<{
-          leaveType: string;
-          startDate: string;
-          endDate: string;
-          status: string;
-        }> = [];
-
-        setStats({
-          attendance: {
-            status: attendanceStatus?.status || 'absent',
-            checkInTime: attendanceStatus?.check_in_time,
-            checkOutTime: attendanceStatus?.check_out_time,
-            workingHours: attendanceStatus?.working_hours || 0,
-            presentDaysThisMonth: attendanceStats.present_days,
-            absentDaysThisMonth: attendanceStats.absent_days,
-            attendanceRate: (attendanceStats.present_days / attendanceStats.total_days) * 100,
-          },
-          leave: {
-            balances: leaveBalances.map((lb) => ({
-              leaveType: leaveTypeMap.get(lb.leave_type_id) || 'Unknown',
-              available: lb.available_balance,
-              used: lb.used_balance,
-              total: lb.opening_balance + lb.carry_forward_balance,
-            })),
-            pendingRequests: mockPendingRequests,
-            upcomingLeaves: mockUpcomingLeaves,
-          },
-          upcomingEvents: [
-            // Mock data - would come from backend
-            { title: 'Company Holiday', date: '2026-04-15', type: 'holiday' },
-            { title: 'Team Meeting', date: '2026-04-10', type: 'meeting' },
-          ],
-        });
-        
-        setError(null);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load dashboard');
-        console.error('Dashboard error:', err);
-      } finally {
-        setLoading(false);
+        console.warn('Failed to fetch attendance stats:', err);
       }
-    };
+      
+      try {
+        leaveBalances = await leaveService.getLeaveBalance(employeeId, today.getFullYear());
+      } catch (err) {
+        console.warn('Failed to fetch leave balances:', err);
+      }
+      
+      try {
+        leaveTypes = await leaveService.getLeaveTypes();
+      } catch (err) {
+        console.warn('Failed to fetch leave types:', err);
+      }
+      
+      const leaveTypeMap = new Map(leaveTypes.map(lt => [lt.id, lt.name]));
 
+      // Mock data for pending requests and upcoming leaves
+      // In a real implementation, these would come from the backend
+      const mockPendingRequests = 0;
+      const mockUpcomingLeaves: Array<{
+        leaveType: string;
+        startDate: string;
+        endDate: string;
+        status: string;
+      }> = [];
+
+      setStats({
+        attendance: {
+          status: attendanceStatus?.status || 'absent',
+          checkInTime: attendanceStatus?.check_in_time,
+          checkOutTime: attendanceStatus?.check_out_time,
+          workingHours: attendanceStatus?.working_hours || 0,
+          presentDaysThisMonth: attendanceStats.present_days,
+          absentDaysThisMonth: attendanceStats.absent_days,
+          attendanceRate: (attendanceStats.present_days / attendanceStats.total_days) * 100,
+        },
+        leave: {
+          balances: leaveBalances.map((lb) => ({
+            leaveType: leaveTypeMap.get(lb.leave_type_id) || 'Unknown',
+            available: lb.available_balance,
+            used: lb.used_balance,
+            total: lb.opening_balance + lb.carry_forward_balance,
+          })),
+          pendingRequests: mockPendingRequests,
+          upcomingLeaves: mockUpcomingLeaves,
+        },
+        upcomingEvents: [
+          // Mock data - would come from backend
+          { title: 'Company Holiday', date: '2026-04-15', type: 'holiday' },
+          { title: 'Team Meeting', date: '2026-04-10', type: 'meeting' },
+        ],
+      });
+      
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load dashboard');
+      console.error('Dashboard error:', err);
+    } finally {
+      setLoading(false);
+      isFetching.current = false;
+    }
+  }, [employeeId]);
+
+  const handleManualRefresh = () => {
+    fetchPersonalStats();
+  };
+
+  useEffect(() => {
+    console.log('[Dashboard] Effect running');
     fetchPersonalStats();
     // Refresh stats every 5 minutes
     const interval = setInterval(fetchPersonalStats, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [user]);
+    return () => {
+      console.log('[Dashboard] Cleanup');
+      clearInterval(interval);
+    };
+  }, [fetchPersonalStats]);
 
   if (loading) {
     return (

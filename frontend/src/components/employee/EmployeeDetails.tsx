@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { UserCircle, Mail, Phone, Calendar, Briefcase, Building2 } from 'lucide-react';
+import { UserCircle, Mail, Phone, Calendar, Camera, Loader2 } from 'lucide-react';
 
 interface Employee {
   id: string;
@@ -29,9 +29,11 @@ interface Employee {
 
 interface EmployeeDetailsProps {
   employee: Employee;
+  onPhotoUpload?: () => void;
+  isUploadingPhoto?: boolean;
 }
 
-export const EmployeeDetails: React.FC<EmployeeDetailsProps> = ({ employee }) => {
+export const EmployeeDetails: React.FC<EmployeeDetailsProps> = ({ employee, onPhotoUpload, isUploadingPhoto }) => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active':
@@ -49,7 +51,9 @@ export const EmployeeDetails: React.FC<EmployeeDetailsProps> = ({ employee }) =>
   };
 
   const getInitials = () => {
-    return `${employee.first_name.charAt(0)}${employee.last_name.charAt(0)}`.toUpperCase();
+    const f = employee.first_name?.charAt(0) ?? '';
+    const l = employee.last_name?.charAt(0) ?? '';
+    return `${f}${l}`.toUpperCase() || '?';
   };
 
   return (
@@ -59,12 +63,26 @@ export const EmployeeDetails: React.FC<EmployeeDetailsProps> = ({ employee }) =>
         <CardHeader>
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-4">
-              <Avatar className="h-16 w-16">
-                <AvatarImage src={employee.profile_photo_url} alt={employee.first_name} />
-                <AvatarFallback className="bg-primary text-primary-foreground text-lg">
-                  {getInitials()}
-                </AvatarFallback>
-              </Avatar>
+              <div className="relative group shrink-0">
+                <Avatar className="h-16 w-16">
+                  <AvatarImage src={employee.profile_photo_url} alt={employee.first_name} />
+                  <AvatarFallback className="bg-primary text-primary-foreground text-lg">
+                    {getInitials()}
+                  </AvatarFallback>
+                </Avatar>
+                {onPhotoUpload && (
+                  <button
+                    type="button"
+                    onClick={onPhotoUpload}
+                    disabled={isUploadingPhoto}
+                    className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    {isUploadingPhoto
+                      ? <Loader2 className="h-5 w-5 text-white animate-spin" />
+                      : <Camera className="h-5 w-5 text-white" />}
+                  </button>
+                )}
+              </div>
               <div>
                 <CardTitle className="text-2xl">
                   {employee.first_name} {employee.last_name}
@@ -72,7 +90,7 @@ export const EmployeeDetails: React.FC<EmployeeDetailsProps> = ({ employee }) =>
                 <CardDescription className="flex items-center gap-2 mt-1">
                   <span className="font-mono text-sm">{employee.employee_id}</span>
                   <Badge className={getStatusColor(employee.status)}>
-                    {employee.status.replace('_', ' ')}
+                    {employee.status?.replace('_', ' ') ?? ''}
                   </Badge>
                 </CardDescription>
               </div>
@@ -126,71 +144,34 @@ export const EmployeeDetails: React.FC<EmployeeDetailsProps> = ({ employee }) =>
         </CardContent>
       </Card>
 
-      {/* Employment Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Briefcase className="h-5 w-5" />
-            Employment Information
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                Date of Joining
-              </p>
-              <p className="font-medium">
-                {new Date(employee.date_of_joining).toLocaleDateString()}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Employment Type</p>
-              <p className="font-medium">
-                {employee.employment_type.charAt(0).toUpperCase() +
-                  employee.employment_type.slice(1)}
-              </p>
-            </div>
-            {employee.date_of_birth && (
-              <div>
-                <p className="text-sm text-muted-foreground">Date of Birth</p>
-                <p className="font-medium">
-                  {new Date(employee.date_of_birth).toLocaleDateString()}
-                </p>
-              </div>
-            )}
-            {employee.gender && (
-              <div>
-                <p className="text-sm text-muted-foreground">Gender</p>
-                <p className="font-medium">{employee.gender.charAt(0).toUpperCase() + employee.gender.slice(1)}</p>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Department & Designation */}
-      {(employee.department_id || employee.designation_id) && (
+      {/* Personal Details */}
+      {(employee.date_of_birth || employee.gender) && (
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <Building2 className="h-5 w-5" />
-              Organization
+              <UserCircle className="h-5 w-5" />
+              Personal Details
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="grid grid-cols-2 gap-4">
-              {employee.department_id && (
+              {employee.date_of_birth && (
                 <div>
-                  <p className="text-sm text-muted-foreground">Department</p>
-                  <p className="font-medium">{employee.department_id}</p>
+                  <p className="text-sm text-muted-foreground flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Date of Birth
+                  </p>
+                  <p className="font-medium">
+                    {new Date(employee.date_of_birth).toLocaleDateString()}
+                  </p>
                 </div>
               )}
-              {employee.designation_id && (
+              {employee.gender && (
                 <div>
-                  <p className="text-sm text-muted-foreground">Designation</p>
-                  <p className="font-medium">{employee.designation_id}</p>
+                  <p className="text-sm text-muted-foreground">Gender</p>
+                  <p className="font-medium">
+                    {employee.gender.charAt(0).toUpperCase() + employee.gender.slice(1)}
+                  </p>
                 </div>
               )}
             </div>

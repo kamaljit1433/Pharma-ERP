@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useLeaveStore } from '../store/leaveStore';
-import { MainLayout } from '../components/layout/MainLayout';
 import { LeaveBalance } from '../components/leave/LeaveBalance';
 import { LeaveRequestForm } from '../components/leave/LeaveRequestForm';
 import { LeaveHistory } from '../components/leave/LeaveHistory';
@@ -14,7 +13,7 @@ import { CalendarDays, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export const Leave: React.FC = () => {
   const { user } = useAuth();
-  const { error, clearError, leaves, leaveBalances, loadingBalances, fetchLeaveBalance, fetchLeaves } = useLeaveStore();
+  const { error, clearError, leaves, leaveBalances, fetchLeaveBalance, fetchLeaves, fetchLeaveTypes, leaveTypes } = useLeaveStore();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -27,7 +26,13 @@ export const Leave: React.FC = () => {
     }
   }, [error, toast, clearError]);
 
-  // Fetch leave balance and leaves on mount
+  // Fetch leave data on mount
+  useEffect(() => {
+    if (leaveTypes.length === 0) {
+      fetchLeaveTypes();
+    }
+  }, [fetchLeaveTypes, leaveTypes.length]);
+
   useEffect(() => {
     if (user?.employeeId) {
       fetchLeaveBalance(user.employeeId, new Date().getFullYear());
@@ -59,8 +64,7 @@ export const Leave: React.FC = () => {
   }, [leaveBalances, leaves]);
 
   return (
-    <MainLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Leave Management</h1>
@@ -132,15 +136,7 @@ export const Leave: React.FC = () => {
 
           {/* Leave Balance Tab */}
           <TabsContent value="balance" className="space-y-4">
-            {loadingBalances ? (
-              <Card>
-                <CardContent className="pt-6">
-                  <p className="text-sm text-muted-foreground">Loading leave balance...</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <LeaveBalance employeeId={user.employeeId} />
-            )}
+            <LeaveBalance employeeId={user.employeeId} />
           </TabsContent>
 
           {/* Request Leave Tab */}
@@ -166,7 +162,6 @@ export const Leave: React.FC = () => {
           )}
         </Tabs>
       </div>
-    </MainLayout>
   );
 };
 

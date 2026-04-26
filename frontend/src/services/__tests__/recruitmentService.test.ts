@@ -427,4 +427,251 @@ describe('recruitmentService', () => {
       });
     });
   });
+
+  describe('Error Handling', () => {
+    it('should propagate API errors from job posting creation', async () => {
+      const jobData: Partial<JobPosting> = { title: 'Developer' };
+      const error = new Error('API Error');
+
+      vi.mocked(apiClient.post).mockRejectedValue(error);
+
+      await expect(recruitmentService.createJobPosting(jobData)).rejects.toThrow('API Error');
+    });
+
+    it('should propagate API errors from applicant stage movement', async () => {
+      const applicantId = 'app-1';
+      const stage = 'Interview';
+      const error = new Error('Invalid stage transition');
+
+      vi.mocked(apiClient.put).mockRejectedValue(error);
+
+      await expect(recruitmentService.moveApplicantStage(applicantId, stage)).rejects.toThrow(
+        'Invalid stage transition'
+      );
+    });
+
+    it('should propagate API errors from interview scheduling', async () => {
+      const interviewData: Partial<Interview> = {
+        applicant_id: 'app-1',
+        scheduled_at: new Date(),
+        mode: 'Video',
+      };
+      const error = new Error('Scheduling conflict');
+
+      vi.mocked(apiClient.post).mockRejectedValue(error);
+
+      await expect(recruitmentService.scheduleInterview(interviewData)).rejects.toThrow(
+        'Scheduling conflict'
+      );
+    });
+
+    it('should propagate API errors from offer letter generation', async () => {
+      const offerData: Partial<OfferLetter> = {
+        applicant_id: 'app-1',
+        position: 'Developer',
+      };
+      const error = new Error('Failed to generate offer');
+
+      vi.mocked(apiClient.post).mockRejectedValue(error);
+
+      await expect(recruitmentService.generateOfferLetter(offerData)).rejects.toThrow(
+        'Failed to generate offer'
+      );
+    });
+  });
+
+  describe('Batch Operations', () => {
+    it('should handle multiple applicants for a job posting', async () => {
+      const jobPostingId = 'job-1';
+      const applicants: Partial<Applicant>[] = [
+        {
+          name: 'John Doe',
+          email: 'john@example.com',
+          contact_number: '555-1234',
+          resume_url: 'https://example.com/resume1.pdf',
+        },
+        {
+          name: 'Jane Smith',
+          email: 'jane@example.com',
+          contact_number: '555-5678',
+          resume_url: 'https://example.com/resume2.pdf',
+        },
+      ];
+
+      const mockResponses = applicants.map((app, idx) => ({
+        id: `app-${idx + 1}`,
+        job_posting_id: jobPostingId,
+        ...app,
+      }));
+
+      vi.mocked(apiClient.post).mockResolvedValueOnce({ data: mockResponses[0] });
+      vi.mocked(apiClient.post).mockResolvedValueOnce({ data: mockResponses[1] });
+
+      const result1 = await recruitmentService.addApplicant(jobPostingId, applicants[0]);
+      const result2 = await recruitmentService.addApplicant(jobPostingId, applicants[1]);
+
+      expect(result1).toEqual(mockResponses[0]);
+      expect(result2).toEqual(mockResponses[1]);
+      expect(apiClient.post).toHaveBeenCalledTimes(2);
+    });
+
+    it('should handle filtering applicants by stage', async () => {
+      const filters = { job_posting_id: 'job-1', stage: 'Interview' };
+      const mockApplicants: Applicant[] = [
+        {
+          id: 'app-1',
+          job_posting_id: 'job-1',
+          name: 'John Doe',
+          email: 'john@example.com',
+          contact_number: '555-1234',
+          resume_url: 'https://example.com/resume1.pdf',
+          current_stage: 'Interview',
+          applied_at: new Date(),
+          updated_at: new Date(),
+        },
+        {
+          id: 'app-2',
+          job_posting_id: 'job-1',
+          name: 'Jane Smith',
+          email: 'jane@example.com',
+          contact_number: '555-5678',
+          resume_url: 'https://example.com/resume2.pdf',
+          current_stage: 'Interview',
+          applied_at: new Date(),
+          updated_at: new Date(),
+        },
+      ];
+
+      vi.mocked(apiClient.get).mockResolvedValue({ data: mockApplicants });
+
+      const result = await recruitmentService.getApplicants(filters);
+
+      expect(apiClient.get).toHaveBeenCalledWith('/recruitment/applicants', { params: filters });
+      expect(result).toEqual(mockApplicants);
+      expect(result.length).toBe(2);
+    });
+  });
+
+  describe('Interview Management', () => {
+    it('should handle multiple interviews for different applicants', async () => {
+      const interviews: Partial<Interview>[] = [
+        {
+          applicant_id: 'app-1',
+          scheduled_at: new Date('2025-02-15T10:00:00'),
+          mode: 'Video',
+          interviewers: ['user-1'],
+        },
+        {
+          applicant_id: 'app-2',
+          scheduled_at: new Date('2025-02-16T14:00:00'),
+          mode: 'In-person',
+          interviewers: ['user-2', 'user-3'],
+        },
+      ];
+
+      const mockResponses = interviews.map((int, idx) => ({
+        id: `int-${idx + 1}`,
+        status: 'Scheduled',
+        created_at: new Date(),
+        updated_at: new Date(),
+        ...int,
+      }));
+
+      vi.mocked(apiClient.post).mockResolvedValueOnce({ data: mockResponses[0] });
+      vi.mocked(apiClient.post).mockResolvedValueOnce({ data: mockResponses[1] });
+
+      const result1 = await recruitmentService.scheduleInterview(interviews[0]);
+      const result2 = await recruitmentService.scheduleInterview(interviews[1]);
+
+      expect(result1.id).toBe('int-1');
+      expect(result2.id).toBe('int-2');
+      expect(apiClient.post).toHaveBeenCalledTimes(2);
+    });
+
+    it('should handle interview cancellation', async () => {
+      const interviewId = 'int-1';
+      const mockResponse = { id: interviewId, status: 'Cancelled' };
+
+      vi.mocked(apiClient.put).mockResolvedValue({ data: mockResponse });
+
+      const result = await recruitmentService.cancelInterview(interviewId);
+
+      expect(apiClient.put).toHaveBeenCalledWith(
+        `/recruitment/interviews/${interviewId}/cancel`
+      );
+      expect(result.status).toBe('Cancelled');
+    });
+
+    it('should handle feedback submission for multiple interviewers', async () => {
+      const interviewId = 'int-1';
+      const feedbackList: Partial<InterviewFeedback>[] = [
+        {
+          rating: 4,
+          technical_score: 85,
+          communication_score: 90,
+          cultural_fit_score: 88,
+          overall_impression: 'Strong candidate',
+          recommendation: 'Strong Hire',
+        },
+        {
+          rating: 3,
+          technical_score: 75,
+          communication_score: 80,
+          cultural_fit_score: 85,
+          overall_impression: 'Good candidate',
+          recommendation: 'Hire',
+        },
+      ];
+
+      const mockResponses = feedbackList.map((fb, idx) => ({
+        id: `feedback-${idx + 1}`,
+        interview_id: interviewId,
+        interviewer_id: `user-${idx + 1}`,
+        submitted_at: new Date(),
+        ...fb,
+      }));
+
+      vi.mocked(apiClient.post).mockResolvedValueOnce({ data: mockResponses[0] });
+      vi.mocked(apiClient.post).mockResolvedValueOnce({ data: mockResponses[1] });
+
+      const result1 = await recruitmentService.submitInterviewFeedback(interviewId, feedbackList[0]);
+      const result2 = await recruitmentService.submitInterviewFeedback(interviewId, feedbackList[1]);
+
+      expect(result1.rating).toBe(4);
+      expect(result2.rating).toBe(3);
+      expect(apiClient.post).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('Offer Letter Workflow', () => {
+    it('should handle complete offer letter workflow', async () => {
+      const offerData: Partial<OfferLetter> = {
+        applicant_id: 'app-1',
+        position: 'Senior Developer',
+        department: 'Engineering',
+        salary: 120000,
+        start_date: new Date('2025-03-01'),
+        terms: 'Full-time',
+      };
+
+      const draftOffer = { id: 'offer-1', status: 'Draft', ...offerData };
+      const sentOffer = { id: 'offer-1', status: 'Sent', ...offerData };
+      const acceptedOffer = { id: 'offer-1', status: 'Accepted', ...offerData };
+
+      vi.mocked(apiClient.post).mockResolvedValueOnce({ data: draftOffer });
+      vi.mocked(apiClient.post).mockResolvedValueOnce({ data: sentOffer });
+      vi.mocked(apiClient.post).mockResolvedValueOnce({ data: acceptedOffer });
+
+      const generated = await recruitmentService.generateOfferLetter(offerData);
+      expect(generated.status).toBe('Draft');
+
+      const sent = await recruitmentService.sendOfferLetter('offer-1');
+      expect(sent.status).toBe('Sent');
+
+      const accepted = await recruitmentService.acceptOfferLetter('offer-1');
+      expect(accepted.status).toBe('Accepted');
+
+      expect(apiClient.post).toHaveBeenCalledTimes(3);
+    });
+  });
 });

@@ -35,7 +35,7 @@ export class PIPService {
       startDate: data.startDate,
       endDate: data.endDate,
       initiatedBy: userId,
-    });
+    }) as any;
   }
 
   async getPIP(pipId: string): Promise<PIP> {
@@ -43,15 +43,15 @@ export class PIPService {
     if (!pip) {
       throw new Error(`PIP with ID ${pipId} not found`);
     }
-    return pip;
+    return pip as any;
   }
 
   async getEmployeePIPs(employeeId: string): Promise<PIP[]> {
-    return this.pipRepository.getPIPByEmployee(employeeId);
+    return this.pipRepository.getPIPByEmployee(employeeId) as any;
   }
 
   async getActivePIPs(): Promise<PIP[]> {
-    return this.pipRepository.getActivePIPs();
+    return this.pipRepository.getActivePIPs() as any;
   }
 
   async recordCheckIn(

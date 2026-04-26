@@ -1,36 +1,6 @@
 import { create } from 'zustand';
 import { payrollService } from '../services/payrollService';
-
-interface PayrollRecord {
-  id: string;
-  employee_id: string;
-  month: number;
-  year: number;
-  gross_salary: number;
-  net_salary: number;
-  deductions: number;
-  status: 'draft' | 'processed' | 'locked';
-  created_at?: string;
-  updated_at?: string;
-}
-
-interface SalaryStructure {
-  id: string;
-  employee_id: string;
-  basic_salary: number;
-  hra: number;
-  allowances: Record<string, number>;
-  deductions: Record<string, number>;
-}
-
-interface Payslip {
-  id: string;
-  payroll_id: string;
-  employee_id: string;
-  month: number;
-  year: number;
-  generated_at: string;
-}
+import { PayrollRecord, SalaryStructure, Payslip, PayrollSummary } from '../types/payroll';
 
 interface PayrollState {
   // Data
@@ -38,6 +8,7 @@ interface PayrollState {
   currentRecord: PayrollRecord | null;
   salaryStructure: SalaryStructure | null;
   payslips: Payslip[];
+  currentPayslip: Payslip | null;
 
   // UI State
   loading: boolean;
@@ -46,7 +17,9 @@ interface PayrollState {
   // Actions
   fetchRecords: (filters?: { month?: number; year?: number; employee_id?: string }) => Promise<void>;
   fetchPayrollDetails: (employeeId: string, month: number, year: number) => Promise<void>;
-  processMonthlyPayroll: (month: number, year: number) => Promise<void>;
+  fetchPayslips: (filters?: { employee_id?: string; month?: number; year?: number }) => Promise<void>;
+  fetchPayslipById: (payslipId: string) => Promise<Payslip | null>;
+  processMonthlyPayroll: (month: number, year: number) => Promise<PayrollSummary>;
   lockPayroll: (payrollId: string) => Promise<void>;
   fetchSalaryStructure: (employeeId: string) => Promise<void>;
   configureSalaryStructure: (data: any) => Promise<void>;
@@ -63,6 +36,7 @@ const initialState = {
   currentRecord: null,
   salaryStructure: null,
   payslips: [],
+  currentPayslip: null,
   loading: false,
   error: null,
 };
@@ -74,7 +48,8 @@ export const usePayrollStore = create<PayrollState>((set, get) => ({
   fetchRecords: async (filters) => {
     set({ loading: true, error: null });
     try {
-      const records = await payrollService.getPayrollRecords(filters);
+      const result = await payrollService.getPayrollRecords(filters);
+      const records = Array.isArray(result) ? result : (result as any)?.data ?? [];
       set({
         records,
         loading: false,
@@ -104,14 +79,41 @@ export const usePayrollStore = create<PayrollState>((set, get) => ({
     }
   },
 
+  // Fetch payslips
+  fetchPayslips: async (filters) => {
+    set({ loading: true, error: null });
+    try {
+      const result = await payrollService.getPayslips(filters);
+      const payslips = Array.isArray(result) ? result : (result as any)?.data ?? [];
+      set({ payslips, loading: false });
+    } catch (error) {
+      set({ error: (error as Error).message, loading: false });
+    }
+  },
+
+  // Fetch single payslip by id
+  fetchPayslipById: async (payslipId) => {
+    set({ loading: true, error: null });
+    try {
+      const result = await payrollService.getPayslip(payslipId);
+      const payslip = (result as any)?.data ?? result;
+      set({ currentPayslip: payslip, loading: false });
+      return payslip;
+    } catch (error) {
+      set({ error: (error as Error).message, loading: false });
+      return null;
+    }
+  },
+
   // Process monthly payroll
   processMonthlyPayroll: async (month, year) => {
     set({ loading: true, error: null });
     try {
-      await payrollService.processMonthlyPayroll(month, year);
-      // Refresh records
+      const result = await payrollService.processMonthlyPayroll(month, year);
+      const summary = (result as any)?.data ?? result;
       await get().fetchRecords({ month, year });
       set({ loading: false });
+      return summary;
     } catch (error) {
       set({
         error: (error as Error).message,

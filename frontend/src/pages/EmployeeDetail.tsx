@@ -1,16 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useEmployeeStore } from '@/store/employeeStore';
 import { useAuthStore } from '@/store/authStore';
 import { useToast } from '@/hooks/useToast';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Edit2, Save, X } from 'lucide-react';
+import { ArrowLeft, Camera, Edit2, Loader2, X } from 'lucide-react';
 import { UserRole } from '@/types/auth';
+import employeeService from '@/services/employeeService';
 import { EmployeeDetails } from '@/components/employee/EmployeeDetails';
+import { EmployeeEmploymentDetails } from '@/components/employee/EmployeeEmploymentDetails';
 import { EmergencyContactForm } from '@/components/employee/EmergencyContactForm';
 import { EmployeeForm } from '@/components/employee/EmployeeForm';
 import { EmployeeAttendanceTab } from '@/components/employee/EmployeeAttendanceTab';
@@ -28,6 +29,8 @@ export const EmployeeDetail: React.FC = () => {
 
   const [isEditMode, setIsEditMode] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   // Check if user can edit employees (HR Manager or Super Admin)
   const canEditEmployee =
@@ -39,6 +42,22 @@ export const EmployeeDetail: React.FC = () => {
       fetchItem(id);
     }
   }, [id, fetchItem]);
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !id) return;
+    setIsUploadingPhoto(true);
+    try {
+      await employeeService.uploadPhoto(id, file);
+      await fetchItem(id);
+      toast({ type: 'success', message: 'Profile photo updated' });
+    } catch (error) {
+      toast({ type: 'error', message: error instanceof Error ? error.message : 'Failed to upload photo' });
+    } finally {
+      setIsUploadingPhoto(false);
+      if (photoInputRef.current) photoInputRef.current.value = '';
+    }
+  };
 
   const handleEditToggle = () => {
     if (isEditMode) {
@@ -149,6 +168,15 @@ export const EmployeeDetail: React.FC = () => {
         )}
       </div>
 
+      {/* Photo upload (hidden input) */}
+      <input
+        ref={photoInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={handlePhotoUpload}
+      />
+
       {/* Edit Mode */}
       {isEditMode ? (
         <EmployeeForm
@@ -170,20 +198,17 @@ export const EmployeeDetail: React.FC = () => {
 
           {/* Personal Tab */}
           <TabsContent value="personal" className="space-y-4">
-            <EmployeeDetails employee={employee} />
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Emergency Contacts</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <EmergencyContactForm employeeId={employee.id} readOnly={!isEditMode} />
-              </CardContent>
-            </Card>
+            <EmployeeDetails
+              employee={employee}
+              onPhotoUpload={canEditEmployee ? () => photoInputRef.current?.click() : undefined}
+              isUploadingPhoto={isUploadingPhoto}
+            />
+            <EmergencyContactForm employeeId={employee.id} readOnly={!isEditMode} />
           </TabsContent>
 
           {/* Employment Tab */}
           <TabsContent value="employment">
-            <EmployeeDetails employee={employee} />
+            <EmployeeEmploymentDetails employee={employee} />
           </TabsContent>
 
           {/* Documents Tab */}

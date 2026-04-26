@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useRecruitmentStore } from '@/store/recruitmentStore';
 import { useAuthStore } from '@/store/authStore';
-import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -79,29 +78,26 @@ const Recruitment: React.FC = () => {
 
   if (!isAuthorized) {
     return (
-      <MainLayout>
-        <div className="flex items-center justify-center min-h-screen">
-          <Card className="w-full max-w-md">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-red-600">
-                <AlertCircle className="h-5 w-5" />
-                Access Denied
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                You do not have permission to access the Recruitment module. Only HR Manager and
-                Super Admin roles can access this section.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </MainLayout>
+      <div className="flex items-center justify-center min-h-screen">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-600">
+              <AlertCircle className="h-5 w-5" />
+              Access Denied
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              You do not have permission to access the Recruitment module. Only HR Manager and
+              Super Admin roles can access this section.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
     );
-  }
+    }
 
-  return (
-    <MainLayout>
+    return (
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -596,8 +592,7 @@ const Recruitment: React.FC = () => {
           </DialogContent>
         </Dialog>
       </div>
-    </MainLayout>
-  );
+    );
 };
 
 export default Recruitment;

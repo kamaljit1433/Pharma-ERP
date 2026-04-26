@@ -21,7 +21,6 @@ export class DocumentController {
    */
   async uploadDocument(req: Request, res: Response): Promise<void> {
     try {
-      const employeeId = (req as any).user?.id;
       const uploadedBy = (req as any).user?.id;
       const userRole = (req as any).user?.role;
 
@@ -34,7 +33,7 @@ export class DocumentController {
         return;
       }
 
-      const { document_type, issue_date, expiry_date } = req.body;
+      const { document_type, document_name, issue_date, expiry_date, employee_id } = req.body;
 
       // Validate required fields
       if (!document_type) {
@@ -45,12 +44,15 @@ export class DocumentController {
         return;
       }
 
+      // HR/Admin can upload for a specific employee; others upload for themselves
+      const employeeId = employee_id || uploadedBy;
+
       const document = await this.documentService.uploadDocument(
         employeeId,
         {
           document_type,
           file: req.file.buffer,
-          file_name: req.file.originalname,
+          file_name: document_name || req.file.originalname,
           mime_type: req.file.mimetype,
           issue_date: issue_date || undefined,
           expiry_date: expiry_date || undefined,
@@ -116,6 +118,62 @@ export class DocumentController {
           success: false,
           message: error.message || 'Failed to fetch document',
         });
+      }
+    }
+  }
+
+  /**
+   * DELETE /api/v1/documents/:id
+   * Soft-delete a document
+   */
+  async deleteDocument(req: Request, res: Response): Promise<void> {
+    try {
+      const id = req.params['id'] as string;
+      const deletedBy = (req as any).user.id as string;
+      const userRole = (req as any).user.role;
+
+      await this.documentService.deleteDocument(id, deletedBy, userRole);
+
+      res.status(200).json({
+        success: true,
+        message: 'Document deleted successfully',
+      });
+    } catch (error: any) {
+      if (error.message.includes('not found')) {
+        res.status(404).json({ success: false, message: error.message });
+      } else if (error.message.includes('permission')) {
+        res.status(403).json({ success: false, message: error.message });
+      } else {
+        res.status(500).json({ success: false, message: error.message || 'Failed to delete document' });
+      }
+    }
+  }
+
+  /**
+   * GET /api/v1/documents/:id/download
+   * Redirect to the document's stored file URL
+   */
+  async downloadDocument(req: Request, res: Response): Promise<void> {
+    try {
+      const id = req.params['id'] as string;
+      const requestedBy = (req as any).user.id as string;
+      const userRole = (req as any).user.role;
+
+      const doc = await this.documentService.getDocument(id, requestedBy, userRole);
+
+      if (!doc.file_url) {
+        res.status(404).json({ success: false, message: 'File not found for this document' });
+        return;
+      }
+
+      res.redirect(doc.file_url);
+    } catch (error: any) {
+      if (error.message.includes('not found')) {
+        res.status(404).json({ success: false, message: error.message });
+      } else if (error.message.includes('permission')) {
+        res.status(403).json({ success: false, message: error.message });
+      } else {
+        res.status(500).json({ success: false, message: error.message || 'Failed to download document' });
       }
     }
   }

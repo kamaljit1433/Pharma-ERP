@@ -87,13 +87,13 @@ export class TrainingService {
     }
 
     // Check max participants
-    const program = await this.trainingProgramRepository.getTrainingProgramById(data.training_program_id);
+    const program = await this.trainingProgramRepository.getTrainingProgramById(data.training_program_id!);
     if (!program) {
       throw new Error('Training program not found');
     }
 
     if (program.max_participants) {
-      const allEnrollments = await this.trainingEnrollmentRepository.getProgramEnrollments(data.training_program_id);
+      const allEnrollments = await this.trainingEnrollmentRepository.getProgramEnrollments(data.training_program_id!);
       const activeEnrollmentsCount = allEnrollments.filter(e => e.status !== 'cancelled').length;
       if (activeEnrollmentsCount >= program.max_participants) {
         throw new Error('Training program has reached maximum participants');
@@ -128,7 +128,7 @@ export class TrainingService {
     });
 
     // Auto-update skills on training completion
-    await this.autoUpdateSkillsOnCompletion(enrollment.employee_id, enrollment.training_program_id);
+    await this.autoUpdateSkillsOnCompletion(enrollment.employee_id, enrollment.training_program_id!);
 
     return updated;
   }

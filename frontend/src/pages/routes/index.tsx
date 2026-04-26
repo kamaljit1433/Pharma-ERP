@@ -8,6 +8,13 @@ import { Attendance } from '../Attendance';
 import Leave from '../Leave';
 import Payroll from '../Payroll';
 import Recruitment from '../Recruitment';
+import EmployeeCreate from '../EmployeeCreate';
+import Performance from '../Performance';
+import Training from '../Training';
+import Benefits from '../Benefits';
+import Separation from '../Separation';
+import Organization from '../Organization';
+import Settings from '../Settings';
 import ProtectedRoute from '../../routes/ProtectedRoute';
 import { UserRole } from '../../types/auth';
 
@@ -39,6 +46,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <Employees />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'employees/new',
+        element: (
+          <ProtectedRoute>
+            <EmployeeCreate />
           </ProtectedRoute>
         ),
       },
@@ -79,6 +94,54 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute requiredRoles={[UserRole.HR_MANAGER, UserRole.SUPER_ADMIN]}>
             <Recruitment />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'performance',
+        element: (
+          <ProtectedRoute>
+            <Performance />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'training',
+        element: (
+          <ProtectedRoute>
+            <Training />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'benefits',
+        element: (
+          <ProtectedRoute>
+            <Benefits />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'separation',
+        element: (
+          <ProtectedRoute>
+            <Separation />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'hierarchy',
+        element: (
+          <ProtectedRoute>
+            <Organization />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'settings',
+        element: (
+          <ProtectedRoute>
+            <Settings />
           </ProtectedRoute>
         ),
       },

@@ -14,7 +14,12 @@ module.exports = {
     '/__tests__/utils/index\\.ts',
   ],
   transform: {
-    '^.+\\.ts$': 'ts-jest',
+    '^.+\\.ts$': ['ts-jest', {
+      tsconfig: {
+        esModuleInterop: true,
+        allowSyntheticDefaultImports: true,
+      },
+    }],
   },
   collectCoverageFrom: [
     'src/**/*.ts',
@@ -34,13 +39,4 @@ module.exports = {
   },
   testTimeout: 30000,
   verbose: true,
-  // Test database configuration
-  globals: {
-    'ts-jest': {
-      tsconfig: {
-        esModuleInterop: true,
-        allowSyntheticDefaultImports: true,
-      },
-    },
-  },
 };

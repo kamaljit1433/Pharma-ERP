@@ -19,12 +19,12 @@ export const recruitmentService = {
 
   getJobPostings: async (filters?: { department_id?: string; status?: string; search?: string }) => {
     const response = await apiClient.get('/recruitment/jobs', { params: filters });
-    return response.data;
+    return response.data.data || [];
   },
 
   getJobPosting: async (id: string) => {
     const response = await apiClient.get(`/recruitment/jobs/${id}`);
-    return response.data;
+    return response.data.data;
   },
 
   // Applicants
@@ -35,7 +35,7 @@ export const recruitmentService = {
 
   getApplicants: async (filters?: { job_posting_id?: string; stage?: string; search?: string }) => {
     const response = await apiClient.get('/recruitment/applicants', { params: filters });
-    return response.data;
+    return response.data.data || [];
   },
 
   moveApplicantStage: async (applicantId: string, stage: string) => {
@@ -51,12 +51,12 @@ export const recruitmentService = {
 
   getInterviews: async (filters?: { applicant_id?: string; status?: string }) => {
     const response = await apiClient.get('/recruitment/interviews', { params: filters });
-    return response.data;
+    return response.data.data || [];
   },
 
   getInterview: async (id: string) => {
     const response = await apiClient.get(`/recruitment/interviews/${id}`);
-    return response.data;
+    return response.data.data;
   },
 
   cancelInterview: async (interviewId: string) => {
@@ -71,7 +71,7 @@ export const recruitmentService = {
 
   getInterviewFeedback: async (interviewId: string) => {
     const response = await apiClient.get(`/recruitment/interviews/${interviewId}/feedback`);
-    return response.data;
+    return response.data.data;
   },
 
   // Offer Letters
@@ -103,7 +103,7 @@ export const recruitmentService = {
 
   getOnboardingChecklist: async (employeeId: string) => {
     const response = await apiClient.get(`/recruitment/onboarding/${employeeId}`);
-    return response.data;
+    return response.data.data;
   },
 
   // Candidate Communication
@@ -114,7 +114,7 @@ export const recruitmentService = {
 
   getCommunicationHistory: async (applicantId: string) => {
     const response = await apiClient.get(`/recruitment/communications/${applicantId}`);
-    return response.data;
+    return response.data.data || [];
   },
 
   markCommunicationAsRead: async (communicationId: string) => {

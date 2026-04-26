@@ -87,7 +87,7 @@ export class LeaveController {
           type as 'national' | 'regional' | 'company'
         );
       } else {
-        holidays = await this.knex('company_holidays').orderBy('holiday_date');
+        holidays = await this.holidayService.getHolidaysByYear(new Date().getFullYear());
       }
 
       res.json(holidays);
@@ -120,6 +120,40 @@ export class LeaveController {
   async deleteHoliday(req: Request, res: Response, next: NextFunction) {
     try {
       await this.holidayService.deleteHoliday(req.params['id'] as string);
+      res.status(204).send();
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  async getLeaves(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { status, employeeId, fromDate, toDate } = req.query;
+      const leaves = await this.leaveService.getLeaves({
+        status: status as string | undefined,
+        employeeId: employeeId as string | undefined,
+        fromDate: fromDate as string | undefined,
+        toDate: toDate as string | undefined,
+      });
+      res.json(leaves);
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  async getPendingLeaves(req: Request, res: Response, next: NextFunction) {
+    try {
+      const managerId = (req as any).user?.id;
+      const leaves = await this.leaveService.getPendingLeaves(managerId);
+      res.json(leaves);
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  async cancelLeave(req: Request, res: Response, next: NextFunction) {
+    try {
+      await this.leaveService.cancelLeave(req.params['id'] as string);
       res.status(204).send();
     } catch (error) {
       return next(error);

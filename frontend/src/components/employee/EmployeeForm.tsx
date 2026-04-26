@@ -62,10 +62,11 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
     employment_type: initialData?.employment_type || 'permanent',
   });
 
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  interface FormErrors { first_name?: string; last_name?: string; email?: string; date_of_joining?: string; }
+  const [errors, setErrors] = useState<FormErrors>({});
 
   const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
+    const newErrors: FormErrors = {};
 
     if (!formData.first_name.trim()) {
       newErrors.first_name = 'First name is required';
@@ -94,21 +95,37 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
       ...prev,
       [name]: value,
     }));
-    // Clear error for this field
-    if (errors[name]) {
+    // Clear error for this field if it's a validated field
+    const errorKey = name as keyof FormErrors;
+    if (errors[errorKey]) {
       setErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors[name];
-        return newErrors;
+        const next = { ...prev };
+        delete next[errorKey];
+        return next;
       });
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateForm()) {
-      await onSubmit(formData);
+    if (!validateForm()) return;
+
+    // Convert empty strings to undefined for optional UUID and nullable fields
+    const uuidFields = ['department_id', 'designation_id', 'reporting_manager_id'] as const;
+    const optionalStringFields = [
+      'phone', 'personal_email', 'date_of_birth', 'address',
+      'city', 'state', 'postal_code', 'country', 'pan', 'aadhar',
+    ] as const;
+
+    const sanitized: any = { ...formData };
+    for (const field of uuidFields) {
+      if (!sanitized[field]) sanitized[field] = undefined;
     }
+    for (const field of optionalStringFields) {
+      if (!sanitized[field]) sanitized[field] = undefined;
+    }
+
+    await onSubmit(sanitized);
   };
 
   return (

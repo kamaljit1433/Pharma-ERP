@@ -184,7 +184,7 @@ export class SeparationService {
       });
     }
 
-    return resignation;
+    return resignation as any;
   }
 
   /**
@@ -1292,35 +1292,35 @@ export class SeparationService {
    * Get resignation by ID
    */
   async getResignation(id: string): Promise<Resignation | null> {
-    return this.resignationRepository.getResignationById(id);
+    return this.resignationRepository.getResignationById(id) as any;
   }
 
   /**
    * Get resignation by employee ID
    */
   async getResignationByEmployeeId(employeeId: string): Promise<Resignation | null> {
-    return this.resignationRepository.getResignationByEmployeeId(employeeId);
+    return this.resignationRepository.getResignationByEmployeeId(employeeId) as any;
   }
 
   /**
    * Accept resignation
    */
   async acceptResignation(resignationId: string, acceptedBy: string): Promise<Resignation> {
-    return this.resignationRepository.acceptResignation(resignationId, acceptedBy);
+    return this.resignationRepository.acceptResignation(resignationId, acceptedBy) as any;
   }
 
   /**
    * Reject resignation
    */
   async rejectResignation(resignationId: string): Promise<Resignation> {
-    return this.resignationRepository.rejectResignation(resignationId);
+    return this.resignationRepository.rejectResignation(resignationId) as any;
   }
 
   /**
    * Withdraw resignation
    */
   async withdrawResignation(resignationId: string): Promise<Resignation> {
-    return this.resignationRepository.withdrawResignation(resignationId);
+    return this.resignationRepository.withdrawResignation(resignationId) as any;
   }
 
   /**

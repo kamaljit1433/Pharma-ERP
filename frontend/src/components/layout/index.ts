@@ -7,4 +7,5 @@ export { NotificationDropdown } from './NotificationDropdown';
 export { ThemeToggle } from './ThemeToggle';
 export { UserMenu } from './UserMenu';
 export { SearchBar } from './SearchBar';
+export { SkipNavigation } from './SkipNavigation';
 export { default } from './MainLayout';

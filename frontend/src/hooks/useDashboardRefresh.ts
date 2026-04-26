@@ -22,7 +22,8 @@ export function useDashboardRefresh() {
         clearInterval(intervalRef.current);
       }
     };
-  }, [autoRefreshEnabled, refreshInterval, fetchStats]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoRefreshEnabled, refreshInterval]);
 
   return { fetchStats };
 }

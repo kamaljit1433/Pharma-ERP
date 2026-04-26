@@ -63,8 +63,8 @@ describe('OnboardingService', () => {
       const checklistData = {
         employee_id: employeeId,
         items: [
-          { title: 'IT Setup', description: 'Laptop and email setup' },
-          { title: 'Office Access', description: 'Access card issuance' },
+          { task: 'IT Setup', completed: false },
+          { task: 'Office Access', completed: false },
         ],
       };
 
@@ -78,7 +78,7 @@ describe('OnboardingService', () => {
     it('should throw error for non-existent employee', async () => {
       const checklistData = {
         employee_id: 'non-existent-id',
-        items: [{ title: 'IT Setup', description: 'Laptop setup' }],
+        items: [{ task: 'IT Setup', completed: false }],
       };
 
       await expect(service.createOnboardingChecklist(checklistData)).rejects.toThrow(
@@ -89,7 +89,7 @@ describe('OnboardingService', () => {
     it('should send welcome email after creating checklist', async () => {
       const checklistData = {
         employee_id: employeeId,
-        items: [{ title: 'IT Setup', description: 'Laptop setup' }],
+        items: [{ task: 'IT Setup', completed: false }],
       };
 
       // Should not throw even if email fails
@@ -355,8 +355,8 @@ describe('OnboardingService', () => {
       const checklistData = {
         employee_id: employeeId,
         items: [
-          { title: 'IT Setup', description: 'Laptop setup' },
-          { title: 'Office Access', description: 'Access card' },
+          { task: 'IT Setup', completed: false },
+          { task: 'Office Access', completed: false },
         ],
       };
 

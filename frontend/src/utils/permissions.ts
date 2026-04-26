@@ -5,7 +5,23 @@
 
 import { UserRole } from '@/types/auth';
 
-export interface Permission {
+/** Named permission constants used for route/navigation guards */
+export enum Permission {
+  VIEW_EMPLOYEES = 'employees:read',
+  VIEW_ATTENDANCE = 'attendance:read',
+  VIEW_LEAVE = 'leave:read',
+  VIEW_PAYROLL = 'payroll:read',
+  VIEW_RECRUITMENT = 'recruitment:read',
+  VIEW_PERFORMANCE = 'performance:read',
+  VIEW_TRAINING = 'training:read',
+  VIEW_BENEFITS = 'benefits:read',
+  VIEW_SEPARATION = 'separation:read',
+  VIEW_SETTINGS = 'settings:read',
+  VIEW_USERS = 'users:read',
+}
+
+/** Low-level permission shape used in role mappings */
+export interface PermissionDef {
   resource: string;
   action: 'create' | 'read' | 'update' | 'delete';
 }
@@ -14,7 +30,7 @@ export interface Permission {
  * Role-to-permissions mapping
  * Defines what each role can do
  */
-const rolePermissions: Record<UserRole, Permission[]> = {
+const rolePermissions: Record<UserRole, PermissionDef[]> = {
   [UserRole.SUPER_ADMIN]: [
     // Super Admin has all permissions
     { resource: '*', action: 'create' },
@@ -94,27 +110,47 @@ const rolePermissions: Record<UserRole, Permission[]> = {
 /**
  * Check if a user role has a specific permission
  */
-export const hasPermission = (
+/**
+ * Check if a user role has a specific permission.
+ * Accepts either (role, resource, action) or (role, Permission) overloads.
+ */
+export function hasPermission(role: UserRole, resource: string, action: 'create' | 'read' | 'update' | 'delete'): boolean;
+export function hasPermission(role: UserRole, permission: Permission): boolean;
+export function hasPermission(
   role: UserRole,
-  resource: string,
-  action: 'create' | 'read' | 'update' | 'delete'
-): boolean => {
+  resourceOrPermission: string | Permission,
+  action?: 'create' | 'read' | 'update' | 'delete'
+): boolean {
   const permissions = rolePermissions[role];
   if (!permissions) return false;
+
+  let resource: string;
+  let act: 'create' | 'read' | 'update' | 'delete';
+
+  if (action !== undefined) {
+    // Called as hasPermission(role, resource, action)
+    resource = resourceOrPermission as string;
+    act = action;
+  } else {
+    // Called as hasPermission(role, Permission.VIEW_X)
+    const [res, a] = (resourceOrPermission as string).split(':');
+    resource = res!;
+    act = a! as 'create' | 'read' | 'update' | 'delete';
+  }
 
   return permissions.some(
     (p) =>
       (p.resource === '*' || p.resource === resource) &&
-      (p.action === action)
+      p.action === act
   );
-};
+}
 
 /**
  * Check if a user role has any of the specified permissions
  */
 export const hasAnyPermission = (
   role: UserRole,
-  permissions: Permission[]
+  permissions: PermissionDef[]
 ): boolean => {
   return permissions.some((p) => hasPermission(role, p.resource, p.action));
 };
@@ -124,7 +160,7 @@ export const hasAnyPermission = (
  */
 export const hasAllPermissions = (
   role: UserRole,
-  permissions: Permission[]
+  permissions: PermissionDef[]
 ): boolean => {
   return permissions.every((p) => hasPermission(role, p.resource, p.action));
 };
@@ -132,7 +168,7 @@ export const hasAllPermissions = (
 /**
  * Get all permissions for a role
  */
-export const getRolePermissions = (role: UserRole): Permission[] => {
+export const getRolePermissions = (role: UserRole): PermissionDef[] => {
   return rolePermissions[role] || [];
 };
 

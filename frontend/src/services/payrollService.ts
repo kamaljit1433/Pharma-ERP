@@ -34,6 +34,11 @@ export const payrollService = {
   },
 
   // Payslips
+  getPayslips: async (filters?: { employee_id?: string; month?: number; year?: number }) => {
+    const response = await apiClient.get('/payroll/payslips', { params: filters });
+    return response.data;
+  },
+
   getPayslip: async (payslipId: string) => {
     const response = await apiClient.get(`/payroll/payslip/${payslipId}`);
     return response.data;

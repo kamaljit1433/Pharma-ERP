@@ -133,6 +133,162 @@ export class PayrollController {
     }
   }
 
+  async getPayslips(req: Request, res: Response): Promise<void> {
+    try {
+      const { employee_id, month, year } = req.query;
+      let payslips;
+      if (employee_id) {
+        payslips = await this.payslipService.getPayslipsByEmployee(employee_id as string);
+      } else if (month && year) {
+        payslips = await this.payslipService.getPayslipsByMonth(
+          parseInt(month as string),
+          parseInt(year as string)
+        );
+      } else {
+        payslips = await this.knex('payslips')
+          .leftJoin('employees', 'payslips.employee_id', 'employees.id')
+          .select(
+            'payslips.*',
+            this.knex.raw("CONCAT(employees.first_name, ' ', employees.last_name) as employee_name")
+          )
+          .orderBy('payslips.year', 'desc')
+          .orderBy('payslips.month', 'desc')
+          .limit(50);
+      }
+      res.status(200).json({ success: true, data: payslips });
+    } catch (error) {
+      res.status(httpStatusFor(error)).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'An unexpected error occurred',
+      });
+    }
+  }
+
+  async generatePayslip(req: Request, res: Response): Promise<void> {
+    try {
+      const { employee_id, month, year } = req.body;
+      if (!employee_id || !month || !year) {
+        res.status(400).json({ success: false, error: 'employee_id, month, and year are required' });
+        return;
+      }
+
+      // Resolve employee UUID if string ID provided
+      let employeeUUID = employee_id;
+      if (!employee_id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+        const emp = await this.knex('employees').where('employee_id', employee_id).first();
+        if (!emp) {
+          res.status(404).json({ success: false, error: `Employee not found: ${employee_id}` });
+          return;
+        }
+        employeeUUID = emp.id;
+      }
+
+      // Find the payroll record for this employee/month/year
+      const payroll = await this.knex('payroll')
+        .where({ employee_id: employeeUUID, month: parseInt(month), year: parseInt(year) })
+        .first();
+
+      if (!payroll) {
+        res.status(404).json({
+          success: false,
+          error: `No payroll record found for month ${month}/${year}. Process payroll first.`,
+        });
+        return;
+      }
+
+      const payslip = await this.payslipService.generatePayslip(
+        payroll.id,
+        employeeUUID,
+        parseInt(month),
+        parseInt(year)
+      );
+
+      res.status(201).json({ success: true, data: payslip });
+    } catch (error) {
+      res.status(httpStatusFor(error)).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'An unexpected error occurred',
+      });
+    }
+  }
+
+  async downloadPayslip(req: Request, res: Response): Promise<void> {
+    try {
+      const id = req.params['id'] as string;
+      const payslip = await this.payslipService.getPayslip(id);
+
+      if (!payslip) {
+        res.status(404).json({ success: false, error: 'Payslip not found' });
+        return;
+      }
+
+      const employee = await this.knex('employees').where({ id: payslip.employee_id }).first();
+      const employeeName = employee
+        ? `${employee.first_name} ${employee.last_name}`
+        : payslip.employee_id;
+
+      // Generate plain-text payslip
+      const monthName = new Date(payslip.year, payslip.month - 1).toLocaleString('en-US', {
+        month: 'long',
+        year: 'numeric',
+      });
+
+      const lines: string[] = [
+        '========================================',
+        '               PAYSLIP',
+        '========================================',
+        `Employee : ${employeeName}`,
+        `Payslip# : ${payslip.payslip_number}`,
+        `Period   : ${monthName}`,
+        '----------------------------------------',
+        'EARNINGS',
+        '----------------------------------------',
+      ];
+
+      const earnings = (payslip as any).earnings as Record<string, number> | undefined;
+      if (earnings && Object.keys(earnings).length > 0) {
+        for (const [key, val] of Object.entries(earnings)) {
+          lines.push(`  ${key.padEnd(30)} ${String(val.toFixed(2)).padStart(10)}`);
+        }
+      } else {
+        lines.push(`  Gross Salary                   ${String(payslip.gross_salary.toFixed(2)).padStart(10)}`);
+      }
+
+      lines.push('----------------------------------------');
+      lines.push('DEDUCTIONS');
+      lines.push('----------------------------------------');
+
+      const deductions = (payslip as any).deductions as Record<string, number> | undefined;
+      if (deductions && Object.keys(deductions).length > 0) {
+        for (const [key, val] of Object.entries(deductions)) {
+          lines.push(`  ${key.padEnd(30)} ${String(val.toFixed(2)).padStart(10)}`);
+        }
+      } else {
+        const totalDeductions = payslip.gross_salary - payslip.net_salary;
+        lines.push(`  Total Deductions               ${String(totalDeductions.toFixed(2)).padStart(10)}`);
+      }
+
+      lines.push('========================================');
+      lines.push(`  NET SALARY                     ${String(payslip.net_salary.toFixed(2)).padStart(10)}`);
+      lines.push('========================================');
+      lines.push(`Generated: ${new Date().toLocaleDateString('en-IN')}`);
+
+      const content = lines.join('\n');
+
+      res.setHeader('Content-Type', 'text/plain');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="payslip-${payslip.payslip_number}.txt"`
+      );
+      res.send(content);
+    } catch (error) {
+      res.status(httpStatusFor(error)).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'An unexpected error occurred',
+      });
+    }
+  }
+
   async getPayslip(req: Request, res: Response): Promise<void> {
     try {
       const id = req.params['id'] as string;

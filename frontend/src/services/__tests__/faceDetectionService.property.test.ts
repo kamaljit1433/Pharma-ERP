@@ -236,7 +236,7 @@ describe('Face Detection Service - Property Tests', () => {
           expect(uniqueDeviceIds.size).toBe(1);
 
           // Verify device ID format
-          const deviceId = results[0].deviceId;
+          const deviceId = results[0]!.deviceId;
           expect(typeof deviceId).toBe('string');
           expect(deviceId).toMatch(/^device-/);
         }
@@ -275,8 +275,8 @@ describe('Face Detection Service - Property Tests', () => {
 
           // Verify timestamps are monotonically increasing
           for (let i = 1; i < results.length; i++) {
-            expect(results[i].timestamp.getTime()).toBeGreaterThanOrEqual(
-              results[i - 1].timestamp.getTime()
+            expect(results[i]!.timestamp.getTime()).toBeGreaterThanOrEqual(
+              results[i - 1]!.timestamp.getTime()
             );
           }
         }

@@ -36,7 +36,7 @@ export class OnboardingService {
       {
         employeeName: employee.first_name,
         startDate: employee.date_of_joining || new Date().toISOString().split('T')[0] || '2024-01-01',
-        checklistItems: data.items.map(item => item.title),
+        checklistItems: data.items.map(item => item.task),
         hrContactName: 'HR Team',
         hrContactEmail: 'hr@company.com',
       }
@@ -138,7 +138,7 @@ export class OnboardingService {
 
     return this.createOnboardingChecklist({
       employee_id: employeeId,
-      items: defaultItems,
+      items: defaultItems.map(item => ({ task: item.title, completed: false })),
     });
   }
 }

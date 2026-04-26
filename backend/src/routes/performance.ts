@@ -1,8 +1,9 @@
-﻿import { Router, Request, Response } from 'express';
+import { Router, Request, Response } from 'express';
 import { Knex } from 'knex';
 import { PerformanceController } from '../controllers/performanceController';
 import { authenticateToken } from '../middleware/auth';
 import { authorize } from '../middleware/authorize';
+import { UserRole } from '../types/auth';
 
 export function createPerformanceRoutes(knex: Knex): Router {
   const router = Router();
@@ -14,7 +15,7 @@ export function createPerformanceRoutes(knex: Knex): Router {
   // ============ Goals ============
 
   // Create goal (HR Manager, Super Admin)
-  router.post('/goals', authorize(['Super Admin', 'HR Manager']) as any, (req: Request, res: Response) =>
+  router.post('/goals', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER]) as any, (req: Request, res: Response) =>
     controller.createGoal(req, res, () => {})
   );
 
@@ -29,21 +30,21 @@ export function createPerformanceRoutes(knex: Knex): Router {
   );
 
   // Update goal progress (Employee, Manager, HR Manager)
-  router.put('/goals/:id/progress', authorize(['Super Admin', 'HR Manager', 'Department Manager', 'Employee']) as any, (req: Request, res: Response) =>
+  router.put('/goals/:id/progress', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER, UserRole.DEPARTMENT_MANAGER, UserRole.EMPLOYEE]) as any, (req: Request, res: Response) =>
     controller.updateGoalProgress(req, res, () => {})
   );
 
   // ============ Review Cycles ============
 
   // Create review cycle (HR Manager, Super Admin)
-  router.post('/review-cycles', authorize(['Super Admin', 'HR Manager']) as any, (req: Request, res: Response) =>
+  router.post('/review-cycles', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER]) as any, (req: Request, res: Response) =>
     controller.createReviewCycle(req, res, () => {})
   );
 
   // ============ Performance Reviews ============
 
   // Submit review (Employee, Manager, Peer)
-  router.post('/reviews', authorize(['Super Admin', 'HR Manager', 'Department Manager', 'Employee']) as any, (req: Request, res: Response) =>
+  router.post('/reviews', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER, UserRole.DEPARTMENT_MANAGER, UserRole.EMPLOYEE]) as any, (req: Request, res: Response) =>
     controller.submitReview(req, res, () => {})
   );
 
@@ -72,7 +73,7 @@ export function createPerformanceRoutes(knex: Knex): Router {
   // ============ PIP ============
 
   // Initiate PIP (HR Manager, Department Manager, Super Admin)
-  router.post('/pip', authorize(['Super Admin', 'HR Manager', 'Department Manager']) as any, (req: Request, res: Response) =>
+  router.post('/pip', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER, UserRole.DEPARTMENT_MANAGER]) as any, (req: Request, res: Response) =>
     controller.initiatePIP(req, res, () => {})
   );
 
@@ -87,19 +88,19 @@ export function createPerformanceRoutes(knex: Knex): Router {
   );
 
   // Record PIP check-in (HR Manager, Department Manager, Super Admin)
-  router.put('/pip/:id/check-in', authorize(['Super Admin', 'HR Manager', 'Department Manager']) as any, (req: Request, res: Response) =>
+  router.put('/pip/:id/check-in', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER, UserRole.DEPARTMENT_MANAGER]) as any, (req: Request, res: Response) =>
     controller.recordPIPCheckIn(req, res, () => {})
   );
 
   // Record PIP outcome (HR Manager, Super Admin)
-  router.put('/pip/:id/outcome', authorize(['Super Admin', 'HR Manager']) as any, (req: Request, res: Response) =>
+  router.put('/pip/:id/outcome', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER]) as any, (req: Request, res: Response) =>
     controller.recordPIPOutcome(req, res, () => {})
   );
 
   // ============ Reports ============
 
   // Generate performance reports (HR Manager, Department Manager, Super Admin)
-  router.get('/reports', authorize(['Super Admin', 'HR Manager', 'Department Manager']) as any, (req: Request, res: Response) =>
+  router.get('/reports', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER, UserRole.DEPARTMENT_MANAGER]) as any, (req: Request, res: Response) =>
     controller.generatePerformanceReports(req, res, () => {})
   );
 

@@ -32,6 +32,7 @@ describe('SupplierBuyerService', () => {
 
   const mockVisit: Visit = {
     id: mockVisitId,
+    record_id: mockSupplierBuyerId,
     supplier_buyer_id: mockSupplierBuyerId,
     employee_id: mockEmployeeId,
     visit_date: new Date().toISOString(),
@@ -236,6 +237,7 @@ describe('SupplierBuyerService', () => {
   describe('logVisit', () => {
     it('should log a visit with GPS coordinates', async () => {
       const visitData: CreateVisitDTO = {
+        record_id: mockSupplierBuyerId,
         visit_date: new Date().toISOString(),
         latitude: 40.7128,
         longitude: -74.006,
@@ -256,7 +258,7 @@ describe('SupplierBuyerService', () => {
       supplierBuyerRepository.getSupplierBuyerById.mockResolvedValue(null);
 
       await expect(
-        service.logVisit(mockSupplierBuyerId, mockEmployeeId, { visit_date: new Date().toISOString() })
+        service.logVisit(mockSupplierBuyerId, mockEmployeeId, { record_id: mockSupplierBuyerId, visit_date: new Date().toISOString() })
       ).rejects.toThrow(`Supplier/Buyer with ID ${mockSupplierBuyerId} not found`);
     });
 
@@ -265,14 +267,14 @@ describe('SupplierBuyerService', () => {
       supplierBuyerRepository.getSupplierBuyerById.mockResolvedValue(mockSupplierBuyer);
 
       await expect(
-        service.logVisit(mockSupplierBuyerId, differentEmployeeId, { visit_date: new Date().toISOString() })
+        service.logVisit(mockSupplierBuyerId, differentEmployeeId, { record_id: mockSupplierBuyerId, visit_date: new Date().toISOString() })
       ).rejects.toThrow('Unauthorized: Employee can only log visits for their own supplier/buyer records');
     });
 
     it('should throw error if visit date is missing', async () => {
       supplierBuyerRepository.getSupplierBuyerById.mockResolvedValue(mockSupplierBuyer);
 
-      await expect(service.logVisit(mockSupplierBuyerId, mockEmployeeId, { visit_date: '' })).rejects.toThrow(
+      await expect(service.logVisit(mockSupplierBuyerId, mockEmployeeId, { record_id: mockSupplierBuyerId, visit_date: '' })).rejects.toThrow(
         'Visit date is required'
       );
     });

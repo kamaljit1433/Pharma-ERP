@@ -58,9 +58,9 @@ export const useRecruitmentStore = create<RecruitmentState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const jobs = await recruitmentService.getJobPostings(filters);
-      set({ jobs, loading: false });
+      set({ jobs: Array.isArray(jobs) ? jobs : [], loading: false });
     } catch (error) {
-      set({ error: (error as Error).message, loading: false });
+      set({ error: (error as Error).message, loading: false, jobs: [] });
     }
   },
 
@@ -89,9 +89,9 @@ export const useRecruitmentStore = create<RecruitmentState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const candidates = await recruitmentService.getApplicants(filters);
-      set({ candidates, loading: false });
+      set({ candidates: Array.isArray(candidates) ? candidates : [], loading: false });
     } catch (error) {
-      set({ error: (error as Error).message, loading: false });
+      set({ error: (error as Error).message, loading: false, candidates: [] });
     }
   },
 
@@ -137,9 +137,9 @@ export const useRecruitmentStore = create<RecruitmentState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const interviews = await recruitmentService.getInterviews(filters);
-      set({ interviews, loading: false });
+      set({ interviews: Array.isArray(interviews) ? interviews : [], loading: false });
     } catch (error) {
-      set({ error: (error as Error).message, loading: false });
+      set({ error: (error as Error).message, loading: false, interviews: [] });
     }
   },
 

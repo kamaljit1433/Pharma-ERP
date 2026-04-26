@@ -38,6 +38,7 @@ describe('TrainingService - Comprehensive Tests', () => {
         {
           id: 'enroll-1',
           employee_id: 'emp-1',
+          program_id: trainingProgramId,
           training_program_id: trainingProgramId,
           status: 'enrolled',
           enrollment_date: new Date(),
@@ -47,6 +48,7 @@ describe('TrainingService - Comprehensive Tests', () => {
         {
           id: 'enroll-2',
           employee_id: 'emp-2',
+          program_id: trainingProgramId,
           training_program_id: trainingProgramId,
           status: 'enrolled',
           enrollment_date: new Date(),
@@ -56,6 +58,7 @@ describe('TrainingService - Comprehensive Tests', () => {
         {
           id: 'enroll-3',
           employee_id: 'emp-3',
+          program_id: trainingProgramId,
           training_program_id: trainingProgramId,
           status: 'enrolled',
           enrollment_date: new Date(),
@@ -80,6 +83,7 @@ describe('TrainingService - Comprehensive Tests', () => {
         {
           id: 'enroll-1',
           employee_id: 'emp-1',
+          program_id: trainingProgramId,
           training_program_id: trainingProgramId,
           status: 'enrolled',
           enrollment_date: new Date(),
@@ -89,6 +93,7 @@ describe('TrainingService - Comprehensive Tests', () => {
         {
           id: 'enroll-3',
           employee_id: 'emp-3',
+          program_id: trainingProgramId,
           training_program_id: trainingProgramId,
           status: 'enrolled',
           enrollment_date: new Date(),
@@ -108,6 +113,7 @@ describe('TrainingService - Comprehensive Tests', () => {
       const mockEnrollment: TrainingEnrollment = {
         id: 'enroll-1',
         employee_id: 'emp-1',
+        program_id: 'prog-1',
         training_program_id: 'prog-1',
         status: 'enrolled',
         enrollment_date: new Date(),
@@ -324,6 +330,7 @@ describe('TrainingService - Comprehensive Tests', () => {
       const mockEnrollment: TrainingEnrollment = {
         id: 'enroll-1',
         employee_id: 'emp-1',
+        program_id: 'prog-1',
         training_program_id: 'prog-1',
         status: 'completed',
         enrollment_date: new Date(),

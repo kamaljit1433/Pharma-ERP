@@ -1,7 +1,8 @@
-﻿import { Router } from 'express';
+import { Router } from 'express';
 import { NotificationController } from '../controllers/notificationController';
 import { authenticateToken } from '../middleware/auth';
 import { authorize } from '../middleware/authorize';
+import { UserRole } from '../types/auth';
 import { Knex } from 'knex';
 
 export function createNotificationRoutes(knex: Knex): Router {
@@ -30,7 +31,7 @@ export function createNotificationRoutes(knex: Knex): Router {
   router.post(
     '/templates',
     authenticateToken as any,
-    authorize(['Super Admin', 'HR Manager']) as any,
+    authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER]) as any,
     (req, res, next) => notificationController.createTemplate(req as any, res, next)
   );
 
@@ -38,7 +39,7 @@ export function createNotificationRoutes(knex: Knex): Router {
   router.get(
     '/templates',
     authenticateToken as any,
-    authorize(['Super Admin', 'HR Manager']) as any,
+    authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER]) as any,
     (req, res, next) => notificationController.getTemplates(req as any, res, next)
   );
 
@@ -46,7 +47,7 @@ export function createNotificationRoutes(knex: Knex): Router {
   router.get(
     '/templates/:id',
     authenticateToken as any,
-    authorize(['Super Admin', 'HR Manager']) as any,
+    authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER]) as any,
     (req, res, next) => notificationController.getTemplate(req as any, res, next)
   );
 
@@ -54,7 +55,7 @@ export function createNotificationRoutes(knex: Knex): Router {
   router.put(
     '/templates/:id',
     authenticateToken as any,
-    authorize(['Super Admin', 'HR Manager']) as any,
+    authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER]) as any,
     (req, res, next) => notificationController.updateTemplate(req as any, res, next)
   );
 
@@ -62,7 +63,7 @@ export function createNotificationRoutes(knex: Knex): Router {
   router.delete(
     '/templates/:id',
     authenticateToken as any,
-    authorize(['Super Admin', 'HR Manager']) as any,
+    authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER]) as any,
     (req, res, next) => notificationController.deleteTemplate(req as any, res, next)
   );
 

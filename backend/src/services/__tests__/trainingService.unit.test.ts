@@ -175,6 +175,7 @@ describe('TrainingService', () => {
       const mockEnrollment: TrainingEnrollment = {
         id: 'enroll-123',
         employee_id: 'emp-1',
+        program_id: 'prog-1',
         training_program_id: 'prog-1',
         status: 'enrolled',
         enrollment_date: new Date('2026-03-15'),
@@ -213,6 +214,7 @@ describe('TrainingService', () => {
         {
           id: 'enroll-1',
           employee_id: 'emp-1',
+          program_id: 'prog-1',
           training_program_id: 'prog-1',
           status: 'completed',
           enrollment_date: new Date('2026-02-01'),
@@ -225,6 +227,7 @@ describe('TrainingService', () => {
         {
           id: 'enroll-2',
           employee_id: 'emp-1',
+          program_id: 'prog-2',
           training_program_id: 'prog-2',
           status: 'enrolled',
           enrollment_date: new Date('2026-03-15'),
@@ -246,6 +249,7 @@ describe('TrainingService', () => {
       const completedEnrollment: TrainingEnrollment = {
         id: 'enroll-1',
         employee_id: 'emp-1',
+        program_id: 'prog-1',
         training_program_id: 'prog-1',
         status: 'completed',
         enrollment_date: new Date('2026-02-01'),
@@ -355,6 +359,7 @@ describe('TrainingService', () => {
         name: 'TypeScript',
         category: 'Programming',
         description: 'TypeScript programming language',
+        proficiency_levels: [],
         created_at: new Date(),
       };
 
@@ -377,6 +382,7 @@ describe('TrainingService', () => {
           name: 'TypeScript',
           category: 'Programming',
           description: 'TypeScript programming language',
+          proficiency_levels: [],
           created_at: new Date(),
         },
         {
@@ -384,6 +390,7 @@ describe('TrainingService', () => {
           name: 'React',
           category: 'Programming',
           description: 'React library',
+          proficiency_levels: [],
           created_at: new Date(),
         },
       ];
@@ -403,6 +410,7 @@ describe('TrainingService', () => {
           name: 'TypeScript',
           category: 'Programming',
           description: 'TypeScript programming language',
+          proficiency_levels: [],
           created_at: new Date(),
         },
       ];

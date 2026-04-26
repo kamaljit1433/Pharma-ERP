@@ -8,7 +8,6 @@ import {
   TableRow,
 } from '../ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import {
   Dialog,
@@ -26,7 +25,7 @@ import { leaveService } from '../../services/leaveService';
 import { CheckCircle2, XCircle, Clock } from 'lucide-react';
 
 export const LeaveApprovalPanel: React.FC = () => {
-  const { leaves, leaveTypes, fetchPendingLeaves, loadingLeaves } = useLeaveStore();
+  const { pendingLeaves, leaveTypes, fetchPendingLeaves, fetchLeaveTypes, loadingLeaves } = useLeaveStore();
   const { addNotification } = useNotificationStore();
   const { toast } = useToast();
   const [rejectionReason, setRejectionReason] = useState<string>('');
@@ -34,13 +33,13 @@ export const LeaveApprovalPanel: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null);
 
-  // Fetch pending leaves on mount
+  // Fetch pending leaves and leave types on mount
   useEffect(() => {
     fetchPendingLeaves();
-  }, [fetchPendingLeaves]);
-
-  // Filter pending leaves
-  const pendingLeaves = leaves.filter((leave) => leave.status === 'pending');
+    if (leaveTypes.length === 0) {
+      fetchLeaveTypes();
+    }
+  }, [fetchPendingLeaves, fetchLeaveTypes, leaveTypes.length]);
 
   const handleApprove = async (leaveId: string) => {
     setIsLoading(true);
@@ -175,7 +174,7 @@ export const LeaveApprovalPanel: React.FC = () => {
                 {pendingLeaves.map((leave) => (
                   <TableRow key={leave.id}>
                     <TableCell className="font-medium">
-                      {leave.employee_id}
+                      {leave.employee_name || leave.employee_id}
                     </TableCell>
                     <TableCell>
                       {getLeaveTypeName(leave.leave_type_id)}

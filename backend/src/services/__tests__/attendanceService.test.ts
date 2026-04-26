@@ -2,278 +2,315 @@
  * Unit Tests for Attendance Service
  */
 
-import { attendanceService, Attendance } from '../attendanceService';
-import { GeoLocation } from '../geoTrackingService';
+import { describe, it, expect, jest, beforeEach } from '@jest/globals';
+
+// Mock knex before importing service
+const mockFnNow = jest.fn(() => new Date());
+
+const buildChain = (resolveValue: any = null) => {
+  const chain: any = {};
+  const ops = ['where', 'whereIn', 'whereBetween', 'select', 'orderBy', 'first', 'insert', 'update', 'returning', 'del'];
+  ops.forEach((op) => {
+    chain[op] = jest.fn().mockImplementation((..._args: any[]) => {
+      if (op === 'first') return Promise.resolve(resolveValue);
+      if (op === 'returning') return Promise.resolve(resolveValue ? [resolveValue] : []);
+      if (op === 'update' || op === 'del') return Promise.resolve(1);
+      return chain;
+    });
+  });
+  return chain;
+};
+
+const mockAttendance = {
+  id: 'att-uuid-1',
+  employee_id: 'emp-123',
+  attendance_date: '2024-01-15',
+  check_in_time: '09:00:00',
+  check_out_time: null,
+  working_hours: null,
+  overtime_minutes: null,
+  status: 'present',
+  check_in_latitude: 40.7128,
+  check_in_longitude: -74.006,
+  check_out_latitude: null,
+  check_out_longitude: null,
+  face_detected: true,
+  shift_id: null,
+  notes: null,
+  created_at: new Date(),
+  updated_at: new Date(),
+};
+
+const mockAttendanceWithCheckout = {
+  ...mockAttendance,
+  check_in_time: '09:00:00',
+  check_out_time: '17:00:00',
+  working_hours: 7,
+  overtime_minutes: 0,
+  check_out_latitude: 40.7128,
+  check_out_longitude: -74.006,
+};
+
+const mockRegRequest = {
+  id: 'req-uuid-1',
+  attendance_id: 'att-uuid-1',
+  employee_id: 'emp-123',
+  reason: 'System error during check-out',
+  status: 'pending',
+  approved_by: null,
+  approval_notes: null,
+  approved_at: null,
+  created_at: new Date(),
+  updated_at: new Date(),
+};
+
+const mockApprovedRequest = {
+  ...mockRegRequest,
+  status: 'approved',
+  approved_by: 'mgr-123',
+  approval_notes: 'Approved',
+  approved_at: new Date(),
+};
+
+let mockDbCalls: Record<string, any> = {};
+
+const mockKnex: any = jest.fn((table: string) => {
+  return mockDbCalls[table] ?? buildChain();
+});
+mockKnex.fn = { now: mockFnNow };
+
+jest.mock('../../config/knex', () => ({
+  getKnexInstance: () => mockKnex,
+  default: mockKnex,
+}));
+
+import { attendanceService } from '../attendanceService';
+
+const mockLocation = {
+  latitude: 40.7128,
+  longitude: -74.006,
+  accuracy: 10,
+  timestamp: new Date(),
+};
 
 describe('AttendanceService', () => {
-  const mockLocation: GeoLocation = {
-    latitude: 40.7128,
-    longitude: -74.006,
-    accuracy: 10,
-    timestamp: new Date(),
-  };
-
-  const employeeId = 'emp-123';
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockDbCalls = {};
+  });
 
   describe('checkIn', () => {
-    it('should create attendance record on successful check-in', async () => {
-      const attendance = await attendanceService.checkIn(
-        employeeId,
-        mockLocation,
-        true
-      );
-
-      expect(attendance).toBeDefined();
-      expect(attendance.employeeId).toBe(employeeId);
-      expect(attendance.faceDetected).toBe(true);
-      expect(attendance.status).toBe('Present');
-      expect(attendance.checkInLocation).toEqual(mockLocation);
-    });
-
     it('should reject check-in without face detection', async () => {
       await expect(
-        attendanceService.checkIn(employeeId, mockLocation, false)
+        attendanceService.checkIn('emp-123', mockLocation, false)
       ).rejects.toThrow('Face detection required for check-in');
     });
 
     it('should reject check-in with invalid GPS location', async () => {
-      const invalidLocation: GeoLocation = {
-        latitude: 200, // Invalid latitude
-        longitude: -74.006,
-        accuracy: 10,
-        timestamp: new Date(),
-      };
-
       await expect(
-        attendanceService.checkIn(employeeId, invalidLocation, true)
+        attendanceService.checkIn('emp-123', { latitude: 200, longitude: -74.006 }, true)
       ).rejects.toThrow('Valid GPS location required for check-in');
     });
 
     it('should reject check-in with missing GPS location', async () => {
       await expect(
-        attendanceService.checkIn(employeeId, null as any, true)
+        attendanceService.checkIn('emp-123', null as any, true)
       ).rejects.toThrow('Valid GPS location required for check-in');
     });
 
-    it('should set check-in time to current time', async () => {
-      const beforeCheckIn = new Date();
-      const attendance = await attendanceService.checkIn(
-        employeeId,
-        mockLocation,
-        true
-      );
-      const afterCheckIn = new Date();
+    it('should create attendance record on successful check-in', async () => {
+      const empChain = buildChain({ id: 'emp-123' });
+      const attChain = buildChain(null); // no existing record today
+      const insertChain = buildChain(mockAttendance);
+      const logChain = buildChain();
 
-      expect(attendance.checkInTime.getTime()).toBeGreaterThanOrEqual(
-        beforeCheckIn.getTime()
-      );
-      expect(attendance.checkInTime.getTime()).toBeLessThanOrEqual(
-        afterCheckIn.getTime()
-      );
+      let callCount = 0;
+      mockKnex.mockImplementation((table: string) => {
+        if (table === 'employees') return empChain;
+        if (table === 'attendance') {
+          callCount++;
+          if (callCount === 1) return attChain;     // where({ employee_id, date }).first()
+          if (callCount === 2) return insertChain;  // insert().returning()
+          return buildChain(mockAttendance);         // where({ id }).first() after insert
+        }
+        if (table === 'face_detection_logs') return logChain;
+        return buildChain();
+      });
+
+      const attendance = await attendanceService.checkIn('emp-123', mockLocation, true);
+      expect(attendance).toBeDefined();
+      expect(attendance.employeeId).toBe('emp-123');
+      expect(attendance.faceDetected).toBe(true);
+      expect(attendance.status).toBe('present');
+      expect(attendance.checkInLatitude).toBe(40.7128);
+    });
+
+    it('should throw when employee not found', async () => {
+      mockKnex.mockImplementation((table: string) => {
+        if (table === 'employees') return buildChain(null);
+        return buildChain();
+      });
+
+      await expect(
+        attendanceService.checkIn('nonexistent', mockLocation, true)
+      ).rejects.toThrow('Employee not found: nonexistent');
     });
   });
 
   describe('checkOut', () => {
-    it('should create check-out record', async () => {
-      const attendanceId = 'att-123';
-      const attendance = await attendanceService.checkOut(
-        attendanceId,
-        mockLocation
-      );
+    it('should reject check-out with invalid GPS location', async () => {
+      await expect(
+        attendanceService.checkOut('att-123', { latitude: 200, longitude: -74.006 })
+      ).rejects.toThrow('Valid GPS location required for check-out');
+    });
 
+    it('should throw when attendance record not found', async () => {
+      mockKnex.mockImplementation(() => buildChain(null));
+      await expect(
+        attendanceService.checkOut('att-missing', mockLocation)
+      ).rejects.toThrow('Attendance record not found: att-missing');
+    });
+
+    it('should create check-out record with working hours', async () => {
+      let callCount = 0;
+      mockKnex.mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) return buildChain(mockAttendance);       // first() → existing record
+        if (callCount === 2) return buildChain(1);                     // update()
+        return buildChain(mockAttendanceWithCheckout);                  // first() after update
+      });
+
+      const attendance = await attendanceService.checkOut('att-uuid-1', mockLocation);
       expect(attendance).toBeDefined();
       expect(attendance.checkOutTime).toBeDefined();
-      expect(attendance.checkOutLocation).toEqual(mockLocation);
+      expect(attendance.checkOutLatitude).toBe(40.7128);
+      expect(attendance.workingHours).toBeGreaterThanOrEqual(0);
     });
 
-    it('should calculate working hours on check-out', async () => {
-      const attendanceId = 'att-123';
-      const attendance = await attendanceService.checkOut(
-        attendanceId,
-        mockLocation
+    it('should throw when no check-in exists', async () => {
+      mockKnex.mockImplementation(() =>
+        buildChain({ ...mockAttendance, check_in_time: null })
       );
-
-      expect(attendance.totalHours).toBeDefined();
-      expect(attendance.totalHours).toBeGreaterThan(0);
-    });
-
-    it('should reject check-out with invalid GPS location', async () => {
-      const invalidLocation: GeoLocation = {
-        latitude: 200,
-        longitude: -74.006,
-        accuracy: 10,
-        timestamp: new Date(),
-      };
-
       await expect(
-        attendanceService.checkOut('att-123', invalidLocation)
-      ).rejects.toThrow('Valid GPS location required for check-out');
+        attendanceService.checkOut('att-uuid-1', mockLocation)
+      ).rejects.toThrow('Cannot check out without a check-in record');
     });
   });
 
   describe('calculateWorkingHours', () => {
-    it('should calculate working hours correctly', () => {
-      const checkInTime = new Date('2024-01-15T09:00:00');
-      const checkOutTime = new Date('2024-01-15T18:00:00');
-
-      const attendance: Attendance = {
-        id: 'att-1',
-        employeeId: 'emp-1',
-        date: new Date('2024-01-15'),
-        checkInTime,
-        checkOutTime,
-        mode: 'PWA',
-        status: 'Present',
-        faceDetected: true,
-        regularizationRequested: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      const workingHours = attendanceService.calculateWorkingHours(attendance);
-
-      // 9 hours - 1 hour break = 8 hours
-      expect(workingHours).toBe(8);
+    it('should calculate working hours correctly with Date objects', () => {
+      const checkIn = new Date('2024-01-15T09:00:00');
+      const checkOut = new Date('2024-01-15T18:00:00');
+      const hours = attendanceService.calculateWorkingHours(checkIn, checkOut);
+      expect(hours).toBe(8); // 9h gross - 1h break
     });
 
     it('should return 0 for missing check-out time', () => {
-      const attendance: Attendance = {
-        id: 'att-1',
-        employeeId: 'emp-1',
-        date: new Date('2024-01-15'),
-        checkInTime: new Date('2024-01-15T09:00:00'),
-        mode: 'PWA',
-        status: 'Present',
-        faceDetected: true,
-        regularizationRequested: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      const workingHours = attendanceService.calculateWorkingHours(attendance);
-
-      expect(workingHours).toBe(0);
+      const checkIn = new Date('2024-01-15T09:00:00');
+      const hours = attendanceService.calculateWorkingHours(checkIn, undefined);
+      expect(hours).toBe(0);
     });
 
     it('should handle partial hours', () => {
-      const checkInTime = new Date('2024-01-15T09:00:00');
-      const checkOutTime = new Date('2024-01-15T12:30:00');
+      const checkIn = new Date('2024-01-15T09:00:00');
+      const checkOut = new Date('2024-01-15T12:30:00');
+      const hours = attendanceService.calculateWorkingHours(checkIn, checkOut);
+      expect(hours).toBeCloseTo(2.5, 1); // 3.5h gross - 1h break
+    });
 
-      const attendance: Attendance = {
-        id: 'att-1',
-        employeeId: 'emp-1',
-        date: new Date('2024-01-15'),
-        checkInTime,
-        checkOutTime,
-        mode: 'PWA',
-        status: 'Present',
-        faceDetected: true,
-        regularizationRequested: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      const workingHours = attendanceService.calculateWorkingHours(attendance);
-
-      // 3.5 hours - 1 hour break = 2.5 hours
-      expect(workingHours).toBeCloseTo(2.5, 1);
+    it('should calculate working hours from time strings', () => {
+      const hours = attendanceService.calculateWorkingHours('09:00:00', '18:00:00');
+      expect(hours).toBe(8);
     });
   });
 
   describe('calculateOvertimeHours', () => {
     it('should calculate overtime hours correctly', () => {
-      const checkInTime = new Date('2024-01-15T09:00:00');
-      const checkOutTime = new Date('2024-01-15T20:00:00');
-
-      const attendance: Attendance = {
-        id: 'att-1',
-        employeeId: 'emp-1',
-        date: new Date('2024-01-15'),
-        checkInTime,
-        checkOutTime,
-        totalHours: 10, // 11 hours - 1 hour break
-        mode: 'PWA',
-        status: 'Present',
-        faceDetected: true,
-        regularizationRequested: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      const overtimeHours = attendanceService.calculateOvertimeHours(attendance);
-
-      // 10 hours - 8 hours standard = 2 hours overtime
-      expect(overtimeHours).toBe(2);
+      const overtime = attendanceService.calculateOvertimeHours(10);
+      expect(overtime).toBe(2); // 10h - 8h standard
     });
 
     it('should return 0 for no overtime', () => {
-      const attendance: Attendance = {
-        id: 'att-1',
-        employeeId: 'emp-1',
-        date: new Date('2024-01-15'),
-        checkInTime: new Date('2024-01-15T09:00:00'),
-        checkOutTime: new Date('2024-01-15T18:00:00'),
-        totalHours: 8,
-        mode: 'PWA',
-        status: 'Present',
-        faceDetected: true,
-        regularizationRequested: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      const overtime = attendanceService.calculateOvertimeHours(8);
+      expect(overtime).toBe(0);
+    });
 
-      const overtimeHours = attendanceService.calculateOvertimeHours(attendance);
-
-      expect(overtimeHours).toBe(0);
+    it('should return 0 when below standard hours', () => {
+      const overtime = attendanceService.calculateOvertimeHours(6);
+      expect(overtime).toBe(0);
     });
   });
 
   describe('requestRegularization', () => {
     it('should create regularization request', async () => {
-      const attendanceId = 'att-123';
-      const reason = 'System error during check-out';
+      let callCount = 0;
+      mockKnex.mockImplementation((table: string) => {
+        if (table === 'attendance') {
+          callCount++;
+          return buildChain(callCount === 1 ? mockAttendance : null);
+        }
+        if (table === 'attendance_regularization_requests') return buildChain(mockRegRequest);
+        return buildChain();
+      });
 
       const request = await attendanceService.requestRegularization(
-        attendanceId,
-        employeeId,
-        reason
+        'att-uuid-1', 'emp-123', 'System error during check-out'
       );
 
       expect(request).toBeDefined();
-      expect(request.attendanceId).toBe(attendanceId);
-      expect(request.employeeId).toBe(employeeId);
-      expect(request.reason).toBe(reason);
-      expect(request.status).toBe('Pending');
+      expect(request.attendanceId).toBe('att-uuid-1');
+      expect(request.employeeId).toBe('emp-123');
+      expect(request.reason).toBe('System error during check-out');
+      expect(request.status).toBe('pending');
+    });
+
+    it('should throw when attendance not found', async () => {
+      mockKnex.mockImplementation(() => buildChain(null));
+      await expect(
+        attendanceService.requestRegularization('bad-id', 'emp-123', 'test')
+      ).rejects.toThrow('Attendance record not found');
     });
   });
 
   describe('approveRegularization', () => {
     it('should approve regularization request', async () => {
-      const requestId = 'req-123';
-      const approverId = 'mgr-123';
-      const comments = 'Approved';
+      let callCount = 0;
+      mockKnex.mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) return buildChain(mockRegRequest);       // first() pending
+        if (callCount === 2) return buildChain(1);                     // update()
+        return buildChain(mockApprovedRequest);                         // first() after update
+      });
 
-      const request = await attendanceService.approveRegularization(
-        requestId,
-        approverId,
-        comments
-      );
+      const request = await attendanceService.approveRegularization('req-uuid-1', 'mgr-123', 'Approved');
+      expect(request.status).toBe('approved');
+      expect(request.approvedBy).toBe('mgr-123');
+      expect(request.approvalNotes).toBe('Approved');
+      expect(request.approvedAt).toBeDefined();
+    });
 
-      expect(request.status).toBe('Approved');
-      expect(request.approverId).toBe(approverId);
-      expect(request.approverComments).toBe(comments);
-      expect(request.processedAt).toBeDefined();
+    it('should throw when request not found', async () => {
+      mockKnex.mockImplementation(() => buildChain(null));
+      await expect(
+        attendanceService.approveRegularization('bad-id', 'mgr-123')
+      ).rejects.toThrow('Regularization request not found');
+    });
+
+    it('should throw when request is not pending', async () => {
+      mockKnex.mockImplementation(() => buildChain(mockApprovedRequest));
+      await expect(
+        attendanceService.approveRegularization('req-uuid-1', 'mgr-123')
+      ).rejects.toThrow('Request is already approved');
     });
   });
 
   describe('getMonthlyAttendance', () => {
     it('should return monthly attendance records', async () => {
-      const records = await attendanceService.getMonthlyAttendance(
-        employeeId,
-        1,
-        2024
-      );
+      const chain = buildChain([mockAttendance]);
+      chain.orderBy = jest.fn().mockResolvedValue([mockAttendance]);
+      mockKnex.mockImplementation(() => chain);
 
+      const records = await attendanceService.getMonthlyAttendance('emp-123', 1, 2024);
       expect(Array.isArray(records)).toBe(true);
     });
   });

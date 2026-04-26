@@ -76,7 +76,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({ employeeId, onSu
       setLoading(true);
       const formData = new FormData();
       formData.append('employee_id', employeeId);
-      formData.append('category', category);
+      formData.append('document_type', category);
       formData.append('document_name', documentName);
       formData.append('file', selectedFile);
       if (expiryDate) {

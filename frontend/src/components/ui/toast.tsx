@@ -46,10 +46,26 @@ const Toast = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Root> &
     VariantProps<typeof toastVariants>
 >(({ className, variant, ...props }, ref) => {
+  // Map variant to appropriate ARIA role and live region politeness
+  const getAriaProps = () => {
+    switch (variant) {
+      case 'destructive':
+        return { role: 'alert' as const, 'aria-live': 'assertive' as const };
+      case 'warning':
+        return { role: 'alert' as const, 'aria-live': 'assertive' as const };
+      default:
+        return { role: 'status' as const, 'aria-live': 'polite' as const };
+    }
+  };
+
+  const ariaProps = getAriaProps();
+
   return (
     <ToastPrimitives.Root
       ref={ref}
       className={cn(toastVariants({ variant }), className)}
+      {...ariaProps}
+      aria-atomic="true"
       {...props}
     />
   );
@@ -82,9 +98,10 @@ const ToastClose = React.forwardRef<
       className
     )}
     toast-close=""
+    aria-label="Close notification"
     {...props}
   >
-    <X className="h-4 w-4" />
+    <X className="h-4 w-4" aria-hidden="true" />
   </ToastPrimitives.Close>
 ));
 ToastClose.displayName = ToastPrimitives.Close.displayName;

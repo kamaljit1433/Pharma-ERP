@@ -32,15 +32,15 @@ export class SalaryStructureService {
     }
 
     // Validate salary amounts
-    if (data.base_salary <= 0) {
+    if (data.base_salary! <= 0) {
       throw new Error('Base salary must be greater than 0');
     }
 
-    if (data.pf_contribution_rate < 0 || data.pf_contribution_rate > 100) {
+    if (data.pf_contribution_rate! < 0 || data.pf_contribution_rate! > 100) {
       throw new Error('PF contribution rate must be between 0 and 100');
     }
 
-    if (data.esi_contribution_rate < 0 || data.esi_contribution_rate > 100) {
+    if (data.esi_contribution_rate! < 0 || data.esi_contribution_rate! > 100) {
       throw new Error('ESI contribution rate must be between 0 and 100');
     }
 
@@ -57,16 +57,16 @@ export class SalaryStructureService {
 
       // Create revision record
       const grossSalary =
-        data.base_salary +
-        data.hra +
-        data.dearness_allowance +
-        data.other_allowances;
+        data.base_salary! +
+        data.hra! +
+        data.dearness_allowance! +
+        data.other_allowances!;
 
       const previousGrossSalary =
-        previousStructure.base_salary +
-        previousStructure.hra +
-        previousStructure.dearness_allowance +
-        previousStructure.other_allowances;
+        previousStructure.base_salary! +
+        previousStructure.hra! +
+        previousStructure.dearness_allowance! +
+        previousStructure.other_allowances!;
 
       try {
         await this.salaryStructureRepository.createRevision(
@@ -136,10 +136,10 @@ export class SalaryStructureService {
     }
 
     return (
-      structure.base_salary +
-      structure.hra +
-      structure.dearness_allowance +
-      structure.other_allowances
+      structure.base_salary! +
+      structure.hra! +
+      structure.dearness_allowance! +
+      structure.other_allowances!
     );
   }
 

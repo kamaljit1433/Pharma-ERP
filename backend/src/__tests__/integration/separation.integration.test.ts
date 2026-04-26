@@ -14,7 +14,7 @@ describe('Separation API Integration Tests', () => {
     // Create test employee
     const [employee] = await db('employees')
       .insert({
-        id: 'test-emp-sep-001',
+        id: '00000000-0000-0000-0000-000000000001',
         employee_id: 'EMP-SEP-001',
         first_name: 'John',
         last_name: 'Doe',
@@ -149,7 +149,7 @@ describe('Separation API Integration Tests', () => {
       // Create another resignation for this test
       const [newResignation] = await db('resignations')
         .insert({
-          id: 'test-res-002',
+          id: '00000000-0000-0000-0000-000000000002',
           employee_id: employeeId,
           resignation_date: new Date('2026-03-20'),
           last_working_day: new Date('2026-04-20'),
@@ -225,7 +225,7 @@ describe('Separation API Integration Tests', () => {
       // Create another exit interview for this test
       const [newExitInterview] = await db('exit_interviews')
         .insert({
-          id: 'test-exit-002',
+          id: '00000000-0000-0000-0000-000000000003',
           employee_id: employeeId,
           scheduled_at: new Date('2026-04-25'),
           status: 'scheduled',
@@ -282,7 +282,7 @@ describe('Separation API Integration Tests', () => {
       // Create another F&F settlement for this test
       const [newFnF] = await db('fnf_settlements')
         .insert({
-          id: 'test-fnf-002',
+          id: '00000000-0000-0000-0000-000000000004',
           employee_id: employeeId,
           pending_salary: 0,
           leave_encashment: 0,
@@ -322,9 +322,9 @@ describe('Separation API Integration Tests', () => {
       // Create an asset recovery record for this test
       const [assetRecovery] = await db('asset_recovery_checklists')
         .insert({
-          id: 'test-arc-001',
+          id: '00000000-0000-0000-0000-000000000005',
           employee_id: employeeId,
-          asset_id: 'asset-001',
+          asset_id: '00000000-0000-0000-0000-000000000006',
           status: 'pending',
         })
         .returning('*');

@@ -1,121 +1,91 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
-import { Download, Receipt, Eye } from 'lucide-react';
-
-interface PayslipData {
-  id: string;
-  payroll_id: string;
-  employee_id: string;
-  month: number;
-  year: number;
-  payslip_number: string;
-  file_url?: string;
-  earnings?: Record<string, number>;
-  deductions?: Record<string, number>;
-  gross_salary: number;
-  net_salary: number;
-  generated_at: Date;
-}
+import { Download, Receipt } from 'lucide-react';
+import { usePayrollStore } from '../../store/payrollStore';
+import { Payslip } from '../../types/payroll';
 
 interface PayslipViewerProps {
-  payslip: PayslipData;
-  employeeName?: string;
-  onDownload?: (payslipId: string) => Promise<void>;
+  payslipId: string;
+  onClose: () => void;
 }
 
-export const PayslipViewer: React.FC<PayslipViewerProps> = ({
-  payslip,
-  employeeName,
-  onDownload,
-}) => {
-  const [isOpen, setIsOpen] = useState(false);
+export const PayslipViewer: React.FC<PayslipViewerProps> = ({ payslipId, onClose }) => {
+  const { fetchPayslipById, downloadPayslip } = usePayrollStore();
+  const [payslip, setPayslip] = useState<Payslip | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isFetching, setIsFetching] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setIsFetching(true);
+    fetchPayslipById(payslipId).then((data) => {
+      if (!cancelled) {
+        setPayslip(data);
+        setIsFetching(false);
+      }
+    });
+    return () => { cancelled = true; };
+  }, [payslipId, fetchPayslipById]);
 
   const handleDownload = async () => {
-    if (!onDownload) return;
-
+    if (!payslip) return;
     setIsDownloading(true);
     try {
-      await onDownload(payslip.id);
-    } catch (error) {
-      console.error('Error downloading payslip:', error);
+      const blob = await downloadPayslip(payslip.id);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `payslip-${(payslip as any).payslip_number || payslip.id}.txt`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error downloading payslip:', err);
     } finally {
       setIsDownloading(false);
     }
   };
 
-  const monthYear = new Date(2024, payslip.month - 1).toLocaleString('en-US', {
-    month: 'long',
-    year: 'numeric',
-  });
+  const monthYear = payslip
+    ? new Date(payslip.year, payslip.month - 1).toLocaleString('en-US', {
+        month: 'long',
+        year: 'numeric',
+      })
+    : '';
+
+  const earnings = payslip ? ((payslip as any).earnings as Record<string, number> | undefined) : undefined;
+  const deductions = payslip ? ((payslip as any).deductions as Record<string, number> | undefined) : undefined;
 
   return (
-    <>
-      <Card className="w-full">
-        <CardHeader>
-          <div className="flex justify-between items-start">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Receipt className="h-5 w-5" />
-                Payslip
-              </CardTitle>
-              <CardDescription>
-                {employeeName} • {monthYear}
-              </CardDescription>
-            </div>
-            <Badge variant="outline">{payslip.payslip_number}</Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Summary */}
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Gross Salary</p>
-              <p className="text-lg font-semibold">
-                {payslip.gross_salary.toLocaleString('en-IN', {
-                  style: 'currency',
-                  currency: 'INR',
-                  maximumFractionDigits: 0,
-                })}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Deductions</p>
-              <p className="text-lg font-semibold text-destructive">
-                {(payslip.gross_salary - payslip.net_salary).toLocaleString('en-IN', {
-                  style: 'currency',
-                  currency: 'INR',
-                  maximumFractionDigits: 0,
-                })}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Net Salary</p>
-              <p className="text-lg font-semibold text-success">
-                {payslip.net_salary.toLocaleString('en-IN', {
-                  style: 'currency',
-                  currency: 'INR',
-                  maximumFractionDigits: 0,
-                })}
-              </p>
-            </div>
-          </div>
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Receipt className="h-5 w-5" />
+            Payslip Details
+          </DialogTitle>
+          {payslip && (
+            <DialogDescription>
+              {payslip.employee_name || payslip.employee_id} • {monthYear}
+            </DialogDescription>
+          )}
+        </DialogHeader>
 
-          {/* Actions */}
-          <div className="flex gap-2 pt-4 border-t">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsOpen(true)}
-              className="gap-2"
-            >
-              <Eye className="h-4 w-4" />
-              View Details
-            </Button>
-            {payslip.file_url && (
+        {isFetching ? (
+          <div className="py-8 text-center text-muted-foreground">Loading payslip...</div>
+        ) : !payslip ? (
+          <div className="py-8 text-center text-muted-foreground">Payslip not found.</div>
+        ) : (
+          <div className="space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Payslip Number</p>
+                <Badge variant="outline">{(payslip as any).payslip_number || payslip.id}</Badge>
+              </div>
               <Button
                 variant="outline"
                 size="sm"
@@ -124,32 +94,18 @@ export const PayslipViewer: React.FC<PayslipViewerProps> = ({
                 className="gap-2"
               >
                 <Download className="h-4 w-4" />
-                {isDownloading ? 'Downloading...' : 'Download PDF'}
+                {isDownloading ? 'Downloading...' : 'Download'}
               </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+            </div>
 
-      {/* Details Dialog */}
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Payslip Details</DialogTitle>
-            <DialogDescription>
-              {employeeName} • {monthYear}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-6">
             {/* Earnings */}
-            {payslip.earnings && Object.keys(payslip.earnings).length > 0 && (
+            {earnings && Object.keys(earnings).length > 0 && (
               <div>
                 <h3 className="font-semibold mb-3">Earnings</h3>
                 <div className="space-y-2">
-                  {Object.entries(payslip.earnings).map(([key, value]) => (
+                  {Object.entries(earnings).map(([key, value]) => (
                     <div key={key} className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">{key}</span>
+                      <span className="text-muted-foreground capitalize">{key.replace(/_/g, ' ')}</span>
                       <span className="font-medium">
                         {(value as number).toLocaleString('en-IN', {
                           style: 'currency',
@@ -164,13 +120,13 @@ export const PayslipViewer: React.FC<PayslipViewerProps> = ({
             )}
 
             {/* Deductions */}
-            {payslip.deductions && Object.keys(payslip.deductions).length > 0 && (
+            {deductions && Object.keys(deductions).length > 0 && (
               <div>
                 <h3 className="font-semibold mb-3">Deductions</h3>
                 <div className="space-y-2">
-                  {Object.entries(payslip.deductions).map(([key, value]) => (
+                  {Object.entries(deductions).map(([key, value]) => (
                     <div key={key} className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">{key}</span>
+                      <span className="text-muted-foreground capitalize">{key.replace(/_/g, ' ')}</span>
                       <span className="font-medium text-destructive">
                         {(value as number).toLocaleString('en-IN', {
                           style: 'currency',
@@ -218,13 +174,12 @@ export const PayslipViewer: React.FC<PayslipViewerProps> = ({
               </div>
             </div>
 
-            {/* Generated Date */}
             <div className="text-xs text-muted-foreground text-right">
               Generated on {new Date(payslip.generated_at).toLocaleDateString('en-IN')}
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
-    </>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 };

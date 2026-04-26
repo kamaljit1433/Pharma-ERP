@@ -1,7 +1,8 @@
-﻿import { Router } from 'express';
+import { Router } from 'express';
 import { GeoTrackingController } from '../controllers/geoTrackingController';
 import { authenticateToken } from '../middleware/auth';
 import { authorize } from '../middleware/authorize';
+import { UserRole } from '../types/auth';
 import { Knex } from 'knex';
 
 export function createGeoTrackingRoutes(knex: Knex): Router {
@@ -31,7 +32,7 @@ export function createGeoTrackingRoutes(knex: Knex): Router {
   router.put(
     '/journey/:id/approve',
     authenticateToken as any,
-    authorize(['Manager', 'HR Manager', 'Super Admin']) as any,
+    authorize(['Manager', UserRole.HR_MANAGER, UserRole.SUPER_ADMIN]) as any,
     (req, res, next) => geoTrackingController.approveJourney(req, res, next)
   );
 
@@ -42,7 +43,7 @@ export function createGeoTrackingRoutes(knex: Knex): Router {
   router.get(
     '/allowance/:employeeId/:month',
     authenticateToken as any,
-    authorize(['Finance', 'HR Manager', 'Super Admin']) as any,
+    authorize(['Finance', UserRole.HR_MANAGER, UserRole.SUPER_ADMIN]) as any,
     (req, res, next) => geoTrackingController.getMonthlyAllowance(req, res, next)
   );
 
@@ -53,7 +54,7 @@ export function createGeoTrackingRoutes(knex: Knex): Router {
   router.post(
     '/geo-fences',
     authenticateToken as any,
-    authorize(['Super Admin', 'IT Admin']) as any,
+    authorize([UserRole.SUPER_ADMIN, UserRole.IT_ADMIN]) as any,
     (req, res, next) => geoTrackingController.createGeoFence(req, res, next)
   );
 

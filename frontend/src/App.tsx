@@ -3,11 +3,15 @@ import { Outlet } from 'react-router-dom';
 import { registerServiceWorker, onOnlineStatusChange, isStandalone } from '@/utils/pwaRegister';
 import { initializeOfflineStorage } from '@/utils/offlineStorage';
 import { useSessionManagement } from '@/hooks/useSessionManagement';
+import { useAuthInitialization } from '@/hooks/useAuthInitialization';
 import { useThemeInitialization } from '@/hooks/useThemeInitialization';
 
 const App: React.FC = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isInstalled, setIsInstalled] = useState(false);
+  
+  // Initialize auth on app startup (validate persisted tokens)
+  useAuthInitialization();
   
   // Initialize session management
   useSessionManagement();

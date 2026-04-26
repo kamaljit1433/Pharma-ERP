@@ -206,7 +206,7 @@ describe('PIPService', () => {
       (pipRepository.getPIPById as jest.Mock).mockResolvedValue(mockPIP);
       (pipRepository.updatePIPStatus as jest.Mock).mockResolvedValue(undefined);
 
-      await service.recordPIPOutcome('pip-001', 'Completed');
+      await service.recordOutcome('pip-001', 'Completed');
 
       expect(pipRepository.updatePIPStatus).toHaveBeenCalledWith('pip-001', 'Completed', 'Completed');
     });
@@ -228,7 +228,7 @@ describe('PIPService', () => {
 
       (pipRepository.getPIPById as jest.Mock).mockResolvedValue(mockPIP);
 
-      await expect(service.recordPIPOutcome('pip-001', 'Extended')).rejects.toThrow(
+      await expect(service.recordOutcome('pip-001', 'Extended')).rejects.toThrow(
         'Can only record outcome for active PIPs'
       );
     });

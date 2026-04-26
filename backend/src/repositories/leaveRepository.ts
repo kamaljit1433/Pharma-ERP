@@ -100,16 +100,21 @@ export class LeaveRepository {
   }
 
   async getPendingLeaves(managerId?: string): Promise<Leave[]> {
+    let query = this.knex('leaves')
+      .leftJoin('employees', 'leaves.employee_id', 'employees.id')
+      .leftJoin('leave_types', 'leaves.leave_type_id', 'leave_types.id')
+      .where('leaves.status', 'pending')
+      .select(
+        'leaves.*',
+        this.knex.raw("CONCAT(employees.first_name, ' ', employees.last_name) as employee_name"),
+        'leave_types.name as leave_type_name'
+      );
+
     if (managerId) {
-      return this.knex('leaves')
-        .join('employees', 'leaves.employee_id', 'employees.id')
-        .where('leaves.status', 'pending')
-        .where('employees.reporting_manager_id', managerId)
-        .select('leaves.*')
-        .orderBy('leaves.from_date', 'desc');
+      query = query.where('employees.reporting_manager_id', managerId);
     }
 
-    return this.knex('leaves').where({ status: 'pending' }).orderBy('from_date', 'desc');
+    return query.orderBy('leaves.from_date', 'desc');
   }
 
   async getApprovedLeaves(employeeId: string): Promise<Leave[]> {
@@ -206,6 +211,29 @@ export class LeaveRepository {
     if (employeeId) query = query.where({ employee_id: employeeId });
 
     return query.orderBy('from_date');
+  }
+
+  async getLeaves(filters?: {
+    status?: string;
+    employeeId?: string;
+    fromDate?: string;
+    toDate?: string;
+  }): Promise<Leave[]> {
+    let query = this.knex('leaves')
+      .leftJoin('employees', 'leaves.employee_id', 'employees.id')
+      .leftJoin('leave_types', 'leaves.leave_type_id', 'leave_types.id')
+      .select(
+        'leaves.*',
+        this.knex.raw("CONCAT(employees.first_name, ' ', employees.last_name) as employee_name"),
+        'leave_types.name as leave_type_name'
+      );
+
+    if (filters?.employeeId) query = query.where('leaves.employee_id', filters.employeeId);
+    if (filters?.status) query = query.where('leaves.status', filters.status);
+    if (filters?.fromDate) query = query.where('leaves.from_date', '>=', filters.fromDate);
+    if (filters?.toDate) query = query.where('leaves.to_date', '<=', filters.toDate);
+
+    return query.orderBy('leaves.from_date', 'desc');
   }
 
   async getTeamLeaves(managerId: string, fromDate?: string, toDate?: string): Promise<Leave[]> {

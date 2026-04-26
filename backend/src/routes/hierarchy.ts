@@ -1,8 +1,9 @@
-﻿import { Router, Request, Response } from 'express';
+import { Router, Request, Response } from 'express';
 import { Knex } from 'knex';
 import { HierarchyController } from '../controllers/hierarchyController';
 import { authenticateToken } from '../middleware/auth';
 import { authorize } from '../middleware/authorize';
+import { UserRole } from '../types/auth';
 
 export function createHierarchyRoutes(knex: Knex): Router {
   const router = Router();
@@ -14,7 +15,7 @@ export function createHierarchyRoutes(knex: Knex): Router {
   // ============ Department Management ============
 
   // Create department (Super Admin, HR Manager)
-  router.post('/departments', authorize(['Super Admin', 'HR Manager']) as any, (req: Request, res: Response) =>
+  router.post('/departments', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER]) as any, (req: Request, res: Response) =>
     controller.createDepartment(req, res)
   );
 
@@ -29,19 +30,19 @@ export function createHierarchyRoutes(knex: Knex): Router {
   );
 
   // Update department (Super Admin, HR Manager)
-  router.put('/departments/:id', authorize(['Super Admin', 'HR Manager']) as any, (req: Request, res: Response) =>
+  router.put('/departments/:id', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER]) as any, (req: Request, res: Response) =>
     controller.updateDepartment(req, res)
   );
 
   // Delete department (Super Admin, HR Manager)
-  router.delete('/departments/:id', authorize(['Super Admin', 'HR Manager']) as any, (req: Request, res: Response) =>
+  router.delete('/departments/:id', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER]) as any, (req: Request, res: Response) =>
     controller.deleteDepartment(req, res)
   );
 
   // ============ Designation Management ============
 
   // Create designation (Super Admin, HR Manager)
-  router.post('/designations', authorize(['Super Admin', 'HR Manager']) as any, (req: Request, res: Response) =>
+  router.post('/designations', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER]) as any, (req: Request, res: Response) =>
     controller.createDesignation(req, res)
   );
 
@@ -56,19 +57,19 @@ export function createHierarchyRoutes(knex: Knex): Router {
   );
 
   // Update designation (Super Admin, HR Manager)
-  router.put('/designations/:id', authorize(['Super Admin', 'HR Manager']) as any, (req: Request, res: Response) =>
+  router.put('/designations/:id', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER]) as any, (req: Request, res: Response) =>
     controller.updateDesignation(req, res)
   );
 
   // Delete designation (Super Admin, HR Manager)
-  router.delete('/designations/:id', authorize(['Super Admin', 'HR Manager']) as any, (req: Request, res: Response) =>
+  router.delete('/designations/:id', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER]) as any, (req: Request, res: Response) =>
     controller.deleteDesignation(req, res)
   );
 
   // ============ Employee Position Assignment ============
 
   // Assign employee position (Super Admin, HR Manager)
-  router.put('/assign', authorize(['Super Admin', 'HR Manager']) as any, (req: Request, res: Response) =>
+  router.put('/assign', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER]) as any, (req: Request, res: Response) =>
     controller.assignEmployeePosition(req, res)
   );
 
@@ -90,7 +91,7 @@ export function createHierarchyRoutes(knex: Knex): Router {
   );
 
   // Get hierarchy audit logs
-  router.get('/audit-logs/:employeeId', authorize(['Super Admin', 'HR Manager']) as any, (req: Request, res: Response) =>
+  router.get('/audit-logs/:employeeId', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER]) as any, (req: Request, res: Response) =>
     controller.getHierarchyAuditLogs(req, res)
   );
 

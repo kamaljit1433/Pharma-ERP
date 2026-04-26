@@ -12,7 +12,7 @@ export class HolidayService {
   async createHoliday(data: CreateHolidayDTO): Promise<CompanyHoliday> {
     // Check if holiday already exists on that date
     const existing = await this.knex('company_holidays')
-      .where('holiday_date', data.date)
+      .where('holiday_date', data.holiday_date)
       .first();
 
     if (existing) {

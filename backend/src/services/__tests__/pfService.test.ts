@@ -7,7 +7,7 @@ import { Knex } from 'knex';
 describe('PFService', () => {
   let pfService: PFService;
   let mockKnex: Knex;
-  let mockPFRepository: jest.Mocked<PFRepository>;
+  let mockPFRepository: jest.Mocked<PFRepository> & { getPFContribution: jest.Mock; getPFContributionsByPeriod: jest.Mock };
   let mockEmployeeRepository: jest.Mocked<EmployeeRepository>;
   let mockSalaryStructureRepository: jest.Mocked<SalaryStructureRepository>;
 
@@ -24,17 +24,18 @@ describe('PFService', () => {
   const mockPFAccount = {
     id: 'pf-1',
     employee_id: 'emp-1',
-    pf_account_number: 'PF123456789ABC',
-    opening_balance: 0,
+    pf_number: 'PF123456789ABC',
+    employee_contribution_rate: 12,
+    employer_contribution_rate: 12,
+    account_status: 'active',
     current_balance: 50000,
-    total_contributions: 50000,
-    is_active: true,
     created_at: new Date(),
     updated_at: new Date(),
   };
 
   const mockPFContribution = {
     id: 'contrib-1',
+    pf_account_id: 'pf-1',
     employee_id: 'emp-1',
     month: 1,
     year: 2024,
@@ -53,11 +54,13 @@ describe('PFService', () => {
     mockPFRepository = {
       createPFAccount: jest.fn(),
       getPFAccount: jest.fn(),
+      getPFAccountByEmployee: jest.fn(),
       getPFAccountByNumber: jest.fn(),
       recordPFContribution: jest.fn(),
       getPFContribution: jest.fn(),
       getPFContributionsByEmployee: jest.fn(),
       getPFContributionsByPeriod: jest.fn(),
+      getContributions: jest.fn(),
       updatePFAccountBalance: jest.fn(),
       getTotalPFContribution: jest.fn(),
     } as any;
@@ -99,14 +102,14 @@ describe('PFService', () => {
 
   describe('calculateAndRecordPFContribution', () => {
     it('should calculate and record PF contribution with default rates', async () => {
-      mockPFRepository.getPFContribution.mockResolvedValue(null);
       mockPFRepository.getPFAccount.mockResolvedValue(null);
+      mockPFRepository.getPFAccountByEmployee.mockResolvedValue(mockPFAccount);
+      mockPFRepository.getContributions.mockResolvedValue([]);
       mockPFRepository.createPFAccount.mockResolvedValue(mockPFAccount);
       mockPFRepository.recordPFContribution.mockResolvedValue(mockPFContribution);
 
       const result = await pfService.calculateAndRecordPFContribution('emp-1', 1, 2024, 50000);
 
-      expect(mockPFRepository.getPFContribution).toHaveBeenCalledWith('emp-1', 1, 2024);
       expect(mockPFRepository.recordPFContribution).toHaveBeenCalled();
       expect(result.employee_contribution).toBe(6000);
       expect(result.employer_contribution).toBe(6000);
@@ -114,7 +117,8 @@ describe('PFService', () => {
     });
 
     it('should not record duplicate contribution for same month', async () => {
-      mockPFRepository.getPFContribution.mockResolvedValue(mockPFContribution);
+      mockPFRepository.getPFAccountByEmployee.mockResolvedValue(mockPFAccount);
+      mockPFRepository.getContributions.mockResolvedValue([mockPFContribution]);
 
       const result = await pfService.calculateAndRecordPFContribution('emp-1', 1, 2024, 50000);
 
@@ -132,8 +136,9 @@ describe('PFService', () => {
         total_contribution: 12500,
       };
 
-      mockPFRepository.getPFContribution.mockResolvedValue(null);
       mockPFRepository.getPFAccount.mockResolvedValue(null);
+      mockPFRepository.getPFAccountByEmployee.mockResolvedValue(mockPFAccount);
+      mockPFRepository.getContributions.mockResolvedValue([]);
       mockPFRepository.createPFAccount.mockResolvedValue(mockPFAccount);
       mockPFRepository.recordPFContribution.mockResolvedValue(customContribution);
 
@@ -146,16 +151,16 @@ describe('PFService', () => {
 
   describe('getPFAccount', () => {
     it('should return PF account for an employee', async () => {
-      mockPFRepository.getPFAccount.mockResolvedValue(mockPFAccount);
+      mockPFRepository.getPFAccountByEmployee.mockResolvedValue(mockPFAccount);
 
       const result = await pfService.getPFAccount('emp-1');
 
-      expect(mockPFRepository.getPFAccount).toHaveBeenCalledWith('emp-1');
+      expect(mockPFRepository.getPFAccountByEmployee).toHaveBeenCalledWith('emp-1');
       expect(result).toEqual(mockPFAccount);
     });
 
     it('should return null if PF account does not exist', async () => {
-      mockPFRepository.getPFAccount.mockResolvedValue(null);
+      mockPFRepository.getPFAccountByEmployee.mockResolvedValue(null);
 
       const result = await pfService.getPFAccount('emp-1');
 
@@ -165,11 +170,12 @@ describe('PFService', () => {
 
   describe('getPFContribution', () => {
     it('should return PF contribution for a specific month', async () => {
-      mockPFRepository.getPFContribution.mockResolvedValue(mockPFContribution);
+      mockPFRepository.getPFAccountByEmployee.mockResolvedValue(mockPFAccount);
+      mockPFRepository.getContributions.mockResolvedValue([mockPFContribution]);
 
       const result = await pfService.getPFContribution('emp-1', 1, 2024);
 
-      expect(mockPFRepository.getPFContribution).toHaveBeenCalledWith('emp-1', 1, 2024);
+      expect(mockPFRepository.getPFAccountByEmployee).toHaveBeenCalledWith('emp-1');
       expect(result).toEqual(mockPFContribution);
     });
   });
@@ -178,6 +184,8 @@ describe('PFService', () => {
     it('should return all PF contributions for an employee', async () => {
       const contributions = [mockPFContribution];
       mockPFRepository.getPFContributionsByEmployee.mockResolvedValue(contributions);
+      mockPFRepository.getPFAccountByEmployee.mockResolvedValue(mockPFAccount);
+      mockPFRepository.getContributions.mockResolvedValue(contributions);
 
       const result = await pfService.getPFContributions('emp-1');
 
@@ -189,8 +197,8 @@ describe('PFService', () => {
   describe('generatePFStatement', () => {
     it('should generate PF statement for a period', async () => {
       mockEmployeeRepository.getEmployee.mockResolvedValue(mockEmployee as any);
-      mockPFRepository.getPFAccount.mockResolvedValue(mockPFAccount);
-      mockPFRepository.getPFContributionsByPeriod.mockResolvedValue([mockPFContribution]);
+      mockPFRepository.getPFAccountByEmployee.mockResolvedValue(mockPFAccount);
+      mockPFRepository.getContributions.mockResolvedValue([mockPFContribution]);
 
       const result = await pfService.generatePFStatement('emp-1', 1, 2024, 3, 2024);
 
@@ -212,6 +220,7 @@ describe('PFService', () => {
 
     it('should throw error if PF account not found', async () => {
       mockEmployeeRepository.getEmployee.mockResolvedValue(mockEmployee as any);
+      mockPFRepository.getPFAccountByEmployee.mockResolvedValue(null);
       mockPFRepository.getPFAccount.mockResolvedValue(null);
 
       await expect(pfService.generatePFStatement('emp-1', 1, 2024, 3, 2024)).rejects.toThrow(

@@ -16,12 +16,13 @@ export class AppError extends Error {
 export const errorHandler = (err: Error | AppError, req: Request, res: Response, _next: NextFunction): void => {
   let statusCode = 500;
   let message = 'Internal Server Error';
-  let isOperational = false;
 
   if (err instanceof AppError) {
     statusCode = err.statusCode;
     message = err.message;
-    isOperational = err.isOperational;
+  } else if (err.message) {
+    // Plain errors: expose message in development, keep generic in production
+    message = config.env === 'development' ? err.message : 'Internal Server Error';
   }
 
   // Log error
@@ -37,17 +38,8 @@ export const errorHandler = (err: Error | AppError, req: Request, res: Response,
   res.status(statusCode).json({
     status: 'error',
     message,
-    ...(config.env === 'development' && {
-      stack: err.stack,
-      error: err,
-    }),
+    ...(config.env === 'development' && { stack: err.stack }),
   });
-
-  // If error is not operational, exit process
-  if (!isOperational) {
-    console.error('Non-operational error detected. Shutting down...');
-    process.exit(1);
-  }
 };
 
 export const notFoundHandler = (req: Request, res: Response): void => {

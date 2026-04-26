@@ -46,7 +46,7 @@ export class DocumentService {
     const fileUrl = await this.fileStorageService.getSignedUrl(fileKey, 'getObject', { expiresIn: 3600 });
 
     // Create document record
-    const document = await this.documentRepository.createDocument(employeeId, {
+    const document = await this.documentRepository.createDocumentWithFile(employeeId, {
       ...data,
       file_url: fileUrl,
       uploaded_by: uploadedBy,

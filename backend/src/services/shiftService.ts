@@ -1,222 +1,214 @@
-/**
- * Shift Management Service
- * Handles shift CRUD operations and employee shift assignments
- */
+import { getKnexInstance } from '../config/knex';
 
-interface Shift {
+export interface Shift {
   id: string;
   name: string;
-  startTime: string; // HH:mm format
-  endTime: string; // HH:mm format
-  breakDuration: number; // minutes
-  type: 'Fixed' | 'Rotating' | 'Flexible';
+  shiftType: string;              // 'fixed' | 'rotating' | 'flexible'
+  startTime: string | null;       // HH:MM:SS
+  endTime: string | null;         // HH:MM:SS
+  durationMinutes: number | null;
+  breakDurationMinutes: number;   // default 60, persisted in DB
+  daysOfWeek: string | null;
+  rotationPattern: string | null;
+  minHours: number | null;
+  maxHours: number | null;
+  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
 
-interface EmployeeShiftAssignment {
+export interface EmployeeShiftAssignment {
   id: string;
   employeeId: string;
-  shiftId: string;
-  effectiveFrom: Date;
-  effectiveTo?: Date;
+  shiftId: string | null;
+  effectiveFrom: string;      // YYYY-MM-DD
+  effectiveTo: string | null; // YYYY-MM-DD
   createdAt: Date;
-  updatedAt: Date;
+}
+
+interface CreateShiftInput {
+  name: string;
+  startTime?: string;
+  endTime?: string;
+  breakDuration?: number;   // accepted from API but not persisted (no DB column)
+  type: string;             // 'Fixed' | 'Rotating' | 'Flexible' (case-insensitive)
+  rotationPattern?: string;
+  minHours?: number;
+  maxHours?: number;
+  daysOfWeek?: string;
 }
 
 class ShiftService {
-  private shifts: Map<string, Shift> = new Map();
-  private assignments: Map<string, EmployeeShiftAssignment> = new Map();
+  async createShift(input: CreateShiftInput): Promise<Shift> {
+    this._validateShiftInput(input);
+    const db = getKnexInstance();
+    const shiftType = input.type.toLowerCase();
 
-  /**
-   * Create a new shift
-   */
-  async createShift(shiftData: Omit<Shift, 'id' | 'createdAt' | 'updatedAt'>): Promise<Shift> {
-    // Validate shift data
-    this._validateShiftData(shiftData);
+    const [shift] = await db('shifts')
+      .insert({
+        name: input.name,
+        type: shiftType,
+        shift_type: shiftType,
+        start_time: input.startTime ?? null,
+        end_time: input.endTime ?? null,
+        break_duration_minutes: input.breakDuration ?? 60,
+        rotation_pattern: input.rotationPattern ?? null,
+        min_hours: input.minHours ?? null,
+        max_hours: input.maxHours ?? null,
+        days_of_week: input.daysOfWeek ?? null,
+        is_active: true,
+      })
+      .returning('*');
 
-    const shift: Shift = {
-      id: this._generateId(),
-      ...shiftData,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    this.shifts.set(shift.id, shift);
-    return shift;
+    return mapShift(shift);
   }
 
-  /**
-   * Get shift by ID
-   */
   async getShift(shiftId: string): Promise<Shift | null> {
-    return this.shifts.get(shiftId) || null;
+    const db = getKnexInstance();
+    const shift = await db('shifts').where({ id: shiftId }).first();
+    return shift ? mapShift(shift) : null;
   }
 
-  /**
-   * Get all shifts
-   */
   async getAllShifts(): Promise<Shift[]> {
-    return Array.from(this.shifts.values());
+    const db = getKnexInstance();
+    const shifts = await db('shifts').where({ is_active: true }).orderBy('name');
+    return shifts.map(mapShift);
   }
 
-  /**
-   * Update shift
-   */
   async updateShift(
     shiftId: string,
-    updates: Partial<Omit<Shift, 'id' | 'createdAt' | 'updatedAt'>>
+    updates: Partial<Omit<CreateShiftInput, 'breakDuration'>>
   ): Promise<Shift> {
-    const shift = this.shifts.get(shiftId);
-    if (!shift) {
-      throw new Error(`Shift with ID ${shiftId} not found`);
+    const db = getKnexInstance();
+    const shift = await db('shifts').where({ id: shiftId }).first();
+    if (!shift) throw new Error(`Shift with ID ${shiftId} not found`);
+
+    const updateData: Record<string, any> = { updated_at: db.fn.now() };
+    if (updates.name !== undefined) updateData['name'] = updates.name;
+    if (updates.startTime !== undefined) updateData['start_time'] = updates.startTime;
+    if (updates.endTime !== undefined) updateData['end_time'] = updates.endTime;
+    if (updates.type !== undefined) {
+      updateData['shift_type'] = updates.type.toLowerCase();
+      updateData['type'] = updates.type.toLowerCase();
     }
+    if (updates.rotationPattern !== undefined) updateData['rotation_pattern'] = updates.rotationPattern;
+    if (updates.minHours !== undefined) updateData['min_hours'] = updates.minHours;
+    if (updates.maxHours !== undefined) updateData['max_hours'] = updates.maxHours;
+    if (updates.daysOfWeek !== undefined) updateData['days_of_week'] = updates.daysOfWeek;
 
-    // Validate updated data
-    const updatedData = { ...shift, ...updates };
-    this._validateShiftData(updatedData);
-
-    const updated: Shift = {
-      ...shift,
-      ...updates,
-      updatedAt: new Date(),
-    };
-
-    this.shifts.set(shiftId, updated);
-    return updated;
+    await db('shifts').where({ id: shiftId }).update(updateData);
+    const updated = await db('shifts').where({ id: shiftId }).first();
+    return mapShift(updated);
   }
 
-  /**
-   * Delete shift
-   */
   async deleteShift(shiftId: string): Promise<void> {
-    const shift = this.shifts.get(shiftId);
-    if (!shift) {
-      throw new Error(`Shift with ID ${shiftId} not found`);
+    const db = getKnexInstance();
+    const shift = await db('shifts').where({ id: shiftId }).first();
+    if (!shift) throw new Error(`Shift with ID ${shiftId} not found`);
+
+    const activeAssignments = await db('employee_shifts')
+      .where({ shift_id: shiftId })
+      .whereNull('effective_to');
+
+    if (activeAssignments.length > 0) {
+      throw new Error(`Cannot delete shift — assigned to ${activeAssignments.length} employee(s)`);
     }
 
-    // Check if shift is assigned to any employees
-    const assignments = Array.from(this.assignments.values()).filter(
-      (a) => a.shiftId === shiftId && !a.effectiveTo
-    );
-
-    if (assignments.length > 0) {
-      throw new Error(
-        `Cannot delete shift. It is assigned to ${assignments.length} employee(s)`
-      );
-    }
-
-    this.shifts.delete(shiftId);
+    await db('shifts').where({ id: shiftId }).del();
   }
 
-  /**
-   * Assign shift to employee
-   */
   async assignShiftToEmployee(
     employeeId: string,
     shiftId: string,
-    effectiveFrom: Date
+    effectiveFrom: string
   ): Promise<EmployeeShiftAssignment> {
-    // Validate shift exists
-    const shift = await this.getShift(shiftId);
-    if (!shift) {
-      throw new Error(`Shift with ID ${shiftId} not found`);
-    }
+    const db = getKnexInstance();
+    const shift = await db('shifts').where({ id: shiftId }).first();
+    if (!shift) throw new Error(`Shift with ID ${shiftId} not found`);
 
-    // End previous assignment if exists
-    const previousAssignments = Array.from(this.assignments.values()).filter(
-      (a) => a.employeeId === employeeId && !a.effectiveTo
-    );
+    // Close any open assignments for this employee
+    await db('employee_shifts')
+      .where({ employee_id: employeeId })
+      .whereNull('effective_to')
+      .update({ effective_to: effectiveFrom });
 
-    for (const prev of previousAssignments) {
-      prev.effectiveTo = new Date(effectiveFrom.getTime() - 1);
-      this.assignments.set(prev.id, prev);
-    }
+    const [assignment] = await db('employee_shifts')
+      .insert({ employee_id: employeeId, shift_id: shiftId, effective_from: effectiveFrom })
+      .returning('*');
 
-    // Create new assignment
-    const assignment: EmployeeShiftAssignment = {
-      id: this._generateId(),
-      employeeId,
-      shiftId,
-      effectiveFrom,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    this.assignments.set(assignment.id, assignment);
-    return assignment;
+    return mapAssignment(assignment);
   }
 
-  /**
-   * Get current shift for employee
-   */
   async getCurrentShiftForEmployee(employeeId: string): Promise<Shift | null> {
-    const now = new Date();
-    const assignment = Array.from(this.assignments.values()).find(
-      (a) =>
-        a.employeeId === employeeId &&
-        a.effectiveFrom <= now &&
-        (!a.effectiveTo || a.effectiveTo >= now)
-    );
+    const db = getKnexInstance();
+    const today = new Date().toISOString().split('T')[0]!;
 
-    if (!assignment) {
-      return null;
-    }
+    const assignment = await db('employee_shifts')
+      .where({ employee_id: employeeId })
+      .where('effective_from', '<=', today)
+      .where(function () {
+        this.whereNull('effective_to').orWhere('effective_to', '>=', today);
+      })
+      .orderBy('effective_from', 'desc')
+      .first();
 
-    return this.getShift(assignment.shiftId);
+    if (!assignment?.shift_id) return null;
+    const shift = await db('shifts').where({ id: assignment.shift_id }).first();
+    return shift ? mapShift(shift) : null;
   }
 
-  /**
-   * Get shift history for employee
-   */
   async getShiftHistoryForEmployee(employeeId: string): Promise<EmployeeShiftAssignment[]> {
-    return Array.from(this.assignments.values())
-      .filter((a) => a.employeeId === employeeId)
-      .sort((a, b) => b.effectiveFrom.getTime() - a.effectiveFrom.getTime());
+    const db = getKnexInstance();
+    const rows = await db('employee_shifts')
+      .where({ employee_id: employeeId })
+      .orderBy('effective_from', 'desc');
+    return rows.map(mapAssignment);
   }
 
-  /**
-   * Validate shift data
-   */
-  private _validateShiftData(
-    shiftData: Omit<Shift, 'id' | 'createdAt' | 'updatedAt'>
-  ): void {
-    if (!shiftData.name || shiftData.name.trim().length === 0) {
-      throw new Error('Shift name is required');
-    }
-
-    if (!this._isValidTimeFormat(shiftData.startTime)) {
+  private _validateShiftInput(input: CreateShiftInput): void {
+    if (!input.name?.trim()) throw new Error('Shift name is required');
+    if (input.startTime && !isValidTimeFormat(input.startTime))
       throw new Error('Invalid start time format. Use HH:mm');
-    }
-
-    if (!this._isValidTimeFormat(shiftData.endTime)) {
+    if (input.endTime && !isValidTimeFormat(input.endTime))
       throw new Error('Invalid end time format. Use HH:mm');
-    }
-
-    if (shiftData.breakDuration < 0) {
-      throw new Error('Break duration cannot be negative');
-    }
-
-    if (!['Fixed', 'Rotating', 'Flexible'].includes(shiftData.type)) {
-      throw new Error('Invalid shift type');
-    }
-  }
-
-  /**
-   * Validate time format (HH:mm)
-   */
-  private _isValidTimeFormat(time: string): boolean {
-    const regex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-    return regex.test(time);
-  }
-
-  /**
-   * Generate unique ID
-   */
-  private _generateId(): string {
-    return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+    const validTypes = ['fixed', 'rotating', 'flexible', 'Fixed', 'Rotating', 'Flexible'];
+    if (!validTypes.includes(input.type))
+      throw new Error('Invalid shift type. Must be Fixed, Rotating, or Flexible');
   }
 }
 
+function isValidTimeFormat(time: string): boolean {
+  return /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(time);
+}
+
+function mapShift(row: any): Shift {
+  return {
+    id: row.id,
+    name: row.name,
+    shiftType: row.shift_type ?? row.type,
+    startTime: row.start_time ?? null,
+    endTime: row.end_time ?? null,
+    durationMinutes: row.duration_minutes ?? null,
+    breakDurationMinutes: row.break_duration_minutes ?? 60,
+    daysOfWeek: row.days_of_week ?? null,
+    rotationPattern: row.rotation_pattern ?? null,
+    minHours: row.min_hours ?? null,
+    maxHours: row.max_hours ?? null,
+    isActive: row.is_active,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function mapAssignment(row: any): EmployeeShiftAssignment {
+  return {
+    id: row.id,
+    employeeId: row.employee_id,
+    shiftId: row.shift_id ?? null,
+    effectiveFrom: row.effective_from,
+    effectiveTo: row.effective_to ?? null,
+    createdAt: row.created_at,
+  };
+}
+
 export const shiftService = new ShiftService();
-export type { Shift, EmployeeShiftAssignment };

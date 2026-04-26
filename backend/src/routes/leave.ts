@@ -49,7 +49,23 @@ export function createLeaveRoutes(knex: Knex): Router {
     leaveController.deleteHoliday(req, res, next)
   );
 
-  // Leave request routes
+  // Leave request routes — static paths must come before /:id routes
+  router.get('/leaves/pending', authenticateToken as any, (req, res, next) =>
+    leaveController.getPendingLeaves(req, res, next)
+  );
+
+  router.get('/leaves/balance/:employeeId', authenticateToken as any, (req, res, next) =>
+    leaveController.getLeaveBalance(req, res, next)
+  );
+
+  router.get('/leaves/team-calendar', authenticateToken as any, (req, res, next) =>
+    leaveController.getTeamLeaveCalendar(req, res, next)
+  );
+
+  router.get('/leaves', authenticateToken as any, (req, res, next) =>
+    leaveController.getLeaves(req, res, next)
+  );
+
   router.post('/leaves', authenticateToken as any, (req, res, next) =>
     leaveController.applyLeave(req, res, next)
   );
@@ -62,12 +78,8 @@ export function createLeaveRoutes(knex: Knex): Router {
     leaveController.rejectLeave(req, res, next)
   );
 
-  router.get('/leaves/balance/:employeeId', authenticateToken as any, (req, res, next) =>
-    leaveController.getLeaveBalance(req, res, next)
-  );
-
-  router.get('/leaves/team-calendar', authenticateToken as any, (req, res, next) =>
-    leaveController.getTeamLeaveCalendar(req, res, next)
+  router.put('/leaves/:id/cancel', authenticateToken as any, (req, res, next) =>
+    leaveController.cancelLeave(req, res, next)
   );
 
   return router;

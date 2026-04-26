@@ -10,6 +10,7 @@
     "start": "node dist/index.js",
     "test": "jest",
     "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\"",
@@ -25,6 +26,7 @@
     "@aws-sdk/client-ses": "^3.600",
     "@aws-sdk/s3-request-presigner": "^3.600",
     "@sendgrid/mail": "^8.1",
+    "@types/pdfkit": "^0.17.6",
     "axios": "^1.7",
     "bcrypt": "^6.0",
     "compression": "^1.8",
@@ -47,12 +49,14 @@
     "passport": "^0.7",
     "passport-google-oauth20": "^2.0",
     "passport-local": "^1.0",
+    "pdfkit": "^0.18.0",
     "pg": "^8.16",
     "qrcode": "^1.5",
     "speakeasy": "^2.0",
     "sqlite3": "^6.0.1",
     "tslib": "^2.8.1",
-    "uuid": "^10.0"
+    "uuid": "^10.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0",

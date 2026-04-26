@@ -19,9 +19,11 @@ export const NotificationBell: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Fetch notifications on mount
+  // Fetch on mount then poll every 30 s for new notifications
   useEffect(() => {
     fetchNotifications();
+    const interval = setInterval(() => fetchNotifications(), 30_000);
+    return () => clearInterval(interval);
   }, [fetchNotifications]);
 
   // Close dropdown when clicking outside

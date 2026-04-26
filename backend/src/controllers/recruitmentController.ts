@@ -5,6 +5,32 @@ import { ApplicantTrackingService } from '../services/applicantTrackingService';
 import { InterviewManagementService } from '../services/interviewManagementService';
 import { OfferLetterService } from '../services/offerLetterService';
 import { OnboardingService } from '../services/onboardingService';
+import { AuthenticatedRequest } from '../middleware/auth';
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const VALID_STAGES = ['applied', 'screening', 'interview', 'offer', 'hired', 'rejected'] as const;
+const VALID_RECOMMENDATIONS = ['hire', 'maybe', 'reject'] as const;
+
+function handleError(res: Response, error: unknown): void {
+  const msg = error instanceof Error ? error.message : 'An unexpected error occurred';
+  const lower = msg.toLowerCase();
+  if (lower.includes('not found')) {
+    res.status(404).json({ success: false, error: msg });
+  } else if (lower.includes('already') || lower.includes('conflict')) {
+    res.status(409).json({ success: false, error: msg });
+  } else if (
+    lower.includes('invalid') ||
+    lower.includes('required') ||
+    lower.includes('must be') ||
+    lower.includes('missing') ||
+    lower.includes('future') ||
+    lower.includes('positive')
+  ) {
+    res.status(400).json({ success: false, error: msg });
+  } else {
+    res.status(500).json({ success: false, error: msg });
+  }
+}
 
 export class RecruitmentController {
   private jobPostingRepository: JobPostingRepository;
@@ -25,20 +51,29 @@ export class RecruitmentController {
   async createJobPosting(req: Request, res: Response): Promise<void> {
     try {
       const { title, department_id, designation_id, description, positions_count, application_deadline, closing_date } = req.body;
-      const userId = (req as any).user?.id;
+
+      if (!title || typeof title !== 'string' || !title.trim()) {
+        res.status(400).json({ success: false, error: 'Job title is required' });
+        return;
+      }
+      const positionsNum = Number(positions_count);
+      if (!positions_count || !Number.isInteger(positionsNum) || positionsNum < 1) {
+        res.status(400).json({ success: false, error: 'positions_count must be a positive integer' });
+        return;
+      }
 
       const jobPosting = await this.jobPostingRepository.createJobPosting({
-        title,
+        title: title.trim(),
         department_id,
         designation_id,
         description,
-        positions_count,
+        positions_count: positionsNum,
         closing_date: closing_date ? new Date(closing_date) : application_deadline ? new Date(application_deadline) : undefined,
       });
 
       res.status(201).json({ success: true, data: jobPosting });
     } catch (error) {
-      res.status(400).json({ success: false, error: (error as Error).message });
+      handleError(res, error);
     }
   }
 
@@ -56,7 +91,7 @@ export class RecruitmentController {
 
       res.status(200).json({ success: true, data: jobPostings });
     } catch (error) {
-      res.status(400).json({ success: false, error: (error as Error).message });
+      handleError(res, error);
     }
   }
 
@@ -72,7 +107,7 @@ export class RecruitmentController {
 
       res.status(200).json({ success: true, data: jobPosting });
     } catch (error) {
-      res.status(400).json({ success: false, error: (error as Error).message });
+      handleError(res, error);
     }
   }
 
@@ -82,16 +117,29 @@ export class RecruitmentController {
       const job_posting_id = req.params['job_posting_id'] as string;
       const { name, email, contact_number, resume_url } = req.body;
 
+      if (!name || typeof name !== 'string' || !name.trim()) {
+        res.status(400).json({ success: false, error: 'Applicant name is required' });
+        return;
+      }
+      if (!email || !EMAIL_REGEX.test(String(email))) {
+        res.status(400).json({ success: false, error: 'A valid email address is required' });
+        return;
+      }
+      if (!contact_number || typeof contact_number !== 'string' || !contact_number.trim()) {
+        res.status(400).json({ success: false, error: 'Contact number is required' });
+        return;
+      }
+
       const applicant = await this.applicantTrackingService.addApplicant(job_posting_id, {
-        name,
-        email,
-        contact_number,
+        name: name.trim(),
+        email: String(email).trim().toLowerCase(),
+        contact_number: contact_number.trim(),
         resume_url,
       });
 
       res.status(201).json({ success: true, data: applicant });
     } catch (error) {
-      res.status(400).json({ success: false, error: (error as Error).message });
+      handleError(res, error);
     }
   }
 
@@ -107,7 +155,7 @@ export class RecruitmentController {
 
       res.status(200).json({ success: true, data: applicants });
     } catch (error) {
-      res.status(400).json({ success: false, error: (error as Error).message });
+      handleError(res, error);
     }
   }
 
@@ -116,29 +164,93 @@ export class RecruitmentController {
       const applicant_id = req.params['applicant_id'] as string;
       const { stage } = req.body;
 
-      const applicant = await this.applicantTrackingService.moveApplicantStage(applicant_id, stage);
+      if (!stage || !(VALID_STAGES as readonly string[]).includes(stage)) {
+        res.status(400).json({ success: false, error: `stage must be one of: ${VALID_STAGES.join(', ')}` });
+        return;
+      }
 
+      const applicant = await this.applicantTrackingService.moveApplicantStage(applicant_id, stage);
       res.status(200).json({ success: true, data: applicant });
     } catch (error) {
-      res.status(400).json({ success: false, error: (error as Error).message });
+      handleError(res, error);
     }
   }
 
   // Interview endpoints
   async scheduleInterview(req: Request, res: Response): Promise<void> {
     try {
-      const { applicant_id, scheduled_at, mode, interviewers } = req.body;
+      const { applicant_id, scheduled_at, type, interviewers, duration_minutes } = req.body;
+
+      if (!applicant_id) {
+        res.status(400).json({ success: false, error: 'applicant_id is required' });
+        return;
+      }
+      if (!scheduled_at) {
+        res.status(400).json({ success: false, error: 'scheduled_at is required' });
+        return;
+      }
+      const scheduledDate = new Date(scheduled_at);
+      if (isNaN(scheduledDate.getTime())) {
+        res.status(400).json({ success: false, error: 'scheduled_at must be a valid date' });
+        return;
+      }
+      if (scheduledDate <= new Date()) {
+        res.status(400).json({ success: false, error: 'Interview must be scheduled for a future date' });
+        return;
+      }
 
       const interview = await this.interviewManagementService.scheduleInterview({
         applicant_id,
-        scheduled_at: new Date(scheduled_at),
-        mode,
+        scheduled_at: scheduledDate,
+        type,
         interviewers,
+        duration_minutes,
       });
 
       res.status(201).json({ success: true, data: interview });
     } catch (error) {
-      res.status(400).json({ success: false, error: (error as Error).message });
+      handleError(res, error);
+    }
+  }
+
+  async getInterview(req: Request, res: Response): Promise<void> {
+    try {
+      const interview_id = req.params['interview_id'] as string;
+      const interview = await this.interviewManagementService.getInterview(interview_id);
+      res.status(200).json({ success: true, data: interview });
+    } catch (error) {
+      handleError(res, error);
+    }
+  }
+
+  async getInterviews(req: Request, res: Response): Promise<void> {
+    try {
+      const { applicant_id, status } = req.query;
+
+      let interviews;
+      if (applicant_id) {
+        interviews = await this.interviewManagementService.getInterviewsByApplicant(applicant_id as string);
+      } else {
+        interviews = await this.interviewManagementService.getAllInterviews();
+      }
+
+      if (status && interviews) {
+        interviews = interviews.filter((i: any) => i.status === status);
+      }
+
+      res.status(200).json({ success: true, data: interviews || [] });
+    } catch (error) {
+      handleError(res, error);
+    }
+  }
+
+  async cancelInterview(req: Request, res: Response): Promise<void> {
+    try {
+      const interview_id = req.params['interview_id'] as string;
+      const interview = await this.interviewManagementService.cancelInterview(interview_id);
+      res.status(200).json({ success: true, data: interview });
+    } catch (error) {
+      handleError(res, error);
     }
   }
 
@@ -147,29 +259,41 @@ export class RecruitmentController {
       const interview_id = req.params['interview_id'] as string;
       const { interviewer_id, rating, comments, recommendation } = req.body;
 
+      if (!interviewer_id) {
+        res.status(400).json({ success: false, error: 'interviewer_id is required' });
+        return;
+      }
+      const ratingNum = Number(rating);
+      if (!rating || !Number.isInteger(ratingNum) || ratingNum < 1 || ratingNum > 5) {
+        res.status(400).json({ success: false, error: 'rating must be an integer between 1 and 5' });
+        return;
+      }
+      if (!recommendation || !(VALID_RECOMMENDATIONS as readonly string[]).includes(recommendation)) {
+        res.status(400).json({ success: false, error: `recommendation must be one of: ${VALID_RECOMMENDATIONS.join(', ')}` });
+        return;
+      }
+
       const feedback = await this.interviewManagementService.submitFeedback({
         interview_id,
         interviewer_id,
-        rating,
+        rating: ratingNum,
         comments,
         recommendation,
       });
 
       res.status(201).json({ success: true, data: feedback });
     } catch (error) {
-      res.status(400).json({ success: false, error: (error as Error).message });
+      handleError(res, error);
     }
   }
 
   async getInterviewFeedback(req: Request, res: Response): Promise<void> {
     try {
       const interview_id = req.params['interview_id'] as string;
-
       const feedback = await this.interviewManagementService.getFeedback(interview_id);
-
       res.status(200).json({ success: true, data: feedback });
     } catch (error) {
-      res.status(400).json({ success: false, error: (error as Error).message });
+      handleError(res, error);
     }
   }
 
@@ -178,42 +302,56 @@ export class RecruitmentController {
     try {
       const { applicant_id, position, department, salary, start_date, terms } = req.body;
 
+      if (!applicant_id) {
+        res.status(400).json({ success: false, error: 'applicant_id is required' });
+        return;
+      }
+      if (!position || typeof position !== 'string' || !position.trim()) {
+        res.status(400).json({ success: false, error: 'position is required' });
+        return;
+      }
+      const salaryNum = Number(salary);
+      if (!salary || isNaN(salaryNum) || salaryNum <= 0) {
+        res.status(400).json({ success: false, error: 'salary must be a positive number' });
+        return;
+      }
+      if (!start_date) {
+        res.status(400).json({ success: false, error: 'start_date is required' });
+        return;
+      }
+
       const offerLetter = await this.offerLetterService.generateOfferLetter({
         applicant_id,
-        position,
+        position: position.trim(),
         department,
-        salary,
+        salary: salaryNum,
         start_date: new Date(start_date),
         terms,
       });
 
       res.status(201).json({ success: true, data: offerLetter });
     } catch (error) {
-      res.status(400).json({ success: false, error: (error as Error).message });
+      handleError(res, error);
     }
   }
 
   async sendOfferLetter(req: Request, res: Response): Promise<void> {
     try {
       const offer_letter_id = req.params['offer_letter_id'] as string;
-
       const offerLetter = await this.offerLetterService.sendOfferLetter(offer_letter_id);
-
       res.status(200).json({ success: true, data: offerLetter });
     } catch (error) {
-      res.status(400).json({ success: false, error: (error as Error).message });
+      handleError(res, error);
     }
   }
 
   async acceptOfferLetter(req: Request, res: Response): Promise<void> {
     try {
       const offer_letter_id = req.params['offer_letter_id'] as string;
-
       const offerLetter = await this.offerLetterService.acceptOfferLetter(offer_letter_id);
-
       res.status(200).json({ success: true, data: offerLetter });
     } catch (error) {
-      res.status(400).json({ success: false, error: (error as Error).message });
+      handleError(res, error);
     }
   }
 
@@ -222,6 +360,15 @@ export class RecruitmentController {
     try {
       const { employee_id, items } = req.body;
 
+      if (!employee_id) {
+        res.status(400).json({ success: false, error: 'employee_id is required' });
+        return;
+      }
+      if (!Array.isArray(items) || items.length === 0) {
+        res.status(400).json({ success: false, error: 'items must be a non-empty array' });
+        return;
+      }
+
       const checklist = await this.onboardingService.createOnboardingChecklist({
         employee_id,
         items,
@@ -229,27 +376,31 @@ export class RecruitmentController {
 
       res.status(201).json({ success: true, data: checklist });
     } catch (error) {
-      res.status(400).json({ success: false, error: (error as Error).message });
+      handleError(res, error);
     }
   }
 
   async completeChecklistItem(req: Request, res: Response): Promise<void> {
     try {
       const item_id = req.params['item_id'] as string;
-      const userId = (req as any).user?.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+
+      if (!userId) {
+        res.status(401).json({ success: false, error: 'Authentication required' });
+        return;
+      }
 
       const item = await this.onboardingService.completeChecklistItem(item_id, userId);
-
       res.status(200).json({ success: true, data: item });
     } catch (error) {
-      res.status(400).json({ success: false, error: (error as Error).message });
+      handleError(res, error);
     }
   }
 
   async getOnboardingChecklist(req: Request, res: Response): Promise<void> {
     try {
       const employee_id = req.params['employee_id'] as string;
-
       const checklist = await this.onboardingService.getOnboardingChecklistByEmployee(employee_id);
 
       if (!checklist) {
@@ -259,7 +410,7 @@ export class RecruitmentController {
 
       res.status(200).json({ success: true, data: checklist });
     } catch (error) {
-      res.status(400).json({ success: false, error: (error as Error).message });
+      handleError(res, error);
     }
   }
 }

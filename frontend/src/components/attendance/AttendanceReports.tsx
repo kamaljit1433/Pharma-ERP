@@ -17,6 +17,7 @@ import attendanceService from '../../services/attendanceService';
 import {
   exportData,
   formatAttendanceForExport,
+  openPrintWindow,
   downloadBlob,
   generateFilename,
 } from '../../utils/exportUtils';
@@ -85,11 +86,12 @@ export const AttendanceReports: React.FC<AttendanceReportsProps> = ({
       // Format data for export (includes filtered data)
       const formattedData = formatAttendanceForExport(records);
 
-      // Generate export blob
+      // Generate export blob (PDF returns null — print window handles it)
+      const filename = generateFilename('attendance-report', format);
       const blob = await exportData(
         formattedData,
         format,
-        generateFilename('attendance-report', format),
+        filename,
         {
           title: `Attendance Report (${fromDate} to ${toDate})`,
           sheetName: 'Attendance',
@@ -99,9 +101,10 @@ export const AttendanceReports: React.FC<AttendanceReportsProps> = ({
       clearInterval(progressInterval);
       setExportProgress(100);
 
-      // Download the file
-      const filename = generateFilename('attendance-report', format);
-      downloadBlob(blob, filename);
+      // PDF opens a print window — no blob to download
+      if (blob) {
+        downloadBlob(blob, filename);
+      }
 
       // Reset progress after 2 seconds
       setTimeout(() => {
@@ -115,7 +118,11 @@ export const AttendanceReports: React.FC<AttendanceReportsProps> = ({
   };
 
   const handlePrint = () => {
-    window.print();
+    const formattedData = formatAttendanceForExport(records);
+    openPrintWindow(formattedData, {
+      title: `Attendance Report (${fromDate} to ${toDate})`,
+      sheetName: 'Attendance',
+    });
   };
 
   return (

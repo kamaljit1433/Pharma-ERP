@@ -1,3 +1,4 @@
+import path from 'path';
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -27,6 +28,8 @@ import { createBankDetailsRoutes } from './routes/bankDetails';
 import { createDocumentRoutes } from './routes/documents';
 import { createESignatureRoutes } from './routes/esignature';
 import { createNotificationRoutes } from './routes/notifications';
+import attendanceRoutes from './routes/attendance';
+import dashboardRoutes from './routes/dashboard';
 import { getKnexInstance } from './config/knex';
 import './config/passport'; // Initialize passport strategies
 
@@ -34,7 +37,29 @@ const app: Application = express();
 const PORT = config.port;
 
 // Middleware
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'wasm-unsafe-eval'"],           // TF.js WASM
+        workerSrc: ["'self'", 'blob:'],                        // TF.js web workers
+        connectSrc: [
+          "'self'",
+          'https://cdn.jsdelivr.net',                          // face-api model weights
+          config.cors.origin,
+        ],
+        imgSrc: ["'self'", 'data:', 'blob:', 'https:'],        // employee photos + canvas snapshots
+        mediaSrc: ["'self'", 'blob:'],                         // webcam stream
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        fontSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        frameSrc: ["'none'"],
+      },
+    },
+    crossOriginEmbedderPolicy: false, // needed for SharedArrayBuffer used by TF.js
+  })
+);
 app.use(
   cors({
     origin: config.cors.origin,
@@ -51,6 +76,9 @@ app.use(sessionMiddleware);
 
 // Initialize Passport
 app.use(passport.initialize());
+
+// Serve uploaded files (photos, documents) as static assets
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Root route
 app.get('/', (_req: Request, res: Response) => {
@@ -154,6 +182,12 @@ app.use(`/api/${config.apiVersion}/esignature`, createESignatureRoutes(knex));
 
 // Notifications routes
 app.use(`/api/${config.apiVersion}/notifications`, createNotificationRoutes(knex));
+
+// Attendance routes
+app.use(`/api/${config.apiVersion}/attendance`, attendanceRoutes);
+
+// Dashboard routes
+app.use(`/api/${config.apiVersion}/dashboard`, dashboardRoutes);
 
 // 404 handler
 app.use(notFoundHandler);

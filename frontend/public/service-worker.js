@@ -1,7 +1,7 @@
-const CACHE_NAME = 'ems-v1';
-const RUNTIME_CACHE = 'ems-runtime-v1';
-const API_CACHE = 'ems-api-v1';
-const IMAGE_CACHE = 'ems-images-v1';
+const CACHE_NAME = 'ems-v2';
+const RUNTIME_CACHE = 'ems-runtime-v2';
+const API_CACHE = 'ems-api-v2';
+const IMAGE_CACHE = 'ems-images-v2';
 
 const STATIC_ASSETS = [
   '/',
@@ -50,9 +50,12 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
+          // Clone the response before using it
+          const responseToCache = response.clone();
           if (response.ok) {
-            const cache = caches.open(API_CACHE);
-            cache.then((c) => c.put(request, response.clone()));
+            caches.open(API_CACHE).then((cache) => {
+              cache.put(request, responseToCache);
+            });
           }
           return response;
         })
@@ -72,12 +75,14 @@ self.addEventListener('fetch', (event) => {
   if (request.destination === 'image') {
     event.respondWith(
       caches.match(request).then((response) => {
-        return response || fetch(request).then((response) => {
-          if (response.ok) {
-            const cache = caches.open(IMAGE_CACHE);
-            cache.then((c) => c.put(request, response.clone()));
+        return response || fetch(request).then((fetchResponse) => {
+          if (fetchResponse.ok) {
+            const responseToCache = fetchResponse.clone();
+            caches.open(IMAGE_CACHE).then((cache) => {
+              cache.put(request, responseToCache);
+            });
           }
-          return response;
+          return fetchResponse;
         }).catch(() => {
           return new Response(null, { status: 404 });
         });
@@ -90,12 +95,14 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.match(/\.(js|css|woff2?|ttf|eot)$/)) {
     event.respondWith(
       caches.match(request).then((response) => {
-        return response || fetch(request).then((response) => {
-          if (response.ok) {
-            const cache = caches.open(CACHE_NAME);
-            cache.then((c) => c.put(request, response.clone()));
+        return response || fetch(request).then((fetchResponse) => {
+          if (fetchResponse.ok) {
+            const responseToCache = fetchResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(request, responseToCache);
+            });
           }
-          return response;
+          return fetchResponse;
         });
       })
     );
@@ -108,8 +115,10 @@ self.addEventListener('fetch', (event) => {
       fetch(request)
         .then((response) => {
           if (response.ok) {
-            const cache = caches.open(RUNTIME_CACHE);
-            cache.then((c) => c.put(request, response.clone()));
+            const responseToCache = response.clone();
+            caches.open(RUNTIME_CACHE).then((cache) => {
+              cache.put(request, responseToCache);
+            });
           }
           return response;
         })
@@ -127,8 +136,10 @@ self.addEventListener('fetch', (event) => {
     fetch(request)
       .then((response) => {
         if (response.ok) {
-          const cache = caches.open(RUNTIME_CACHE);
-          cache.then((c) => c.put(request, response.clone()));
+          const responseToCache = response.clone();
+          caches.open(RUNTIME_CACHE).then((cache) => {
+            cache.put(request, responseToCache);
+          });
         }
         return response;
       })

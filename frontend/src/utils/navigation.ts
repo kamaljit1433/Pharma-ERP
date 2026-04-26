@@ -106,7 +106,7 @@ export const getNavigationForRole = (role: UserRole): NavigationItem[] => {
     }
     
     // Check if user has required permission
-    return hasPermission(role, item.requiredPermission);
+    return hasPermission(role, item.requiredPermission!);
   });
 };
 

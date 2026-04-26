@@ -101,3 +101,11 @@ export {
 } from './breadcrumb';
 
 export { Alert, AlertTitle, AlertDescription } from './alert';
+
+export {
+  StatusBadge,
+  LeaveStatusBadge,
+  AttendanceStatusBadge,
+  EmployeeStatusBadge,
+} from './status-badge';
+export type { StatusType } from './status-badge';

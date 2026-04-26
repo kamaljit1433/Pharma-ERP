@@ -19,8 +19,8 @@ export class HolidayRepository {
     return {
       id: row.id,
       name: row.name,
-      date: this.formatDate(row.holiday_date),
-      holiday_type: row.type,
+      holiday_date: this.formatDate(row.holiday_date),
+      type: row.type,
       is_optional: row.is_optional,
       created_at: row.created_at,
     };
@@ -32,8 +32,8 @@ export class HolidayRepository {
       .insert({
         id,
         name: data.name,
-        holiday_date: data.date,
-        type: data.holiday_type,
+        holiday_date: data.holiday_date,
+        type: data.type,
         is_optional: data.is_optional ?? false,
       })
       .returning('*');
@@ -105,8 +105,8 @@ export class HolidayRepository {
   async updateHoliday(id: string, data: UpdateHolidayDTO): Promise<CompanyHoliday> {
     const updateData: Record<string, any> = {};
     if (data.name !== undefined) updateData['name'] = data.name;
-    if (data.date !== undefined) updateData['holiday_date'] = data.date;
-    if (data.holiday_type !== undefined) updateData['type'] = data.holiday_type;
+    if (data.holiday_date !== undefined) updateData['holiday_date'] = data.holiday_date;
+    if (data.type !== undefined) updateData['type'] = data.type;
     if (data.is_optional !== undefined) updateData['is_optional'] = data.is_optional;
 
     const [holiday] = await this.knex('company_holidays')

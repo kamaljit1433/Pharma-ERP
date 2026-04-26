@@ -1,12 +1,11 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useEmployeeStore } from '@/store/employeeStore';
 import { useAuthStore } from '@/store/authStore';
 import { EmployeeList } from '@/components/employee/EmployeeList';
 import { UserRole } from '@/types/auth';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Users, UserPlus, Download, Upload } from 'lucide-react';
+import { Users, UserPlus, Download, Upload, ChevronDown, FileSpreadsheet, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
 
 export const Employees: React.FC = () => {
@@ -20,10 +19,12 @@ export const Employees: React.FC = () => {
     fetchItems,
     deleteItem,
     importCSV,
-    exportCSV,
+    exportEmployees,
   } = useEmployeeStore();
 
   const [isImporting, setIsImporting] = useState(false);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
 
   // Fetch employees on mount
   useEffect(() => {
@@ -39,6 +40,17 @@ export const Employees: React.FC = () => {
       });
     }
   }, [error, toast]);
+
+  // Close export dropdown when clicking outside
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
+        setExportMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   // Check if user can manage employees (HR Manager or Super Admin)
   const canManageEmployees =
@@ -103,28 +115,29 @@ export const Employees: React.FC = () => {
     [importCSV, toast]
   );
 
-  const handleExportCSV = useCallback(async () => {
-    try {
-      const blob = await exportCSV();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `employees-${new Date().toISOString().split('T')[0]}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      toast({
-        type: 'success',
-        message: 'Employees exported successfully',
-      });
-    } catch (err) {
-      toast({
-        type: 'error',
-        message: 'Failed to export employees',
-      });
-    }
-  }, [exportCSV, toast]);
+  const EXPORT_EXTENSIONS: Record<string, string> = { csv: 'csv', excel: 'xlsx', pdf: 'pdf' };
+
+  const handleExport = useCallback(
+    async (format: 'csv' | 'excel' | 'pdf') => {
+      setExportMenuOpen(false);
+      try {
+        const blob = await exportEmployees(format);
+        const ext = EXPORT_EXTENSIONS[format];
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `employees-${new Date().toISOString().split('T')[0]}.${ext}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        toast({ type: 'success', message: `Employees exported as ${format.toUpperCase()} successfully` });
+      } catch {
+        toast({ type: 'error', message: 'Failed to export employees' });
+      }
+    },
+    [exportEmployees, toast]
+  );
 
   return (
     <div className="space-y-6">
@@ -141,16 +154,45 @@ export const Employees: React.FC = () => {
         </div>
         {canManageEmployees && (
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExportCSV}
-              disabled={loading || employees.length === 0}
-              className="gap-2"
-            >
-              <Download className="h-4 w-4" />
-              Export
-            </Button>
+            {/* Export dropdown */}
+            <div className="relative" ref={exportMenuRef}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setExportMenuOpen((v) => !v)}
+                disabled={loading || employees.length === 0}
+                className="gap-2"
+              >
+                <Download className="h-4 w-4" />
+                Export
+                <ChevronDown className="h-3 w-3" />
+              </Button>
+              {exportMenuOpen && (
+                <div className="absolute right-0 mt-1 w-44 rounded-md border bg-white shadow-lg z-50">
+                  <button
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50"
+                    onClick={() => handleExport('csv')}
+                  >
+                    <Download className="h-4 w-4 text-green-600" />
+                    CSV (.csv)
+                  </button>
+                  <button
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50"
+                    onClick={() => handleExport('excel')}
+                  >
+                    <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+                    Excel (.xlsx)
+                  </button>
+                  <button
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50"
+                    onClick={() => handleExport('pdf')}
+                  >
+                    <FileText className="h-4 w-4 text-red-600" />
+                    PDF (.pdf)
+                  </button>
+                </div>
+              )}
+            </div>
             <Button
               variant="outline"
               size="sm"
@@ -184,9 +226,7 @@ export const Employees: React.FC = () => {
       <EmployeeList
         employees={employees}
         loading={loading}
-        onEdit={canManageEmployees ? handleEditEmployee : undefined}
-        onDelete={canManageEmployees ? handleDeleteEmployee : undefined}
-        onAdd={canManageEmployees ? handleAddEmployee : undefined}
+        {...(canManageEmployees && { onEdit: handleEditEmployee, onDelete: handleDeleteEmployee })}
       />
     </div>
   );

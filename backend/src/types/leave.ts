@@ -15,6 +15,7 @@ export interface LeaveBalance {
   id: string;
   employee_id: string;
   leave_type_id: string;
+  leave_type_name?: string;
   year: number;
   opening_balance: number;
   used_balance: number;
@@ -27,7 +28,9 @@ export interface LeaveBalance {
 export interface Leave {
   id: string;
   employee_id: string;
+  employee_name?: string;
   leave_type_id: string;
+  leave_type_name?: string;
   from_date: string;
   to_date: string;
   days_count: number;
@@ -44,8 +47,8 @@ export interface Leave {
 export interface CompanyHoliday {
   id: string;
   name: string;
-  date: string;
-  holiday_type: 'national' | 'regional' | 'company';
+  holiday_date: string;
+  type: 'national' | 'regional' | 'company';
   is_optional: boolean;
   created_at: string;
 }
@@ -94,15 +97,15 @@ export interface UpdateLeaveTypeDTO {
 
 export interface CreateHolidayDTO {
   name: string;
-  date: string;
-  holiday_type: 'national' | 'regional' | 'company';
+  holiday_date: string;
+  type: 'national' | 'regional' | 'company';
   is_optional?: boolean;
 }
 
 export interface UpdateHolidayDTO {
   name?: string;
-  date?: string;
-  holiday_type?: 'national' | 'regional' | 'company';
+  holiday_date?: string;
+  type?: 'national' | 'regional' | 'company';
   is_optional?: boolean;
 }
 

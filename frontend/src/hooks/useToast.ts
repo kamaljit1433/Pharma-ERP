@@ -1,9 +1,12 @@
 import { useCallback } from 'react';
 
 export interface Toast {
-  type: 'success' | 'error' | 'info' | 'warning';
-  message: string;
+  type?: 'success' | 'error' | 'info' | 'warning';
+  message?: string;
   duration?: number;
+  title?: string;
+  description?: string;
+  variant?: 'default' | 'destructive';
 }
 
 /**
@@ -13,11 +16,11 @@ export interface Toast {
 export function useToast() {
   const toast = useCallback((notification: Toast) => {
     // For now, just log to console
-    // In production, this would integrate with a toast notification library
-    console.log(`[${notification.type.toUpperCase()}] ${notification.message}`);
-
-    // You could also dispatch to a notification store here
-    // Example: useNotificationStore.getState().addNotification(notification);
+    // Safely extract properties handling both { type, message } and { variant, title, description }
+    const notifType = notification.type || notification.variant || 'info';
+    const msg = notification.message || notification.description || notification.title || '';
+    
+    console.log(`[${notifType.toUpperCase()}] ${msg}`);
   }, []);
 
   return { toast };

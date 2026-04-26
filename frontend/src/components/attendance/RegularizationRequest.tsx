@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react';
 import { useAttendanceStore } from '../../store/attendanceStore';
+import { useNotificationStore } from '../../store/notificationStore';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
@@ -29,6 +30,7 @@ export const RegularizationRequest: React.FC<RegularizationRequestProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const { requestRegularization } = useAttendanceStore();
+  const { fetchNotifications } = useNotificationStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,6 +59,8 @@ export const RegularizationRequest: React.FC<RegularizationRequestProps> = ({
 
       setSuccess(true);
       onSuccess?.();
+      // Pull in the confirmation notification the backend just created
+      fetchNotifications();
 
       // Reset form after 2 seconds
       setTimeout(() => {

@@ -466,5 +466,207 @@ describe('CandidateStatusTracker', () => {
       // 1 hired out of 6 = 16.7%
       expect(screen.getByText(/16.7/)).toBeInTheDocument();
     });
+
+    it('updates metrics when candidate list changes', () => {
+      const { rerender } = render(
+        <CandidateStatusTracker candidates={mockCandidates} />
+      );
+
+      expect(screen.getByText('4')).toBeInTheDocument();
+      expect(screen.getByText(/25/)).toBeInTheDocument();
+
+      const updatedCandidates = [
+        ...mockCandidates,
+        {
+          id: '5',
+          job_posting_id: 'job-1',
+          name: 'New Hire',
+          email: 'newhire@example.com',
+          contact_number: '555-9999',
+          resume_url: 'https://example.com/resume5.pdf',
+          current_stage: 'Hired',
+          applied_at: new Date(),
+          updated_at: new Date(),
+        },
+      ];
+
+      rerender(<CandidateStatusTracker candidates={updatedCandidates} />);
+
+      expect(screen.getByText('5')).toBeInTheDocument();
+      expect(screen.getByText(/40/)).toBeInTheDocument();
+    });
+
+    it('correctly calculates percentages for progress bars', () => {
+      const testCandidates: Applicant[] = [
+        {
+          id: '1',
+          job_posting_id: 'job-1',
+          name: 'C1',
+          email: 'c1@example.com',
+          contact_number: '555-1111',
+          resume_url: 'https://example.com/resume1.pdf',
+          current_stage: 'Applied',
+          applied_at: new Date(),
+          updated_at: new Date(),
+        },
+        {
+          id: '2',
+          job_posting_id: 'job-1',
+          name: 'C2',
+          email: 'c2@example.com',
+          contact_number: '555-2222',
+          resume_url: 'https://example.com/resume2.pdf',
+          current_stage: 'Applied',
+          applied_at: new Date(),
+          updated_at: new Date(),
+        },
+        {
+          id: '3',
+          job_posting_id: 'job-1',
+          name: 'C3',
+          email: 'c3@example.com',
+          contact_number: '555-3333',
+          resume_url: 'https://example.com/resume3.pdf',
+          current_stage: 'Applied',
+          applied_at: new Date(),
+          updated_at: new Date(),
+        },
+        {
+          id: '4',
+          job_posting_id: 'job-1',
+          name: 'C4',
+          email: 'c4@example.com',
+          contact_number: '555-4444',
+          resume_url: 'https://example.com/resume4.pdf',
+          current_stage: 'Applied',
+          applied_at: new Date(),
+          updated_at: new Date(),
+        },
+      ];
+
+      render(<CandidateStatusTracker candidates={testCandidates} />);
+
+      // All 4 candidates in Applied stage = 100% for Applied
+      expect(screen.getByText(/Applied: 4/)).toBeInTheDocument();
+      expect(screen.getByText(/Screening: 0/)).toBeInTheDocument();
+      expect(screen.getByText(/Interview: 0/)).toBeInTheDocument();
+      expect(screen.getByText(/Offer: 0/)).toBeInTheDocument();
+      expect(screen.getByText(/Hired: 0/)).toBeInTheDocument();
+      expect(screen.getByText(/Rejected: 0/)).toBeInTheDocument();
+    });
+  });
+
+  describe('Status Transitions', () => {
+    it('handles candidates moving through multiple stages', () => {
+      const stageCandidates: Applicant[] = [
+        {
+          id: '1',
+          job_posting_id: 'job-1',
+          name: 'C1',
+          email: 'c1@example.com',
+          contact_number: '555-1111',
+          resume_url: 'https://example.com/resume1.pdf',
+          current_stage: 'Applied',
+          applied_at: new Date('2025-01-01'),
+          updated_at: new Date('2025-01-01'),
+        },
+        {
+          id: '2',
+          job_posting_id: 'job-1',
+          name: 'C2',
+          email: 'c2@example.com',
+          contact_number: '555-2222',
+          resume_url: 'https://example.com/resume2.pdf',
+          current_stage: 'Screening',
+          applied_at: new Date('2025-01-01'),
+          updated_at: new Date('2025-01-05'),
+        },
+        {
+          id: '3',
+          job_posting_id: 'job-1',
+          name: 'C3',
+          email: 'c3@example.com',
+          contact_number: '555-3333',
+          resume_url: 'https://example.com/resume3.pdf',
+          current_stage: 'Interview',
+          applied_at: new Date('2025-01-01'),
+          updated_at: new Date('2025-01-10'),
+        },
+        {
+          id: '4',
+          job_posting_id: 'job-1',
+          name: 'C4',
+          email: 'c4@example.com',
+          contact_number: '555-4444',
+          resume_url: 'https://example.com/resume4.pdf',
+          current_stage: 'Offer',
+          applied_at: new Date('2025-01-01'),
+          updated_at: new Date('2025-01-15'),
+        },
+        {
+          id: '5',
+          job_posting_id: 'job-1',
+          name: 'C5',
+          email: 'c5@example.com',
+          contact_number: '555-5555',
+          resume_url: 'https://example.com/resume5.pdf',
+          current_stage: 'Hired',
+          applied_at: new Date('2025-01-01'),
+          updated_at: new Date('2025-01-20'),
+        },
+      ];
+
+      render(<CandidateStatusTracker candidates={stageCandidates} />);
+
+      expect(screen.getByText(/Applied: 1/)).toBeInTheDocument();
+      expect(screen.getByText(/Screening: 1/)).toBeInTheDocument();
+      expect(screen.getByText(/Interview: 1/)).toBeInTheDocument();
+      expect(screen.getByText(/Offer: 1/)).toBeInTheDocument();
+      expect(screen.getByText(/Hired: 1/)).toBeInTheDocument();
+      expect(screen.getByText(/20/)).toBeInTheDocument(); // 1 hired out of 5 = 20%
+    });
+
+    it('tracks rejected candidates separately', () => {
+      const rejectedCandidates: Applicant[] = [
+        {
+          id: '1',
+          job_posting_id: 'job-1',
+          name: 'C1',
+          email: 'c1@example.com',
+          contact_number: '555-1111',
+          resume_url: 'https://example.com/resume1.pdf',
+          current_stage: 'Rejected',
+          applied_at: new Date(),
+          updated_at: new Date(),
+        },
+        {
+          id: '2',
+          job_posting_id: 'job-1',
+          name: 'C2',
+          email: 'c2@example.com',
+          contact_number: '555-2222',
+          resume_url: 'https://example.com/resume2.pdf',
+          current_stage: 'Rejected',
+          applied_at: new Date(),
+          updated_at: new Date(),
+        },
+        {
+          id: '3',
+          job_posting_id: 'job-1',
+          name: 'C3',
+          email: 'c3@example.com',
+          contact_number: '555-3333',
+          resume_url: 'https://example.com/resume3.pdf',
+          current_stage: 'Hired',
+          applied_at: new Date(),
+          updated_at: new Date(),
+        },
+      ];
+
+      render(<CandidateStatusTracker candidates={rejectedCandidates} />);
+
+      expect(screen.getByText(/Rejected: 2/)).toBeInTheDocument();
+      expect(screen.getByText(/Hired: 1/)).toBeInTheDocument();
+    });
   });
 });

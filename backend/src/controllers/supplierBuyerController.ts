@@ -176,7 +176,7 @@ export class SupplierBuyerController {
         return;
       }
 
-      if (!data.visit_date || data.visit_date.trim().length === 0) {
+      if (!data.visit_date || (typeof data.visit_date === 'string' && data.visit_date.trim().length === 0)) {
         res.status(400).json({ error: 'Visit date is required' });
         return;
       }

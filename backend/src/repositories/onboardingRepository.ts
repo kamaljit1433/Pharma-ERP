@@ -15,6 +15,8 @@ export class OnboardingRepository {
     const now = new Date();
 
     const items: OnboardingChecklistItem[] = data.items.map((item) => ({
+      id: uuidv4(),
+      checklist_id: checklistId,
       task: item.task,
       completed: item.completed ?? false,
     }));
@@ -132,6 +134,7 @@ export class OnboardingRepository {
     targetItem.completed = true;
     targetItem.completed_at = now;
     targetItem.completed_by = completedBy;
+    targetItem.checklist_id = targetChecklist.id;
 
     await this.knex('onboarding_checklists')
       .where({ id: targetChecklist.id })

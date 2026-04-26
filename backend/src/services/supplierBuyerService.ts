@@ -91,11 +91,14 @@ export class SupplierBuyerService {
       throw new Error('Unauthorized: Employee can only log visits for their own supplier/buyer records');
     }
 
-    if (!data.visit_date || data.visit_date.trim().length === 0) {
+    if (!data.visit_date || (typeof data.visit_date === 'string' && data.visit_date.trim().length === 0)) {
       throw new Error('Visit date is required');
     }
 
-    return this.visitRepository.createVisit(supplierBuyerId, employeeId, data);
+    return this.visitRepository.createVisit({
+      ...data,
+      record_id: supplierBuyerId
+    });
   }
 
   async getVisit(id: string): Promise<Visit> {
@@ -138,7 +141,7 @@ export class SupplierBuyerService {
       throw new Error(`Supplier/Buyer with ID ${supplierBuyerId} not found`);
     }
 
-    return this.visitRepository.getVisitsByDateRange(supplierBuyerId, startDate, endDate);
+    return this.visitRepository.getVisitsByDateRange(startDate, endDate);
   }
 
   async updateVisit(id: string, data: Partial<CreateVisitDTO>): Promise<Visit> {

@@ -28,9 +28,23 @@ export class LeaveService {
       throw new Error('From date must be before or equal to To date');
     }
 
+    // Convert string employee_id (e.g., "EMP-ADM-001") to UUID if needed
+    let employeeUUID = data.employee_id;
+    if (!employeeUUID.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+      // It's a string employee_id, convert to UUID
+      const employee = await this.knex('employees')
+        .where('employee_id', employeeUUID)
+        .first();
+
+      if (!employee) {
+        throw new Error(`Employee not found: ${employeeUUID}`);
+      }
+      employeeUUID = employee.id;
+    }
+
     // Validate balance
     const balance = await this.leaveBalanceRepository.getBalance(
-      data.employee_id,
+      employeeUUID,
       data.leave_type_id,
       year
     );
@@ -51,22 +65,25 @@ export class LeaveService {
     const overlappingLeaves = await this.leaveRepository.getLeavesByDateRange(
       data.from_date,
       data.to_date,
-      data.employee_id
+      employeeUUID
     );
 
     if (overlappingLeaves.length > 0) {
       throw new Error('Leave already exists for the requested dates');
     }
 
-    // Create leave request
-    const leave = await this.leaveRepository.createLeave(data);
+    // Create leave request with UUID
+    const leave = await this.leaveRepository.createLeave({
+      ...data,
+      employee_id: employeeUUID,
+    });
 
     // Route approval through hierarchy
     try {
       await this.approvalRoutingService.routeApprovalRequest({
         requestType: 'leave',
         requestId: leave.id,
-        employeeId: data.employee_id,
+        employeeId: employeeUUID,
         requestData: leave,
       });
     } catch (error) {
@@ -149,12 +166,59 @@ export class LeaveService {
     employeeId: string,
     year: number
   ): Promise<LeaveBalance[]> {
-    return this.leaveBalanceRepository.getBalancesByEmployee(employeeId, year);
+    // Accept either the UUID (id) or the business employee_id string (e.g. "EMP001")
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(employeeId);
+    const employee = await this.knex('employees')
+      .where(isUuid ? 'id' : 'employee_id', employeeId)
+      .first();
+
+    if (!employee) {
+      throw new Error(`Employee not found: ${employeeId}`);
+    }
+
+    return this.leaveBalanceRepository.getBalancesByEmployee(employee.id, year);
+  }
+
+  async getLeaves(filters?: {
+    status?: string;
+    employeeId?: string;
+    fromDate?: string;
+    toDate?: string;
+  }): Promise<Leave[]> {
+    return this.leaveRepository.getLeaves(filters);
+  }
+
+  async getPendingLeaves(managerId?: string): Promise<Leave[]> {
+    return this.leaveRepository.getPendingLeaves(managerId);
+  }
+
+  async cancelLeave(id: string): Promise<void> {
+    const leave = await this.leaveRepository.getLeaveById(id);
+
+    if (!leave) {
+      throw new Error('Leave request not found');
+    }
+
+    if (leave.status === 'cancelled') {
+      throw new Error('Leave request is already cancelled');
+    }
+
+    if (leave.status === 'rejected') {
+      throw new Error('Cannot cancel a rejected leave request');
+    }
+
+    if (leave.status === 'approved') {
+      const startDate = new Date(leave.from_date);
+      if (startDate <= new Date()) {
+        throw new Error('Cannot cancel an approved leave that has already started');
+      }
+    }
+
+    await this.leaveRepository.cancelLeave(id);
   }
 
   async getTeamLeaveCalendar(managerId: string): Promise<LeaveCalendarEntry[]> {
-    const year = new Date().getFullYear();
-    const leaves = await this.leaveRepository.getTeamLeaves(managerId, year);
+    const leaves = await this.leaveRepository.getTeamLeaves(managerId);
 
     const entries: LeaveCalendarEntry[] = [];
 
@@ -238,8 +302,17 @@ export class LeaveService {
   }
 
   async initializeLeaveBalances(employeeId: string, year: number): Promise<void> {
+    // Convert string employee_id (e.g., "EMP-ADM-001") to UUID
+    const employee = await this.knex('employees')
+      .where('employee_id', employeeId)
+      .first();
+
+    if (!employee) {
+      throw new Error(`Employee not found: ${employeeId}`);
+    }
+
     await this.leaveBalanceRepository.initializeBalancesForEmployee(
-      employeeId,
+      employee.id,
       year
     );
   }

@@ -157,7 +157,7 @@ describe('HierarchyService', () => {
 
   describe('Designation Operations', () => {
     it('should create a designation', async () => {
-      const desigData = { name: 'Senior Engineer', level: 3 };
+      const desigData = { name: 'Senior Engineer', level: '3' };
       const createdDesig = { id: '1', ...desigData, created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
 
       (mockDesignationRepo.getDesignationByName as jest.Mock).mockResolvedValue(null);

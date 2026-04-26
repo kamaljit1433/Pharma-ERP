@@ -60,6 +60,7 @@ describe('SupplierBuyerService - Property-Based Tests', () => {
 
             const mockVisit: Visit = {
               id: uuidv4(),
+              record_id: supplierBuyerId,
               supplier_buyer_id: supplierBuyerId,
               employee_id: employeeId,
               visit_date: new Date().toISOString(),
