@@ -8,24 +8,38 @@ import { DollarSign } from 'lucide-react';
 
 interface SalaryStructureFormProps {
   employeeId: string;
+  employeeName?: string;
+  initialData?: {
+    salary_mode?: string;
+    base_salary?: number;
+    hra?: number;
+    dearness_allowance?: number;
+    other_allowances?: number;
+    pf_contribution_rate?: number;
+    esi_contribution_rate?: number;
+    professional_tax?: number;
+  };
   onSubmit: (data: any) => Promise<void>;
   isLoading?: boolean;
 }
 
 export const SalaryStructureForm: React.FC<SalaryStructureFormProps> = ({
   employeeId,
+  employeeName,
+  initialData,
   onSubmit,
   isLoading = false,
 }) => {
   const [formData, setFormData] = useState({
-    salary_mode: 'monthly',
-    base_salary: '',
-    hra: '',
-    dearness_allowance: '',
-    other_allowances: '',
-    pf_contribution_rate: '12',
-    esi_contribution_rate: '0.75',
-    professional_tax: '',
+    employee_id: employeeId,
+    salary_mode: initialData?.salary_mode ?? 'monthly',
+    base_salary: initialData?.base_salary != null ? String(initialData.base_salary) : '',
+    hra: initialData?.hra != null ? String(initialData.hra) : '',
+    dearness_allowance: initialData?.dearness_allowance != null ? String(initialData.dearness_allowance) : '',
+    other_allowances: initialData?.other_allowances != null ? String(initialData.other_allowances) : '',
+    pf_contribution_rate: initialData?.pf_contribution_rate != null ? String(initialData.pf_contribution_rate) : '12',
+    esi_contribution_rate: initialData?.esi_contribution_rate != null ? String(initialData.esi_contribution_rate) : '0.75',
+    professional_tax: initialData?.professional_tax != null ? String(initialData.professional_tax) : '',
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -48,6 +62,10 @@ export const SalaryStructureForm: React.FC<SalaryStructureFormProps> = ({
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
+
+    if (!formData.employee_id || formData.employee_id.trim().length === 0) {
+      newErrors.employee_id = 'Employee ID is required';
+    }
 
     if (!formData.base_salary || parseFloat(formData.base_salary) <= 0) {
       newErrors.base_salary = 'Base salary must be greater than 0';
@@ -74,7 +92,6 @@ export const SalaryStructureForm: React.FC<SalaryStructureFormProps> = ({
 
     try {
       await onSubmit({
-        employee_id: employeeId,
         ...formData,
         base_salary: parseFloat(formData.base_salary),
         hra: parseFloat(formData.hra) || 0,
@@ -101,12 +118,27 @@ export const SalaryStructureForm: React.FC<SalaryStructureFormProps> = ({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <DollarSign className="h-5 w-5" />
-          Configure Salary Structure
+          {employeeName ? `Salary Structure — ${employeeName}` : 'Configure Salary Structure'}
         </CardTitle>
         <CardDescription>Set up salary components and deduction rates</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Employee ID */}
+          <div className="space-y-2">
+            <Label htmlFor="employee_id">Employee ID *</Label>
+            <Input
+              id="employee_id"
+              name="employee_id"
+              type="text"
+              placeholder="Enter employee ID"
+              value={formData.employee_id}
+              onChange={handleChange}
+              className={errors.employee_id ? 'border-red-500' : ''}
+            />
+            {errors.employee_id && <p className="text-sm text-red-500">{errors.employee_id}</p>}
+          </div>
+
           {/* Salary Mode */}
           <div className="space-y-2">
             <Label htmlFor="salary_mode">Salary Mode</Label>

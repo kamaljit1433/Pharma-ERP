@@ -48,9 +48,9 @@ export const Leave: React.FC = () => {
 
   // Calculate summary statistics
   const stats = useMemo(() => {
-    const totalAvailable = leaveBalances.reduce((sum, b) => sum + b.available_balance, 0);
-    const totalUsed = leaveBalances.reduce((sum, b) => sum + b.used_balance, 0);
-    const totalCarryForward = leaveBalances.reduce((sum, b) => sum + b.carry_forward_balance, 0);
+    const totalAvailable = leaveBalances.reduce((sum, b) => sum + Number(b.available_balance), 0);
+    const totalUsed = leaveBalances.reduce((sum, b) => sum + Number(b.used_balance), 0);
+    const totalCarryForward = leaveBalances.reduce((sum, b) => sum + Number(b.carry_forward_balance), 0);
     const pendingCount = leaves.filter((l) => l.status === 'pending').length;
     const approvedCount = leaves.filter((l) => l.status === 'approved').length;
 

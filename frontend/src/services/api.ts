@@ -96,32 +96,39 @@ apiClient.interceptors.response.use(
       let errorData: any = error.response.data;
       if (errorData instanceof Blob && errorData.type.includes('application/json')) {
         try {
-          errorData = JSON.parse(await errorData.text());
+          const parsed = JSON.parse(await errorData.text());
+          errorData = parsed;
+          const backendMessage = parsed.error || parsed.message;
+          if (backendMessage) {
+            return Promise.reject(new Error(backendMessage));
+          }
         } catch {
           errorData = {};
         }
       }
 
+      const errorMessage = errorData?.error || errorData?.message;
       switch (status) {
         case 401:
-          // Unauthorized - redirect to login
           console.error('Unauthorized access - redirecting to login');
           window.location.href = '/login';
           break;
         case 403:
-          // Forbidden
-          console.error('Access forbidden:', errorData?.message || 'You do not have permission to access this resource');
+          console.error('Access forbidden:', errorMessage || 'You do not have permission to access this resource');
           break;
         case 404:
-          // Not found
-          console.error('Resource not found:', errorData?.message || 'The requested resource was not found');
+          console.error('Resource not found:', errorMessage || 'The requested resource was not found');
           break;
         case 500:
-          // Server error
-          console.error('Server error:', errorData?.message || 'An internal server error occurred');
+          console.error('Server error:', errorMessage || 'An internal server error occurred');
           break;
         default:
-          console.error('API error:', errorData?.message || 'An error occurred');
+          console.error('API error:', errorMessage || 'An error occurred');
+      }
+
+      // Propagate the backend's error message so callers get a meaningful Error.message
+      if (errorMessage) {
+        return Promise.reject(new Error(errorMessage));
       }
     } else if (axios.isCancel(error)) {
       // Request was cancelled

@@ -26,6 +26,45 @@ export function createPayrollRoutes(knex: Knex): Router {
     }
   );
 
+  // List all active employees with their current salary structure
+  router.get(
+    '/salary-structures',
+    authenticateToken as any,
+    async (req: Request, res: Response) => {
+      try {
+        const rows = await knex('employees')
+          .leftJoin('salary_structures', function () {
+            this.on('employees.id', '=', 'salary_structures.employee_id').andOn(
+              'salary_structures.is_active',
+              '=',
+              knex.raw('true')
+            );
+          })
+          .where('employees.status', 'active')
+          .select(
+            'employees.id as employee_uuid',
+            'employees.employee_id as employee_code',
+            knex.raw("CONCAT(employees.first_name, ' ', employees.last_name) as employee_name"),
+            'salary_structures.id as structure_id',
+            'salary_structures.salary_mode',
+            'salary_structures.base_salary',
+            'salary_structures.hra',
+            'salary_structures.dearness_allowance',
+            'salary_structures.other_allowances',
+            'salary_structures.pf_contribution_rate',
+            'salary_structures.esi_contribution_rate',
+            'salary_structures.professional_tax',
+            'salary_structures.effective_from',
+            'salary_structures.is_active'
+          )
+          .orderBy('employees.first_name');
+        res.status(200).json({ success: true, data: rows });
+      } catch (error: any) {
+        res.status(500).json({ success: false, error: error.message });
+      }
+    }
+  );
+
   // Configure salary structure
   router.post(
     '/salary-structure',

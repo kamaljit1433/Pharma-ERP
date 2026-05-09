@@ -33,6 +33,7 @@ const routeLabels: Record<string, string> = {
   attendance: 'Attendance',
   leave: 'Leave',
   payroll: 'Payroll',
+  'salary-structure': 'Salary Structure',
   recruitment: 'Recruitment',
   performance: 'Performance',
   training: 'Training',

@@ -8,21 +8,19 @@
 
     /* Modules */
     "module": "commonjs",
-    "moduleResolution": "node10",
-    // "ignoreDeprecations": "6.0",
-    "baseUrl": ".",
+    "moduleResolution": "node16",
     "paths": {
-      "@/*": ["src/*"],
-      "@services/*": ["src/services/*"],
-      "@models/*": ["src/models/*"],
-      "@repositories/*": ["src/repositories/*"],
-      "@middleware/*": ["src/middleware/*"],
-      "@controllers/*": ["src/controllers/*"],
-      "@utils/*": ["src/utils/*"],
-      "@config/*": ["src/config/*"],
-      "@types/*": ["src/types/*"],
-      "@validators/*": ["src/validators/*"],
-      "@events/*": ["src/events/*"]
+      "@/*": ["./src/*"],
+      "@services/*": ["./src/services/*"],
+      "@models/*": ["./src/models/*"],
+      "@repositories/*": ["./src/repositories/*"],
+      "@middleware/*": ["./src/middleware/*"],
+      "@controllers/*": ["./src/controllers/*"],
+      "@utils/*": ["./src/utils/*"],
+      "@config/*": ["./src/config/*"],
+      "@types/*": ["./src/types/*"],
+      "@validators/*": ["./src/validators/*"],
+      "@events/*": ["./src/events/*"]
     },
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
@@ -36,7 +34,6 @@
     "sourceMap": true,
     "removeComments": true,
     "importHelpers": true,
-    "downlevelIteration": true,
 
     /* Type Checking */
     "strict": true,

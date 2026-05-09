@@ -16,6 +16,15 @@ export class PayrollProcessingService {
     this.payslipService = new PayslipService(knex);
   }
 
+  private async resolveToEmployeeId(userId: string): Promise<string | null> {
+    const direct = await this.knex('employees').where('id', userId).first();
+    if (direct) return direct.id;
+    const user = await this.knex('users').where('id', userId).first();
+    if (!user) return null;
+    const employee = await this.knex('employees').where('employee_id', user.employee_id).first();
+    return employee ? employee.id : null;
+  }
+
   async processMonthlyPayroll(
     month: number,
     year: number,
@@ -38,6 +47,8 @@ export class PayrollProcessingService {
     if (employees.length === 0) {
       throw new Error('No active employees found');
     }
+
+    const processedByEmployeeId = await this.resolveToEmployeeId(processedBy) ?? undefined;
 
     let processedCount = 0;
     let totalGrossSalary = 0;
@@ -84,7 +95,7 @@ export class PayrollProcessingService {
         }
 
         // Update payroll status to processed
-        await this.payrollRepository.updatePayrollStatus(payroll.id, 'processed', processedBy);
+        await this.payrollRepository.updatePayrollStatus(payroll.id, 'processed', processedByEmployeeId);
 
         // Payslip generation is non-critical: failure must not block salary processing
         try {
@@ -167,8 +178,9 @@ export class PayrollProcessingService {
       throw new Error('Only locked payroll can be unlocked');
     }
 
+    const unlockedByEmployeeId = await this.resolveToEmployeeId(unlockedBy) ?? undefined;
     // Update status back to processed, recording who unlocked it
-    await this.payrollRepository.updatePayrollStatus(payrollId, 'processed', unlockedBy);
+    await this.payrollRepository.updatePayrollStatus(payrollId, 'processed', unlockedByEmployeeId);
 
     // Create audit log
     await this.createAuditLog(
@@ -213,13 +225,19 @@ export class PayrollProcessingService {
   ): Promise<Buffer> {
     const payrolls = await this.payrollRepository.getPayrollsByMonth(month, year);
 
-    if (payrolls.length === 0) {
-      throw new Error(`No payroll records found for ${month}/${year}`);
-    }
-
     if (format === 'CSV') {
+      if (payrolls.length === 0) {
+        return Buffer.from(
+          'Employee ID,Employee Name,Amount,Bank Account (Masked),IFSC Code\n' +
+          `# No payroll records found for ${month}/${year}\n`,
+          'utf-8'
+        );
+      }
       return this.generateCSVFile(payrolls);
     } else if (format === 'NEFT') {
+      if (payrolls.length === 0) {
+        return Buffer.from(`# No payroll records found for ${month}/${year}\n`, 'utf-8');
+      }
       return this.generateNEFTFile(payrolls);
     }
 

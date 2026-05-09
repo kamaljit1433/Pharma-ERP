@@ -69,9 +69,9 @@ export const PayrollReports: React.FC<PayrollReportsProps> = ({
 
   const summary = {
     totalEmployees: filteredPayrolls.length,
-    totalGross: filteredPayrolls.reduce((sum, p) => sum + p.gross_salary, 0),
-    totalDeductions: filteredPayrolls.reduce((sum, p) => sum + p.total_deductions, 0),
-    totalNet: filteredPayrolls.reduce((sum, p) => sum + p.net_salary, 0),
+    totalGross: filteredPayrolls.reduce((sum, p) => sum + Number(p.gross_salary), 0),
+    totalDeductions: filteredPayrolls.reduce((sum, p) => sum + Number(p.total_deductions), 0),
+    totalNet: filteredPayrolls.reduce((sum, p) => sum + Number(p.net_salary), 0),
     processed: filteredPayrolls.filter((p) => p.status === 'processed').length,
     paid: filteredPayrolls.filter((p) => p.status === 'paid').length,
   };
@@ -100,7 +100,7 @@ export const PayrollReports: React.FC<PayrollReportsProps> = ({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4 items-end">
+          <div className="flex flex-wrap gap-4 items-end">
             <div className="space-y-2">
               <label className="text-sm font-medium">Month</label>
               <Select value={selectedMonth} onValueChange={setSelectedMonth}>
@@ -160,7 +160,7 @@ export const PayrollReports: React.FC<PayrollReportsProps> = ({
       </Card>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardContent className="pt-6">
             <p className="text-sm text-muted-foreground">Total Employees</p>
@@ -225,40 +225,48 @@ export const PayrollReports: React.FC<PayrollReportsProps> = ({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredPayrolls.map((payroll) => (
-                      <TableRow key={payroll.id}>
-                        <TableCell className="font-medium">
-                          {payroll.employee_name}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {payroll.gross_salary.toLocaleString('en-IN', {
-                            style: 'currency',
-                            currency: 'INR',
-                            maximumFractionDigits: 0,
-                          })}
-                        </TableCell>
-                        <TableCell className="text-right text-destructive">
-                          {payroll.total_deductions.toLocaleString('en-IN', {
-                            style: 'currency',
-                            currency: 'INR',
-                            maximumFractionDigits: 0,
-                          })}
-                        </TableCell>
-                        <TableCell className="text-right font-semibold">
-                          {payroll.net_salary.toLocaleString('en-IN', {
-                            style: 'currency',
-                            currency: 'INR',
-                            maximumFractionDigits: 0,
-                          })}
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={getStatusColor(payroll.status)}>
-                            {payroll.status.charAt(0).toUpperCase() +
-                              payroll.status.slice(1)}
-                          </Badge>
+                    {filteredPayrolls.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                          No payroll records found for the selected period.
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : (
+                      filteredPayrolls.map((payroll) => (
+                        <TableRow key={payroll.id}>
+                          <TableCell className="font-medium">
+                            {payroll.employee_name}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {Number(payroll.gross_salary).toLocaleString('en-IN', {
+                              style: 'currency',
+                              currency: 'INR',
+                              maximumFractionDigits: 0,
+                            })}
+                          </TableCell>
+                          <TableCell className="text-right text-destructive">
+                            {Number(payroll.total_deductions).toLocaleString('en-IN', {
+                              style: 'currency',
+                              currency: 'INR',
+                              maximumFractionDigits: 0,
+                            })}
+                          </TableCell>
+                          <TableCell className="text-right font-semibold">
+                            {Number(payroll.net_salary).toLocaleString('en-IN', {
+                              style: 'currency',
+                              currency: 'INR',
+                              maximumFractionDigits: 0,
+                            })}
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={getStatusColor(payroll.status)}>
+                              {payroll.status.charAt(0).toUpperCase() +
+                                payroll.status.slice(1)}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </div>
@@ -283,34 +291,42 @@ export const PayrollReports: React.FC<PayrollReportsProps> = ({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredPayrolls
-                      .filter((p) => p.status === 'processed')
-                      .map((payroll) => (
-                        <TableRow key={payroll.id}>
-                          <TableCell className="font-medium">
-                            {payroll.employee_name}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {payroll.gross_salary.toLocaleString('en-IN', {
-                              style: 'currency',
-                              currency: 'INR',
-                              maximumFractionDigits: 0,
-                            })}
-                          </TableCell>
-                          <TableCell className="text-right font-semibold">
-                            {payroll.net_salary.toLocaleString('en-IN', {
-                              style: 'currency',
-                              currency: 'INR',
-                              maximumFractionDigits: 0,
-                            })}
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={getStatusColor(payroll.status)}>
-                              Processed
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                    {filteredPayrolls.filter((p) => p.status === 'processed').length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                          No processed payroll records for the selected period.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredPayrolls
+                        .filter((p) => p.status === 'processed')
+                        .map((payroll) => (
+                          <TableRow key={payroll.id}>
+                            <TableCell className="font-medium">
+                              {payroll.employee_name}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {Number(payroll.gross_salary).toLocaleString('en-IN', {
+                                style: 'currency',
+                                currency: 'INR',
+                                maximumFractionDigits: 0,
+                              })}
+                            </TableCell>
+                            <TableCell className="text-right font-semibold">
+                              {Number(payroll.net_salary).toLocaleString('en-IN', {
+                                style: 'currency',
+                                currency: 'INR',
+                                maximumFractionDigits: 0,
+                              })}
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={getStatusColor(payroll.status)}>
+                                Processed
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                    )}
                   </TableBody>
                 </Table>
               </div>
@@ -335,34 +351,42 @@ export const PayrollReports: React.FC<PayrollReportsProps> = ({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredPayrolls
-                      .filter((p) => p.status === 'paid')
-                      .map((payroll) => (
-                        <TableRow key={payroll.id}>
-                          <TableCell className="font-medium">
-                            {payroll.employee_name}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {payroll.gross_salary.toLocaleString('en-IN', {
-                              style: 'currency',
-                              currency: 'INR',
-                              maximumFractionDigits: 0,
-                            })}
-                          </TableCell>
-                          <TableCell className="text-right font-semibold">
-                            {payroll.net_salary.toLocaleString('en-IN', {
-                              style: 'currency',
-                              currency: 'INR',
-                              maximumFractionDigits: 0,
-                            })}
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={getStatusColor(payroll.status)}>
-                              Paid
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                    {filteredPayrolls.filter((p) => p.status === 'paid').length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                          No paid payroll records for the selected period.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredPayrolls
+                        .filter((p) => p.status === 'paid')
+                        .map((payroll) => (
+                          <TableRow key={payroll.id}>
+                            <TableCell className="font-medium">
+                              {payroll.employee_name}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {Number(payroll.gross_salary).toLocaleString('en-IN', {
+                                style: 'currency',
+                                currency: 'INR',
+                                maximumFractionDigits: 0,
+                              })}
+                            </TableCell>
+                            <TableCell className="text-right font-semibold">
+                              {Number(payroll.net_salary).toLocaleString('en-IN', {
+                                style: 'currency',
+                                currency: 'INR',
+                                maximumFractionDigits: 0,
+                              })}
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={getStatusColor(payroll.status)}>
+                                Paid
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                    )}
                   </TableBody>
                 </Table>
               </div>

@@ -185,6 +185,17 @@ export class LeaveService {
     fromDate?: string;
     toDate?: string;
   }): Promise<Leave[]> {
+    if (filters?.employeeId) {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(filters.employeeId);
+      if (!isUuid) {
+        const employee = await this.knex('employees')
+          .where('employee_id', filters.employeeId)
+          .first();
+        if (employee) {
+          filters = { ...filters, employeeId: employee.id };
+        }
+      }
+    }
     return this.leaveRepository.getLeaves(filters);
   }
 

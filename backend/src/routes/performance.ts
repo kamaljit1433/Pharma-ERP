@@ -12,6 +12,11 @@ export function createPerformanceRoutes(knex: Knex): Router {
   // Middleware
   router.use(authenticateToken as any);
 
+  // Dashboard
+  router.get('/dashboard', (req: Request, res: Response) =>
+    controller.getDashboard(req, res, () => {})
+  );
+
   // ============ Goals ============
 
   // Create goal (HR Manager, Super Admin)

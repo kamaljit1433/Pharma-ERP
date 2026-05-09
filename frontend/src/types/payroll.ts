@@ -3,10 +3,18 @@ export interface PayrollRecord {
   employee_id: string;
   month: number;
   year: number;
+  basic_salary?: number;
   gross_salary: number;
   net_salary: number;
-  deductions: number;
-  status: 'draft' | 'processed' | 'locked';
+  total_deductions: number;
+  pf_deduction?: number;
+  esi_deduction?: number;
+  tds_deduction?: number;
+  status: 'draft' | 'processed' | 'paid' | 'locked';
+  processed_by?: string;
+  processed_at?: string;
+  paid_at?: string | null;
+  is_locked?: boolean;
   created_at?: string;
   updated_at?: string;
 }
@@ -19,15 +27,22 @@ export interface SalaryComponent {
 }
 
 export interface SalaryStructure {
-  id: string;
-  employee_id: string;
-  basic_salary: number;
-  hra: number;
-  allowances: Record<string, number>;
-  deductions: Record<string, number>;
-  pf_amount?: number;
-  esi_amount?: number;
-  tax_amount?: number;
+  id?: string;
+  structure_id?: string;
+  employee_id?: string;
+  employee_uuid?: string;
+  employee_code?: string;
+  employee_name?: string;
+  salary_mode?: 'monthly' | 'daily' | 'hourly';
+  base_salary?: number;
+  hra?: number;
+  dearness_allowance?: number;
+  other_allowances?: number;
+  pf_contribution_rate?: number;
+  esi_contribution_rate?: number;
+  professional_tax?: number;
+  effective_from?: string;
+  is_active?: boolean;
 }
 
 export interface Payslip {
@@ -35,12 +50,15 @@ export interface Payslip {
   payroll_id: string;
   employee_id: string;
   employee_name?: string;
+  payslip_number?: string;
   month: number;
   year: number;
   generated_at: string;
   gross_salary: number;
   net_salary: number;
-  deductions: number;
+  total_deductions?: number;
+  earnings?: Record<string, number>;
+  deductions_breakdown?: Record<string, number>;
 }
 
 export interface PayrollSummary {

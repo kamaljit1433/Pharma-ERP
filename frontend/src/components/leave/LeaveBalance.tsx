@@ -64,10 +64,10 @@ export const LeaveBalance: React.FC<LeaveBalanceProps> = ({
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {leaveBalances.map((balance) => {
           const leaveType = leaveTypes.find((lt) => lt.id === balance.leave_type_id);
-          const usagePercent = balance.opening_balance > 0 
-            ? (balance.used_balance / balance.opening_balance) * 100 
+          const usagePercent = Number(balance.opening_balance) > 0
+            ? (Number(balance.used_balance) / Number(balance.opening_balance)) * 100
             : 0;
-          const isLowBalance = balance.available_balance <= 2;
+          const isLowBalance = Number(balance.available_balance) <= 2;
 
           return (
             <Card key={balance.id} className={isLowBalance ? 'border-amber-200 bg-amber-50' : ''}>
@@ -91,19 +91,19 @@ export const LeaveBalance: React.FC<LeaveBalanceProps> = ({
                 <div className="grid grid-cols-3 gap-2 text-center">
                   <div>
                     <p className="text-2xl font-bold text-green-600">
-                      {balance.available_balance.toFixed(1)}
+                      {Number(balance.available_balance).toFixed(1)}
                     </p>
                     <p className="text-xs text-muted-foreground">Available</p>
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-blue-600">
-                      {balance.used_balance.toFixed(1)}
+                      {Number(balance.used_balance).toFixed(1)}
                     </p>
                     <p className="text-xs text-muted-foreground">Used</p>
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-amber-600">
-                      {balance.carry_forward_balance.toFixed(1)}
+                      {Number(balance.carry_forward_balance).toFixed(1)}
                     </p>
                     <p className="text-xs text-muted-foreground">Carry Fwd</p>
                   </div>
@@ -124,7 +124,7 @@ export const LeaveBalance: React.FC<LeaveBalanceProps> = ({
                 <div className="space-y-1 border-t pt-3">
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">Opening Balance</span>
-                    <span className="font-medium">{balance.opening_balance.toFixed(1)}</span>
+                    <span className="font-medium">{Number(balance.opening_balance).toFixed(1)}</span>
                   </div>
                   {balance.carry_forward_balance > 0 && (
                     <div className="flex items-center justify-between text-xs">
@@ -133,7 +133,7 @@ export const LeaveBalance: React.FC<LeaveBalanceProps> = ({
                         Carry Forward
                       </span>
                       <span className="font-medium text-amber-600">
-                        +{balance.carry_forward_balance.toFixed(1)}
+                        +{Number(balance.carry_forward_balance).toFixed(1)}
                       </span>
                     </div>
                   )}
@@ -143,7 +143,7 @@ export const LeaveBalance: React.FC<LeaveBalanceProps> = ({
                       Used
                     </span>
                     <span className="font-medium text-blue-600">
-                      -{balance.used_balance.toFixed(1)}
+                      -{Number(balance.used_balance).toFixed(1)}
                     </span>
                   </div>
                 </div>

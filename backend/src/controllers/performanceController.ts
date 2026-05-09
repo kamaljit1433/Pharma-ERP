@@ -11,6 +11,7 @@ import { PIPRepository } from '../repositories/pipRepository';
 import { ReviewCycleRepository } from '../repositories/reviewCycleRepository';
 
 export class PerformanceController {
+  private knex: Knex;
   private goalService: GoalService;
   private reviewService: PerformanceReviewService;
   private feedbackService: FeedbackService;
@@ -18,6 +19,7 @@ export class PerformanceController {
   private reviewCycleRepository: ReviewCycleRepository;
 
   constructor(knex: Knex) {
+    this.knex = knex;
     this.reviewCycleRepository = new ReviewCycleRepository(knex);
 
     this.goalService = new GoalService(new GoalRepository(knex));
@@ -404,6 +406,87 @@ export class PerformanceController {
 
       const pip = await this.pipService.recordOutcome(id, outcome, (req as any).user.id);
       res.json(pip);
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  // ============ Dashboard ============
+
+  async getDashboard(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const knex = this.knex;
+
+      const [
+        activeReviewCycles,
+        pendingReviews,
+        activePIPs,
+        recentFeedback,
+        goalRows,
+        ratingRows,
+        feedbackVisibility,
+      ] = await Promise.all([
+        knex('review_cycles').where('status', 'active').count('id as count').first(),
+        knex('performance_reviews').where('status', 'draft').count('id as count').first(),
+        knex('pips').where('status', 'active').count('id as count').first(),
+        knex('feedback')
+          .where('created_at', '>=', knex.raw("NOW() - INTERVAL '30 days'"))
+          .select('visibility')
+          .count('id as count')
+          .groupBy('visibility'),
+        knex('goals')
+          .select('status', 'progress_percentage')
+          .whereIn('status', ['active', 'completed']),
+        knex('performance_reviews')
+          .whereNotNull('rating')
+          .select('rating')
+          .count('id as count')
+          .groupBy('rating')
+          .orderBy('rating'),
+        knex('feedback')
+          .select('visibility')
+          .count('id as count')
+          .groupBy('visibility'),
+      ]);
+
+      // Classify active goals into on_track / at_risk / behind
+      const goalCompletionStats = { completed: 0, onTrack: 0, atRisk: 0, behind: 0 };
+      for (const g of goalRows) {
+        if (g.status === 'completed') {
+          goalCompletionStats.completed++;
+        } else {
+          const p = Number(g.progress_percentage);
+          if (p >= 70) goalCompletionStats.onTrack++;
+          else if (p >= 30) goalCompletionStats.atRisk++;
+          else goalCompletionStats.behind++;
+        }
+      }
+
+      // Map feedback visibility to sentiment (public → positive, manager → constructive, private → neutral)
+      const feedbackSentiment = { positive: 0, constructive: 0, neutral: 0 };
+      for (const row of feedbackVisibility as any[]) {
+        const c = Number(row.count);
+        if (row.visibility === 'public') feedbackSentiment.positive += c;
+        else if (row.visibility === 'manager') feedbackSentiment.constructive += c;
+        else feedbackSentiment.neutral += c;
+      }
+
+      res.json({
+        activeReviewCycles: Number((activeReviewCycles as any)?.count || 0),
+        pendingReviews: Number((pendingReviews as any)?.count || 0),
+        activePIPs: Number((activePIPs as any)?.count || 0),
+        recentFeedback: (recentFeedback as any[]).map((r) => ({
+          id: r.visibility,
+          type: r.visibility,
+          count: Number(r.count),
+        })),
+        goalCompletionStats,
+        reviewRatingsDistribution: (ratingRows as any[]).map((r) => ({
+          rating: Number(r.rating),
+          count: Number(r.count),
+        })),
+        feedbackSentiment,
+      });
     } catch (error) {
       return next(error);
     }

@@ -2,6 +2,11 @@ import apiClient from './api';
 
 export const payrollService = {
   // Salary Structure
+  getAllSalaryStructures: async () => {
+    const response = await apiClient.get('/payroll/salary-structures');
+    return response.data;
+  },
+
   configureSalaryStructure: async (data: any) => {
     const response = await apiClient.post('/payroll/salary-structure', data);
     return response.data;

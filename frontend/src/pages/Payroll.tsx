@@ -7,11 +7,10 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PayrollProcessing } from '@/components/payroll/PayrollProcessing';
 import { PayslipViewer } from '@/components/payroll/PayslipViewer';
-import { SalaryStructureForm } from '@/components/payroll/SalaryStructureForm';
+import { SalaryStructureTab } from '@/components/payroll/SalaryStructureTab';
 import { AdvanceSalaryRequest } from '@/components/payroll/AdvanceSalaryRequest';
 import { PayrollReports } from '@/components/payroll/PayrollReports';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, Download, FileText, Wallet } from 'lucide-react';
 import { UserRole } from '@/types/auth';
 import { useToast } from '@/hooks/useToast';
@@ -32,7 +31,6 @@ const Payroll: React.FC = () => {
     generatePayslip,
     downloadPayslip,
     processMonthlyPayroll,
-    configureSalaryStructure,
     requestAdvanceSalary,
     exportBankFile,
   } = usePayrollStore();
@@ -65,7 +63,7 @@ const Payroll: React.FC = () => {
       toast({ type: 'success', message: `Payroll processed for ${month}/${year}` });
       return summary;
     } catch (err) {
-      toast({ type: 'error', message: (err as Error).message || 'Failed to process payroll' });
+      // Error message is surfaced via the store's error effect
       throw err;
     }
   };
@@ -97,8 +95,9 @@ const Payroll: React.FC = () => {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-    } catch (err) {
-      toast({ type: 'error', message: 'Failed to export bank file' });
+      toast({ type: 'success', message: `${format} file exported successfully` });
+    } catch {
+      // Error message is surfaced via the store's error effect below
     }
   };
 
@@ -214,10 +213,10 @@ const Payroll: React.FC = () => {
                         <TableRow key={record.id}>
                           <TableCell className="font-medium">{record.employee_id}</TableCell>
                           <TableCell>{record.month}/{record.year}</TableCell>
-                          <TableCell>₹{record.gross_salary.toLocaleString()}</TableCell>
-                          <TableCell>₹{record.deductions.toLocaleString()}</TableCell>
+                          <TableCell>₹{Number(record.gross_salary ?? 0).toLocaleString()}</TableCell>
+                          <TableCell>₹{Number(record.deductions ?? 0).toLocaleString()}</TableCell>
                           <TableCell className="font-semibold">
-                            ₹{record.net_salary.toLocaleString()}
+                            ₹{Number(record.net_salary ?? 0).toLocaleString()}
                           </TableCell>
                           <TableCell>
                             <Badge
@@ -298,9 +297,9 @@ const Payroll: React.FC = () => {
                             {payslip.employee_name || payslip.employee_id}
                           </TableCell>
                           <TableCell>{payslip.month}/{payslip.year}</TableCell>
-                          <TableCell>₹{payslip.gross_salary.toLocaleString()}</TableCell>
+                          <TableCell>₹{Number(payslip.gross_salary ?? 0).toLocaleString()}</TableCell>
                           <TableCell className="font-semibold">
-                            ₹{payslip.net_salary.toLocaleString()}
+                            ₹{Number(payslip.net_salary ?? 0).toLocaleString()}
                           </TableCell>
                           <TableCell>
                             {new Date(payslip.generated_at).toLocaleDateString()}
@@ -337,42 +336,25 @@ const Payroll: React.FC = () => {
 
         {/* Salary Structure Tab */}
         <TabsContent value="salary-structure" className="space-y-6">
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Select an employee to configure their salary structure. Enter the employee ID in the form below.
-            </AlertDescription>
-          </Alert>
-          <SalaryStructureForm
-            employeeId={user?.employeeId || ''}
-            onSubmit={configureSalaryStructure}
-            isLoading={loading}
-          />
+          <SalaryStructureTab />
         </TabsContent>
 
         {/* Reports Tab (includes advance salary) */}
         <TabsContent value="reports" className="space-y-6">
-          <div className="grid gap-6 lg:grid-cols-3">
-            <div className="lg:col-span-2">
-              <PayrollReports
-                payrolls={records.map((r) => ({
-                  ...r,
-                  employee_name: r.employee_id,
-                  total_deductions: r.deductions,
-                }))}
-                onExport={handleExportBankFile}
-                isLoading={loading}
-              />
-            </div>
-            <div>
-              <AdvanceSalaryRequest
-                employeeId={user?.employeeId || ''}
-                maxAmount={50000}
-                onSubmit={requestAdvanceSalary}
-                isLoading={loading}
-              />
-            </div>
-          </div>
+          <PayrollReports
+            payrolls={records.map((r) => ({
+              ...r,
+              employee_name: r.employee_id,
+            }))}
+            onExport={handleExportBankFile}
+            isLoading={loading}
+          />
+          <AdvanceSalaryRequest
+            employeeId={user?.employeeId || ''}
+            maxAmount={50000}
+            onSubmit={requestAdvanceSalary}
+            isLoading={loading}
+          />
         </TabsContent>
       </Tabs>
 
