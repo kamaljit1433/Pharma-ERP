@@ -114,26 +114,10 @@
     font-feature-settings: 'rlig' 1, 'calt' 1;
   }
 
-  /* Smooth theme transition animation */
-  html {
-    transition: background-color 0.3s ease, color 0.3s ease;
-  }
-
-  html * {
+  /* Theme transitions — only on the elements that actually need it */
+  .theme-transition,
+  .theme-transition * {
     transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
-  }
-
-  /* Disable transitions for elements that shouldn't animate */
-  html *:where(
-    [data-no-transition],
-    input,
-    textarea,
-    select,
-    button:active,
-    [role="progressbar"],
-    [role="slider"]
-  ) {
-    transition: none !important;
   }
 
   /* ============================================

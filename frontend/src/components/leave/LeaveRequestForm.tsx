@@ -59,9 +59,10 @@ export const LeaveRequestForm: React.FC<LeaveRequestFormProps> = ({
     (lb) => lb.leave_type_id === selectedLeaveType
   );
 
-  // Check if sufficient balance
+  // Check if sufficient balance. If no balance record exists (e.g. Maternity, LWP),
+  // let it through — the backend will validate.
   const hasSufficientBalance =
-    selectedBalance && selectedBalance.available_balance >= daysCount;
+    !selectedBalance || Number(selectedBalance.available_balance) >= daysCount;
 
   // Validate form
   const validateForm = (): boolean => {
@@ -237,9 +238,9 @@ export const LeaveRequestForm: React.FC<LeaveRequestFormProps> = ({
               <p className="text-sm font-medium">
                 Total Days: <span className="text-lg">{daysCount}</span>
               </p>
-              {!hasSufficientBalance && selectedBalance && (
+              {selectedBalance && Number(selectedBalance.available_balance) < daysCount && (
                 <p className="text-sm text-destructive mt-1">
-                  ⚠️ Insufficient balance. You need {daysCount - selectedBalance.available_balance} more days.
+                  ⚠️ Insufficient balance. You need {daysCount - Number(selectedBalance.available_balance)} more days.
                 </p>
               )}
             </div>

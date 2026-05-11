@@ -3,7 +3,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Badge } from '../ui/badge';
 import { Skeleton } from '../ui/skeleton';
 import { Button } from '../ui/button';
-import { FileText, Download, Trash2, Upload } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../ui/alert-dialog';
+import { FileText, Download, Trash2, Upload, Loader2 } from 'lucide-react';
 import { documentService } from '@/services/documentService';
 import { useToast } from '@/hooks/useToast';
 import { useAuthStore } from '@/store/authStore';
@@ -30,7 +40,9 @@ export const EmployeeDocumentsTab: React.FC<EmployeeDocumentsTabProps> = ({ empl
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [showUpload, setShowUpload] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const canManage =
     user?.role === UserRole.HR_MANAGER || user?.role === UserRole.SUPER_ADMIN;
@@ -51,24 +63,49 @@ export const EmployeeDocumentsTab: React.FC<EmployeeDocumentsTabProps> = ({ empl
     fetchDocuments();
   }, [fetchDocuments]);
 
-  const handleDownload = (fileUrl: string, fileName: string) => {
-    const link = document.createElement('a');
-    link.href = fileUrl;
-    link.download = fileName;
-    link.target = '_blank';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const MIME_TO_EXT: Record<string, string> = {
+    'application/pdf': '.pdf',
+    'image/jpeg': '.jpg',
+    'image/png': '.png',
+    'application/msword': '.doc',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
   };
 
-  const handleDelete = async (documentId: string, docName: string) => {
-    if (!window.confirm(`Delete "${docName}"? This cannot be undone.`)) return;
-    setDeletingId(documentId);
+  const handleDownload = async (docId: string, fileName: string, fileUrl?: string) => {
+    setDownloadingId(docId);
     try {
-      await documentService.deleteDocument(documentId);
-      toast({ type: 'success', message: 'Document deleted' });
+      const blob = await documentService.downloadDocument(docId);
+      const hasExt = /\.[a-z0-9]{2,5}$/i.test(fileName);
+      const ext = hasExt ? '' : (MIME_TO_EXT[blob.type] ?? '');
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName + ext;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch {
+      if (fileUrl) {
+        window.open(fileUrl, '_blank');
+      } else {
+        toast({ type: 'error', message: 'Download failed' });
+      }
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    const { id, name } = deleteTarget;
+    setDeleteTarget(null);
+    setDeletingId(id);
+    try {
+      await documentService.deleteDocument(id);
+      toast({ type: 'success', message: `"${name}" deleted` });
       fetchDocuments();
-    } catch (error) {
+    } catch {
       toast({ type: 'error', message: 'Failed to delete document' });
     } finally {
       setDeletingId(null);
@@ -110,6 +147,26 @@ export const EmployeeDocumentsTab: React.FC<EmployeeDocumentsTabProps> = ({ empl
 
   return (
     <div className="space-y-4">
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete document?</AlertDialogTitle>
+            <AlertDialogDescription>
+              &ldquo;{deleteTarget?.name}&rdquo; will be permanently removed. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={confirmDelete}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {showUpload && (
         <DocumentUpload
           employeeId={employeeId}
@@ -175,26 +232,33 @@ export const EmployeeDocumentsTab: React.FC<EmployeeDocumentsTabProps> = ({ empl
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
-                    {doc.file_url && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDownload(doc.file_url!, doc.name)}
-                        title="Download"
-                      >
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDownload(doc.id, doc.name, doc.file_url)}
+                      disabled={downloadingId === doc.id}
+                      title="Download"
+                    >
+                      {downloadingId === doc.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
                         <Download className="h-4 w-4" />
-                      </Button>
-                    )}
+                      )}
+                    </Button>
                     {canManage && (
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDelete(doc.id, doc.name)}
+                        onClick={() => setDeleteTarget({ id: doc.id, name: doc.name })}
                         disabled={deletingId === doc.id}
                         className="text-destructive hover:text-destructive"
                         title="Delete"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        {deletingId === doc.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
                       </Button>
                     )}
                   </div>

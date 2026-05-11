@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useEmployeeStore } from '@/store/employeeStore';
 import { useAuthStore } from '@/store/authStore';
 import { useToast } from '@/hooks/useToast';
@@ -23,11 +23,12 @@ import { EmployeeHistoryTab } from '@/components/employee/EmployeeHistoryTab';
 export const EmployeeDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const { user } = useAuthStore();
   const { currentItem: employee, loading, fetchItem, updateItem } = useEmployeeStore();
 
-  const [isEditMode, setIsEditMode] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(() => location.pathname.endsWith('/edit'));
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -35,6 +36,12 @@ export const EmployeeDetail: React.FC = () => {
   // Check if user can edit employees (HR Manager or Super Admin)
   const canEditEmployee =
     user?.role === UserRole.HR_MANAGER || user?.role === UserRole.SUPER_ADMIN;
+
+  // Super Admin, HR Manager, and Department Manager can manage emergency contacts
+  const canManageEmergencyContacts =
+    user?.role === UserRole.SUPER_ADMIN ||
+    user?.role === UserRole.HR_MANAGER ||
+    user?.role === UserRole.DEPARTMENT_MANAGER;
 
   // Fetch employee on mount
   useEffect(() => {
@@ -78,6 +85,7 @@ export const EmployeeDetail: React.FC = () => {
         message: 'Employee updated successfully',
       });
       setIsEditMode(false);
+      navigate(`/employees/${id}`, { replace: true });
     } catch (error) {
       toast({
         type: 'error',
@@ -90,6 +98,19 @@ export const EmployeeDetail: React.FC = () => {
 
   const handleCancel = () => {
     setIsEditMode(false);
+    navigate(`/employees/${id}`, { replace: true });
+  };
+
+  const handleStatusChange = async (newStatus: string) => {
+    if (!id) return;
+    try {
+      await employeeService.updateStatus(id, newStatus as any);
+      await fetchItem(id);
+      toast({ type: 'success', message: 'Employee status updated successfully' });
+    } catch (error) {
+      toast({ type: 'error', message: error instanceof Error ? error.message : 'Failed to update status' });
+      throw error;
+    }
   };
 
   if (loading && !employee) {
@@ -203,12 +224,16 @@ export const EmployeeDetail: React.FC = () => {
               onPhotoUpload={canEditEmployee ? () => photoInputRef.current?.click() : undefined}
               isUploadingPhoto={isUploadingPhoto}
             />
-            <EmergencyContactForm employeeId={employee.id} readOnly={!isEditMode} />
+            <EmergencyContactForm employeeId={employee.id} readOnly={!canManageEmergencyContacts} />
           </TabsContent>
 
           {/* Employment Tab */}
           <TabsContent value="employment">
-            <EmployeeEmploymentDetails employee={employee} />
+            <EmployeeEmploymentDetails
+              employee={employee}
+              canEdit={canEditEmployee}
+              onStatusChange={handleStatusChange}
+            />
           </TabsContent>
 
           {/* Documents Tab */}

@@ -69,19 +69,17 @@ export const Employees: React.FC = () => {
 
   const handleDeleteEmployee = useCallback(
     async (employeeId: string) => {
-      if (window.confirm('Are you sure you want to delete this employee?')) {
-        try {
-          await deleteItem(employeeId);
-          toast({
-            type: 'success',
-            message: 'Employee deleted successfully',
-          });
-        } catch (err) {
-          toast({
-            type: 'error',
-            message: 'Failed to delete employee',
-          });
-        }
+      try {
+        await deleteItem(employeeId);
+        toast({
+          type: 'success',
+          message: 'Employee deleted successfully',
+        });
+      } catch (err) {
+        toast({
+          type: 'error',
+          message: 'Failed to delete employee',
+        });
       }
     },
     [deleteItem, toast]

@@ -31,19 +31,19 @@ export class DocumentService {
     // Check access control
     this.checkUploadAccess(employeeId, uploadedBy, userRole);
 
-    // Upload file to S3
-    const fileKey = `documents/${employeeId}/${data.document_type}/${Date.now()}-${data.file_name}`;
-    await this.fileStorageService.uploadFile(data.file, fileKey, {
+    // Upload file — pass the original filename (not a full path) so generateFileKey
+    // builds the correct storage key, and pass employeeId so it goes under employees/
+    const uploadResult = await this.fileStorageService.uploadFile(data.file, data.file_name, {
       category: FileCategory.DOCUMENT,
+      employeeId,
       metadata: {
-        employeeId,
         documentType: data.document_type,
         uploadedBy,
       },
     });
 
-    // Get signed URL for file
-    const fileUrl = await this.fileStorageService.getSignedUrl(fileKey, 'getObject', { expiresIn: 3600 });
+    // Use the URL returned by the storage provider (works for both local and S3)
+    const fileUrl = uploadResult.url || await this.fileStorageService.getSignedUrl(uploadResult.key, 'getObject', { expiresIn: 3600 });
 
     // Create document record
     const document = await this.documentRepository.createDocumentWithFile(employeeId, {
@@ -121,19 +121,17 @@ export class DocumentService {
     // Validate file
     this.validateFile(newDocumentData);
 
-    // Upload new version to S3
-    const fileKey = `documents/${document.employee_id}/${newDocumentData.document_type}/${Date.now()}-${newDocumentData.file_name}`;
-    await this.fileStorageService.uploadFile(newDocumentData.file, fileKey, {
+    // Upload new version
+    const uploadResult = await this.fileStorageService.uploadFile(newDocumentData.file, newDocumentData.file_name, {
       category: FileCategory.DOCUMENT,
+      employeeId: document.employee_id,
       metadata: {
-        employeeId: document.employee_id,
         documentType: newDocumentData.document_type,
         uploadedBy,
       },
     });
 
-    // Get signed URL for new file
-    const fileUrl = await this.fileStorageService.getSignedUrl(fileKey, 'getObject', { expiresIn: 3600 });
+    const fileUrl = uploadResult.url || await this.fileStorageService.getSignedUrl(uploadResult.key, 'getObject', { expiresIn: 3600 });
 
     // Update document with new version
     const updated = await this.documentRepository.updateDocumentVersion(documentId, fileUrl, uploadedBy);

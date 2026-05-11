@@ -201,6 +201,7 @@ export class LeaveRepository {
     }
 
     let query = this.knex('leaves')
+      .whereNotIn('status', ['rejected', 'cancelled'])
       .where((builder) => {
         builder
           .whereBetween('from_date', [fromDate, toDate])

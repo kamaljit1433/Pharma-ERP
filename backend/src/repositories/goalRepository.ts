@@ -86,7 +86,7 @@ export class GoalRepository {
 
     await this.db('goals').where('id', goalId).update({
       current_value: data.currentValue,
-      completion_percentage: completionPercentage,
+      completion_percentage: completionPercentage,  // column added in migration
       status,
       updated_at: new Date(),
     });

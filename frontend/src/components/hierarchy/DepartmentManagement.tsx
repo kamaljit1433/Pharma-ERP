@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -28,7 +28,7 @@ import {
 } from '../ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 import { Skeleton } from '../ui/skeleton';
-import { Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import hierarchyService, { Department } from '../../services/hierarchyService';
 
 interface DepartmentManagementProps {
@@ -50,6 +50,8 @@ export const DepartmentManagement: React.FC<DepartmentManagementProps> = ({
     description: '',
     parentDepartmentId: '',
   });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => {
     fetchDepartments();
@@ -114,6 +116,17 @@ export const DepartmentManagement: React.FC<DepartmentManagementProps> = ({
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete department');
     }
+  };
+
+  const totalPages = Math.max(1, Math.ceil(departments.length / pageSize));
+  const paginatedDepartments = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return departments.slice(start, start + pageSize);
+  }, [departments, page, pageSize]);
+
+  const handlePageSizeChange = (value: string) => {
+    setPageSize(Number(value));
+    setPage(1);
   };
 
   if (loading) {
@@ -183,16 +196,16 @@ export const DepartmentManagement: React.FC<DepartmentManagementProps> = ({
                 <div>
                   <label className="text-sm font-medium">Parent Department</label>
                   <Select
-                    value={formData.parentDepartmentId}
+                    value={formData.parentDepartmentId || 'none'}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, parentDepartmentId: value })
+                      setFormData({ ...formData, parentDepartmentId: value === 'none' ? '' : value })
                     }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select parent department" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">None (Top Level)</SelectItem>
+                      <SelectItem value="none">None (Top Level)</SelectItem>
                       {departments
                         .filter((d) => d.id !== editingDept?.id)
                         .map((dept) => (
@@ -233,14 +246,14 @@ export const DepartmentManagement: React.FC<DepartmentManagementProps> = ({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {departments.length === 0 ? (
+              {paginatedDepartments.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
                     No departments found
                   </TableCell>
                 </TableRow>
               ) : (
-                departments.map((dept) => (
+                paginatedDepartments.map((dept) => (
                   <TableRow key={dept.id}>
                     <TableCell className="font-medium">{dept.name}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
@@ -275,6 +288,50 @@ export const DepartmentManagement: React.FC<DepartmentManagementProps> = ({
               )}
             </TableBody>
           </Table>
+        </div>
+
+        {/* Pagination */}
+        <div className="flex items-center justify-between mt-4 gap-4 flex-wrap">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>Rows per page:</span>
+            <Select value={String(pageSize)} onValueChange={handlePageSizeChange}>
+              <SelectTrigger className="w-20 h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            <span>
+              {departments.length === 0
+                ? '0 of 0'
+                : `${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, departments.length)} of ${departments.length}`}
+            </span>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
         </div>
       </CardContent>
 

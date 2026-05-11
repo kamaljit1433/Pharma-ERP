@@ -41,55 +41,54 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Employee Details</DialogTitle>
-          <DialogDescription>View employee information and team structure</DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-6">
-          {/* Employee Header */}
-          <div className="flex items-center gap-4">
-            <Avatar className="w-16 h-16">
+      <DialogContent className="max-w-sm flex flex-col max-h-[90vh] overflow-hidden p-0 gap-0">
+        {/* Fixed header */}
+        <DialogHeader className="px-5 pt-5 pb-3 flex-shrink-0 border-b">
+          <div className="flex items-center gap-3">
+            <Avatar className="w-12 h-12 flex-shrink-0">
               <AvatarImage src={node.profilePhotoUrl} alt={node.employeeName} />
-              <AvatarFallback className="text-lg font-semibold">
+              <AvatarFallback className="text-base font-semibold">
                 {getInitials(node.employeeName)}
               </AvatarFallback>
             </Avatar>
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-lg truncate">{node.employeeName}</h3>
-              <p className="text-sm text-muted-foreground truncate">{node.designationName}</p>
+            <div className="min-w-0">
+              <DialogTitle className="text-base leading-tight truncate">
+                {node.employeeName}
+              </DialogTitle>
+              <DialogDescription className="text-xs truncate mt-0.5">
+                {node.designationName}
+              </DialogDescription>
             </div>
           </div>
+        </DialogHeader>
 
-          {/* Employee Information */}
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4 min-h-0">
+          {/* Information */}
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-2 pt-3 px-4">
               <CardTitle className="text-sm">Information</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {/* Department */}
+            <CardContent className="px-4 pb-3 space-y-3">
               <div className="flex items-start gap-3">
-                <Building2 className="w-4 h-4 mt-1 text-muted-foreground flex-shrink-0" />
+                <Building2 className="w-4 h-4 mt-0.5 text-muted-foreground flex-shrink-0" />
                 <div className="min-w-0">
                   <p className="text-xs text-muted-foreground">Department</p>
                   <p className="text-sm font-medium truncate">{node.departmentName}</p>
                 </div>
               </div>
 
-              {/* Designation */}
               <div className="flex items-start gap-3">
-                <Briefcase className="w-4 h-4 mt-1 text-muted-foreground flex-shrink-0" />
+                <Briefcase className="w-4 h-4 mt-0.5 text-muted-foreground flex-shrink-0" />
                 <div className="min-w-0">
                   <p className="text-xs text-muted-foreground">Designation</p>
                   <p className="text-sm font-medium truncate">{node.designationName}</p>
                 </div>
               </div>
 
-              {/* Manager */}
               {node.managerName && (
                 <div className="flex items-start gap-3">
-                  <User className="w-4 h-4 mt-1 text-muted-foreground flex-shrink-0" />
+                  <User className="w-4 h-4 mt-0.5 text-muted-foreground flex-shrink-0" />
                   <div className="min-w-0">
                     <p className="text-xs text-muted-foreground">Reporting Manager</p>
                     <p className="text-sm font-medium truncate">{node.managerName}</p>
@@ -97,12 +96,11 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
                 </div>
               )}
 
-              {/* Status */}
               <div className="flex items-start gap-3">
-                <div className="w-4 h-4 mt-1 flex-shrink-0" />
+                <div className="w-4 flex-shrink-0" />
                 <div className="min-w-0">
                   <p className="text-xs text-muted-foreground">Status</p>
-                  <Badge variant={node.isActive ? 'default' : 'secondary'} className="text-xs">
+                  <Badge variant={node.isActive ? 'default' : 'secondary'} className="text-xs mt-0.5">
                     {node.isActive ? 'Active' : 'Inactive'}
                   </Badge>
                 </div>
@@ -110,30 +108,29 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
             </CardContent>
           </Card>
 
-          {/* Team Information */}
+          {/* Team */}
           {directReportCount > 0 && (
             <Card>
-              <CardHeader className="pb-3">
+              <CardHeader className="pb-2 pt-3 px-4">
                 <CardTitle className="text-sm">Team</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-3">
-                  <Users className="w-5 h-5 text-muted-foreground" />
+              <CardContent className="px-4 pb-3">
+                <div className="flex items-center gap-3 mb-3">
+                  <Users className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                   <div>
                     <p className="text-xs text-muted-foreground">Direct Reports</p>
-                    <p className="text-lg font-semibold">{directReportCount}</p>
+                    <p className="text-base font-semibold leading-tight">{directReportCount}</p>
                   </div>
                 </div>
 
-                {/* Direct Reports List */}
                 {node.children && node.children.length > 0 && (
-                  <div className="mt-4 space-y-2">
-                    <p className="text-xs font-medium text-muted-foreground">Team Members:</p>
-                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                  <>
+                    <p className="text-xs font-medium text-muted-foreground mb-2">Team Members:</p>
+                    <div className="space-y-1.5 max-h-40 overflow-y-auto pr-0.5">
                       {node.children.map((child) => (
                         <div
                           key={child.id}
-                          className="flex items-center gap-2 p-2 rounded-md bg-muted/50 text-sm"
+                          className="flex items-center gap-2 p-2 rounded-md bg-muted/50"
                         >
                           <Avatar className="w-6 h-6 flex-shrink-0">
                             <AvatarImage src={child.profilePhotoUrl} alt={child.employeeName} />
@@ -142,7 +139,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
                             </AvatarFallback>
                           </Avatar>
                           <div className="min-w-0 flex-1">
-                            <p className="font-medium truncate">{child.employeeName}</p>
+                            <p className="text-sm font-medium truncate">{child.employeeName}</p>
                             <p className="text-xs text-muted-foreground truncate">
                               {child.designationName}
                             </p>
@@ -150,21 +147,21 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
                         </div>
                       ))}
                     </div>
-                  </div>
+                  </>
                 )}
               </CardContent>
             </Card>
           )}
+        </div>
 
-          {/* Actions */}
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={onClose} className="flex-1">
-              Close
-            </Button>
-            <Button onClick={handleViewProfile} className="flex-1">
-              View Full Profile
-            </Button>
-          </div>
+        {/* Fixed footer */}
+        <div className="px-5 py-3 flex-shrink-0 border-t flex gap-2">
+          <Button variant="outline" onClick={onClose} className="flex-1 h-9 text-sm">
+            Close
+          </Button>
+          <Button onClick={handleViewProfile} className="flex-1 h-9 text-sm">
+            View Full Profile
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

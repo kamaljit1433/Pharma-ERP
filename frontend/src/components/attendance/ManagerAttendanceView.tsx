@@ -289,7 +289,7 @@ export const ManagerAttendanceView: React.FC<ManagerAttendanceViewProps> = ({
                       <TableCell>{formatTime(record.check_in_time)}</TableCell>
                       <TableCell>{formatTime(record.check_out_time)}</TableCell>
                       <TableCell>
-                        {record.working_hours ? `${record.working_hours.toFixed(1)}h` : '-'}
+                        {record.working_hours != null ? `${Number(record.working_hours).toFixed(1)}h` : '-'}
                       </TableCell>
                       <TableCell>
                         <Badge className={getStatusColor(record.status)}>

@@ -246,7 +246,9 @@ router.get('/monthly/:employeeId', async (req: Request, res: Response): Promise<
 
     const empUuid = await resolveEmployeeUuid(employeeId!);
     if (!empUuid) {
-      const totalDays = new Date(yearNum, monthNum, 0).getDate();
+      const today = new Date();
+      const isCurrentMonth = yearNum === today.getFullYear() && monthNum === today.getMonth() + 1;
+      const totalDays = isCurrentMonth ? today.getDate() : new Date(yearNum, monthNum, 0).getDate();
       res.status(200).json({
         success: true,
         data: { total_days: totalDays, present_days: 0, absent_days: 0, half_days: 0, on_leave_days: 0, holiday_days: 0, late_arrivals: 0, average_working_hours: 0 },
@@ -256,7 +258,9 @@ router.get('/monthly/:employeeId', async (req: Request, res: Response): Promise<
     }
 
     const startDate = `${yearNum}-${String(monthNum).padStart(2, '0')}-01`;
-    const endDate   = new Date(yearNum, monthNum, 0).toISOString().split('T')[0]!;
+    const lastDayOfMonth = new Date(yearNum, monthNum, 0).toISOString().split('T')[0]!;
+    const todayStr  = new Date().toISOString().split('T')[0]!;
+    const endDate   = lastDayOfMonth < todayStr ? lastDayOfMonth : todayStr;
 
     const records = await db('attendance')
       .where('employee_id', empUuid)
@@ -284,7 +288,9 @@ router.get('/monthly/:employeeId', async (req: Request, res: Response): Promise<
       }
     }
 
-    const totalDays    = new Date(yearNum, monthNum, 0).getDate();
+    const totalDays    = endDate === lastDayOfMonth
+      ? new Date(yearNum, monthNum, 0).getDate()
+      : new Date().getDate();
     const presentDays  = records.filter((r: any) => r.status === 'present').length;
     const absentDays   = records.filter((r: any) => r.status === 'absent').length;
     const halfDays     = records.filter((r: any) => r.status === 'half_day').length;

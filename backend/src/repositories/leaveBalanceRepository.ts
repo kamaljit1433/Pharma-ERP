@@ -76,12 +76,12 @@ export class LeaveBalanceRepository {
       throw new Error('Leave balance not found');
     }
 
-    if (balance.available_balance < days) {
+    if (Number(balance.available_balance) < days) {
       throw new Error('Insufficient leave balance');
     }
 
-    const newUsedBalance = balance.used_balance + days;
-    const newAvailableBalance = balance.available_balance - days;
+    const newUsedBalance = Number(balance.used_balance) + days;
+    const newAvailableBalance = Number(balance.available_balance) - days;
 
     return this.updateBalance(balance.id, {
       used_balance: newUsedBalance,
@@ -101,8 +101,8 @@ export class LeaveBalanceRepository {
       throw new Error('Leave balance not found');
     }
 
-    const newCarryForward = balance.carry_forward_balance + carryForwardDays;
-    const newAvailableBalance = balance.available_balance + carryForwardDays;
+    const newCarryForward = Number(balance.carry_forward_balance) + carryForwardDays;
+    const newAvailableBalance = Number(balance.available_balance) + carryForwardDays;
 
     return this.updateBalance(balance.id, {
       carry_forward_balance: newCarryForward,

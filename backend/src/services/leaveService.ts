@@ -3,6 +3,7 @@ import logger from '../utils/logger';
 import { LeaveRepository } from '../repositories/leaveRepository';
 import { LeaveBalanceRepository } from '../repositories/leaveBalanceRepository';
 import { ApprovalRoutingService } from './approvalRoutingService';
+import { AppError } from '../middleware/errorHandler';
 import {
   Leave,
   LeaveApplicationDTO,
@@ -42,23 +43,38 @@ export class LeaveService {
       employeeUUID = employee.id;
     }
 
-    // Validate balance
-    const balance = await this.leaveBalanceRepository.getBalance(
-      employeeUUID,
-      data.leave_type_id,
-      year
-    );
-
-    if (!balance) {
-      throw new Error('Leave balance not initialized for this year');
-    }
-
     const daysRequested = this.calculateDays(data.from_date, data.to_date);
 
-    if (balance.available_balance < daysRequested) {
-      throw new Error(
-        `Insufficient leave balance. Available: ${balance.available_balance}, Requested: ${daysRequested}`
+    // Validate balance — look up leave type first
+    const leaveType = await this.knex('leave_types').where('id', data.leave_type_id).first();
+    if (!leaveType) {
+      throw new Error('Leave type not found');
+    }
+
+    // annual_limit of 0 means unlimited (e.g. Leave Without Pay) — skip balance check
+    if (leaveType.annual_limit > 0) {
+      let balance = await this.leaveBalanceRepository.getBalance(
+        employeeUUID,
+        data.leave_type_id,
+        year
       );
+
+      if (!balance) {
+        // Auto-initialize balance for this leave type for the current year
+        balance = await this.leaveBalanceRepository.createBalance({
+          employee_id: employeeUUID,
+          leave_type_id: data.leave_type_id,
+          year,
+          opening_balance: leaveType.annual_limit,
+          carry_forward_balance: 0,
+        });
+      }
+
+      if (Number(balance.available_balance) < daysRequested) {
+        throw new Error(
+          `Insufficient leave balance. Available: ${balance.available_balance}, Requested: ${daysRequested}`
+        );
+      }
     }
 
     // Check for overlapping leaves
@@ -69,7 +85,7 @@ export class LeaveService {
     );
 
     if (overlappingLeaves.length > 0) {
-      throw new Error('Leave already exists for the requested dates');
+      throw new AppError('Leave already exists for the requested dates', 409);
     }
 
     // Create leave request with UUID
@@ -107,28 +123,31 @@ export class LeaveService {
 
     const year = new Date(leave.from_date).getFullYear();
 
+    const leaveType = await this.knex('leave_types').where('id', leave.leave_type_id).first();
+
     await this.knex.transaction(async (trx) => {
       const trxLeaveBalanceRepo = new LeaveBalanceRepository(trx);
       const trxLeaveRepo = new LeaveRepository(trx);
 
-      // Re-validate balance at approval time to prevent race conditions
-      const currentBalance = await trxLeaveBalanceRepo.getBalance(
-        leave.employee_id,
-        leave.leave_type_id,
-        year
-      );
+      // Skip balance check and deduction for unlimited leave types (annual_limit = 0)
+      if (!leaveType || leaveType.annual_limit > 0) {
+        const currentBalance = await trxLeaveBalanceRepo.getBalance(
+          leave.employee_id,
+          leave.leave_type_id,
+          year
+        );
 
-      if (!currentBalance || currentBalance.available_balance < leave.days_count) {
-        throw new Error('Insufficient leave balance at time of approval');
+        if (!currentBalance || Number(currentBalance.available_balance) < Number(leave.days_count)) {
+          throw new Error('Insufficient leave balance at time of approval');
+        }
+
+        await trxLeaveBalanceRepo.deductBalance(
+          leave.employee_id,
+          leave.leave_type_id,
+          year,
+          leave.days_count
+        );
       }
-
-      // Deduct from balance
-      await trxLeaveBalanceRepo.deductBalance(
-        leave.employee_id,
-        leave.leave_type_id,
-        year,
-        leave.days_count
-      );
 
       // Update leave status
       await trxLeaveRepo.updateLeaveStatus(

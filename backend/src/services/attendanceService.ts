@@ -162,7 +162,7 @@ class AttendanceService {
 
     const now = new Date().toTimeString().split(' ')[0]!;
     const workingMinutes = calcWorkingMinutes(String(existing.check_in_time), now, breakMinutes);
-    const workingHours = Math.round(workingMinutes / 60);
+    const workingHours = parseFloat((workingMinutes / 60).toFixed(2));
     const overtimeMinutes = Math.max(0, Math.round(workingMinutes - STANDARD_SHIFT_HOURS * 60));
     const newStatus: 'present' | 'half_day' = workingHours < 4 ? 'half_day' : 'present';
 

@@ -127,7 +127,7 @@ export const EmployeeAttendanceTab: React.FC<EmployeeAttendanceTabProps> = ({ em
                     )}
                     {record.working_hours && (
                       <span className="ml-2">
-                        ({record.working_hours.toFixed(1)} hrs)
+                        ({Number(record.working_hours).toFixed(1)} hrs)
                       </span>
                     )}
                   </div>

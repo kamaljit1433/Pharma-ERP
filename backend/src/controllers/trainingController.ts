@@ -109,6 +109,26 @@ export class TrainingController {
     }
   }
 
+  static async getProgramEnrollments(req: Request, res: Response): Promise<void> {
+    try {
+      const programId = req.params['id'] as string;
+      const enrollments = await trainingService.getProgramEnrollments(programId);
+      res.json(enrollments);
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
+  }
+
+  static async deleteTrainingEnrollment(req: Request, res: Response): Promise<void> {
+    try {
+      const enrollmentId = req.params['enrollmentId'] as string;
+      await trainingService.deleteTrainingEnrollment(enrollmentId);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
+  }
+
   static async markEnrollmentComplete(req: Request, res: Response): Promise<void> {
     try {
       const enrollmentId = req.params['enrollmentId'] as string;

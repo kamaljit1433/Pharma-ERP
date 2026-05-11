@@ -21,6 +21,7 @@ interface InsurancePlan {
 export const InsurancePlanManagement: React.FC = () => {
   const [plans, setPlans] = useState<InsurancePlan[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -41,8 +42,9 @@ export const InsurancePlanManagement: React.FC = () => {
       setLoading(true);
       const response = await benefitsService.getInsurancePlans();
       setPlans(response.data || []);
-    } catch (error) {
-      console.error('Failed to fetch insurance plans:', error);
+    } catch (err) {
+      setError('Failed to fetch insurance plans');
+      console.error('Failed to fetch insurance plans:', err);
     } finally {
       setLoading(false);
     }
@@ -67,8 +69,9 @@ export const InsurancePlanManagement: React.FC = () => {
       setShowForm(false);
       setEditingId(null);
       fetchPlans();
-    } catch (error) {
-      console.error('Failed to save insurance plan:', error);
+    } catch (err) {
+      setError('Failed to save insurance plan');
+      console.error('Failed to save insurance plan:', err);
     }
   };
 
@@ -90,8 +93,9 @@ export const InsurancePlanManagement: React.FC = () => {
       try {
         await benefitsService.deleteInsurancePlan(id);
         fetchPlans();
-      } catch (error) {
-        console.error('Failed to delete insurance plan:', error);
+      } catch (err) {
+        setError('Failed to delete insurance plan');
+        console.error('Failed to delete insurance plan:', err);
       }
     }
   };
@@ -102,6 +106,15 @@ export const InsurancePlanManagement: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {error && (
+        <div className="p-3 bg-destructive/10 border border-destructive rounded-lg flex gap-2 items-center">
+          <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0" />
+          <p className="text-sm text-destructive">{error}</p>
+          <button onClick={() => setError(null)} className="ml-auto text-destructive text-sm underline">
+            Dismiss
+          </button>
+        </div>
+      )}
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Insurance Plan Management</h2>
         <Button onClick={() => setShowForm(!showForm)} className="gap-2">

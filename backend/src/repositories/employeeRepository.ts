@@ -69,7 +69,7 @@ export class EmployeeRepository {
   }
 
   async getEmployeeByEmail(email: string): Promise<Employee | null> {
-    return this.db('employees').where('email', email).first();
+    return this.db('employees').where('email', email).whereNull('archived_at').first();
   }
 
   async updateEmployee(id: string, data: UpdateEmployeeDTO): Promise<Employee> {
@@ -117,6 +117,10 @@ export class EmployeeRepository {
       query = query.where('employment_type', filters.employment_type);
     }
 
+    if (filters.reporting_manager_id) {
+      query = query.where('reporting_manager_id', filters.reporting_manager_id);
+    }
+
     if (filters.search) {
       const safe = escapeLike(filters.search.toLowerCase());
       query = query.where((q) => {
@@ -159,6 +163,10 @@ export class EmployeeRepository {
 
       if (filters.employment_type) {
         query = query.where('employment_type', filters.employment_type);
+      }
+
+      if (filters.reporting_manager_id) {
+        query = query.where('reporting_manager_id', filters.reporting_manager_id);
       }
 
       if (filters.search) {

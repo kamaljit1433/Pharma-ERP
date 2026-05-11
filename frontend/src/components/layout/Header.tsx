@@ -1,10 +1,9 @@
 import React from 'react';
-import { Menu, Search } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { useUIStore } from '@/store/uiStore';
 import { NotificationBell } from './NotificationBell';
 import { ThemeToggle } from './ThemeToggle';
 import { UserMenu } from './UserMenu';
-import { SearchBar } from './SearchBar';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -28,15 +27,6 @@ interface HeaderProps {
  */
 export const Header: React.FC<HeaderProps> = ({ className }) => {
   const { toggleSidebar, sidebarOpen } = useUIStore();
-  const [showSearch, setShowSearch] = React.useState(false);
-
-  // Handle keyboard navigation for mobile search
-  const handleSearchToggle = (event: React.KeyboardEvent) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      setShowSearch(!showSearch);
-    }
-  };
 
   return (
     <header
@@ -77,51 +67,21 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
           </div>
         </div>
 
-        {/* Center section: Search bar (desktop) - Requirement 21.1 */}
-        <div className="hidden flex-1 justify-center md:flex">
-          <SearchBar className="max-w-md" />
-        </div>
-
-        {/* Right section: Actions - Requirement 21.2 (logical tab order) */}
+        {/* Right section: Actions */}
         <nav
           className="flex items-center gap-2"
           aria-label="User actions"
         >
-          {/* Mobile search toggle */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setShowSearch(!showSearch)}
-            onKeyDown={handleSearchToggle}
-            className="md:hidden"
-            aria-label="Toggle search"
-            aria-expanded={showSearch}
-            aria-controls="mobile-search"
-          >
-            <Search className="h-5 w-5" />
-          </Button>
-
-          {/* Notification bell - Requirement 21.1 */}
+          {/* Notification bell */}
           <NotificationBell />
 
-          {/* Theme toggle - Requirement 21.1 */}
+          {/* Theme toggle */}
           <ThemeToggle />
 
-          {/* User menu - Requirement 21.1 */}
+          {/* User menu */}
           <UserMenu />
         </nav>
       </div>
-
-      {/* Mobile search bar (expanded) - Requirement 21.1 */}
-      {showSearch && (
-        <div
-          id="mobile-search"
-          className="absolute left-0 right-0 top-16 border-b bg-card p-4 shadow-md md:hidden"
-          role="search"
-        >
-          <SearchBar onClose={() => setShowSearch(false)} />
-        </div>
-      )}
     </header>
   );
 };

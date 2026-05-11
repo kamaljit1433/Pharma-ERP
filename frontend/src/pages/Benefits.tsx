@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { UserRole } from '../types/auth';
 import { InsurancePlanManagement } from '../components/benefits/InsurancePlanManagement';
+import { InsuranceEnrollment } from '../components/benefits/InsuranceEnrollment';
 import { PFStatement } from '../components/benefits/PFStatement';
 import { GratuityCalculator } from '../components/benefits/GratuityCalculator';
 import { ReimbursementClaimForm } from '../components/benefits/ReimbursementClaimForm';
@@ -22,6 +24,8 @@ const Benefits: React.FC = () => {
 
   const employeeId = user?.employeeId ?? '';
   const userId = user?.id ?? '';
+  const isAdmin =
+    user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.HR_MANAGER;
 
   return (
     <div className="space-y-4">
@@ -44,12 +48,19 @@ const Benefits: React.FC = () => {
       </div>
 
       <div>
-        {activeTab === 'insurance' && <InsurancePlanManagement />}
+        {activeTab === 'insurance' && (
+          <div className="space-y-8">
+            <InsurancePlanManagement />
+            {employeeId && <InsuranceEnrollment employeeId={employeeId} />}
+          </div>
+        )}
         {activeTab === 'pf' && <PFStatement employeeId={employeeId} />}
         {activeTab === 'gratuity' && <GratuityCalculator employeeId={employeeId} />}
         {activeTab === 'reimbursement' && <ReimbursementClaimForm employeeId={employeeId} />}
         {activeTab === 'approval' && <ReimbursementApproval approverId={userId} />}
-        {activeTab === 'rewards' && <RewardManagement />}
+        {activeTab === 'rewards' && (
+          <RewardManagement employeeId={employeeId} isAdmin={isAdmin} />
+        )}
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { Knex } from 'knex';
 import { PerformanceController } from '../controllers/performanceController';
 import { authenticateToken } from '../middleware/auth';
@@ -9,104 +9,151 @@ export function createPerformanceRoutes(knex: Knex): Router {
   const router = Router();
   const controller = new PerformanceController(knex);
 
-  // Middleware
   router.use(authenticateToken as any);
 
   // Dashboard
-  router.get('/dashboard', (req: Request, res: Response) =>
-    controller.getDashboard(req, res, () => {})
+  router.get('/dashboard', (req: Request, res: Response, next: NextFunction) =>
+    controller.getDashboard(req, res, next)
   );
 
   // ============ Goals ============
 
-  // Create goal (HR Manager, Super Admin)
-  router.post('/goals', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER]) as any, (req: Request, res: Response) =>
-    controller.createGoal(req, res, () => {})
+  router.post(
+    '/goals',
+    authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER]) as any,
+    (req: Request, res: Response, next: NextFunction) => controller.createGoal(req, res, next)
   );
 
-  // Get goal details
-  router.get('/goals/:id', (req: Request, res: Response) =>
-    controller.getGoal(req, res, () => {})
+  router.get('/goals/:id', (req: Request, res: Response, next: NextFunction) =>
+    controller.getGoal(req, res, next)
   );
 
-  // Get employee goals
-  router.get('/goals/employee/:employeeId', (req: Request, res: Response) =>
-    controller.getEmployeeGoals(req, res, () => {})
+  router.get('/goals/employee/:employeeId', (req: Request, res: Response, next: NextFunction) =>
+    controller.getEmployeeGoals(req, res, next)
   );
 
-  // Update goal progress (Employee, Manager, HR Manager)
-  router.put('/goals/:id/progress', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER, UserRole.DEPARTMENT_MANAGER, UserRole.EMPLOYEE]) as any, (req: Request, res: Response) =>
-    controller.updateGoalProgress(req, res, () => {})
+  router.put(
+    '/goals/:id/progress',
+    authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER, UserRole.DEPARTMENT_MANAGER, UserRole.EMPLOYEE]) as any,
+    (req: Request, res: Response, next: NextFunction) => controller.updateGoalProgress(req, res, next)
+  );
+
+  router.put(
+    '/goals/:id',
+    authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER]) as any,
+    (req: Request, res: Response, next: NextFunction) => controller.updateGoal(req, res, next)
+  );
+
+  router.delete(
+    '/goals/:id',
+    authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER]) as any,
+    (req: Request, res: Response, next: NextFunction) => controller.deleteGoal(req, res, next)
   );
 
   // ============ Review Cycles ============
 
-  // Create review cycle (HR Manager, Super Admin)
-  router.post('/review-cycles', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER]) as any, (req: Request, res: Response) =>
-    controller.createReviewCycle(req, res, () => {})
+  router.get('/review-cycles', (req: Request, res: Response, next: NextFunction) =>
+    controller.listReviewCycles(req, res, next)
+  );
+
+  router.post(
+    '/review-cycles',
+    authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER]) as any,
+    (req: Request, res: Response, next: NextFunction) => controller.createReviewCycle(req, res, next)
+  );
+
+  router.get('/review-cycles/:id', (req: Request, res: Response, next: NextFunction) =>
+    controller.getReviewCycle(req, res, next)
+  );
+
+  router.put(
+    '/review-cycles/:id',
+    authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER]) as any,
+    (req: Request, res: Response, next: NextFunction) => controller.updateReviewCycle(req, res, next)
+  );
+
+  router.put(
+    '/review-cycles/:id/status',
+    authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER]) as any,
+    (req: Request, res: Response, next: NextFunction) => controller.transitionCycleStatus(req, res, next)
+  );
+
+  router.delete(
+    '/review-cycles/:id',
+    authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER]) as any,
+    (req: Request, res: Response, next: NextFunction) => controller.deleteReviewCycle(req, res, next)
   );
 
   // ============ Performance Reviews ============
 
-  // Submit review (Employee, Manager, Peer)
-  router.post('/reviews', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER, UserRole.DEPARTMENT_MANAGER, UserRole.EMPLOYEE]) as any, (req: Request, res: Response) =>
-    controller.submitReview(req, res, () => {})
+  router.post(
+    '/reviews',
+    authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER, UserRole.DEPARTMENT_MANAGER, UserRole.EMPLOYEE]) as any,
+    (req: Request, res: Response, next: NextFunction) => controller.submitReview(req, res, next)
   );
 
-  // Get review details
-  router.get('/reviews/:id', (req: Request, res: Response) =>
-    controller.getReview(req, res, () => {})
+  router.get('/reviews/:id', (req: Request, res: Response, next: NextFunction) =>
+    controller.getReview(req, res, next)
   );
 
-  // Get employee reviews
-  router.get('/reviews/employee/:employeeId', (req: Request, res: Response) =>
-    controller.getEmployeeReviews(req, res, () => {})
+  router.get('/reviews/employee/:employeeId', (req: Request, res: Response, next: NextFunction) =>
+    controller.getEmployeeReviews(req, res, next)
+  );
+
+  router.put(
+    '/reviews/:id',
+    authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER, UserRole.DEPARTMENT_MANAGER]) as any,
+    (req: Request, res: Response, next: NextFunction) => controller.updateReview(req, res, next)
   );
 
   // ============ Feedback ============
 
-  // Provide feedback (All authenticated users)
-  router.post('/feedback', (req: Request, res: Response) =>
-    controller.provideFeedback(req, res, () => {})
+  router.post('/feedback', (req: Request, res: Response, next: NextFunction) =>
+    controller.provideFeedback(req, res, next)
   );
 
-  // Get feedback for employee
-  router.get('/feedback/:employeeId', (req: Request, res: Response) =>
-    controller.getFeedback(req, res, () => {})
+  router.get('/feedback/:employeeId', (req: Request, res: Response, next: NextFunction) =>
+    controller.getFeedback(req, res, next)
   );
 
   // ============ PIP ============
 
-  // Initiate PIP (HR Manager, Department Manager, Super Admin)
-  router.post('/pip', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER, UserRole.DEPARTMENT_MANAGER]) as any, (req: Request, res: Response) =>
-    controller.initiatePIP(req, res, () => {})
+  router.post(
+    '/pip',
+    authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER, UserRole.DEPARTMENT_MANAGER]) as any,
+    (req: Request, res: Response, next: NextFunction) => controller.initiatePIP(req, res, next)
   );
 
-  // Get PIP details
-  router.get('/pip/:id', (req: Request, res: Response) =>
-    controller.getPIP(req, res, () => {})
+  router.get('/pip/active', (req: Request, res: Response, next: NextFunction) =>
+    controller.getActivePIPs(req, res, next)
   );
 
-  // Get employee PIPs
-  router.get('/pip/employee/:employeeId', (req: Request, res: Response) =>
-    controller.getEmployeePIPs(req, res, () => {})
+  router.get('/pip/:id', (req: Request, res: Response, next: NextFunction) =>
+    controller.getPIP(req, res, next)
   );
 
-  // Record PIP check-in (HR Manager, Department Manager, Super Admin)
-  router.put('/pip/:id/check-in', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER, UserRole.DEPARTMENT_MANAGER]) as any, (req: Request, res: Response) =>
-    controller.recordPIPCheckIn(req, res, () => {})
+  router.get('/pip/employee/:employeeId', (req: Request, res: Response, next: NextFunction) =>
+    controller.getEmployeePIPs(req, res, next)
   );
 
-  // Record PIP outcome (HR Manager, Super Admin)
-  router.put('/pip/:id/outcome', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER]) as any, (req: Request, res: Response) =>
-    controller.recordPIPOutcome(req, res, () => {})
+  router.put(
+    '/pip/:id/check-in',
+    authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER, UserRole.DEPARTMENT_MANAGER]) as any,
+    (req: Request, res: Response, next: NextFunction) => controller.recordPIPCheckIn(req, res, next)
+  );
+
+  router.put(
+    '/pip/:id/outcome',
+    authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER]) as any,
+    (req: Request, res: Response, next: NextFunction) => controller.recordPIPOutcome(req, res, next)
   );
 
   // ============ Reports ============
 
-  // Generate performance reports (HR Manager, Department Manager, Super Admin)
-  router.get('/reports', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER, UserRole.DEPARTMENT_MANAGER]) as any, (req: Request, res: Response) =>
-    controller.generatePerformanceReports(req, res, () => {})
+  router.get(
+    '/reports',
+    authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER, UserRole.DEPARTMENT_MANAGER]) as any,
+    (req: Request, res: Response, next: NextFunction) => controller.generatePerformanceReports(req, res, next)
   );
 
   return router;

@@ -111,7 +111,7 @@ export const performanceService = {
   },
 
   getEmployeeFeedback: async (employeeId: string) => {
-    const response = await apiClient.get(`/performance/feedback/employee/${employeeId}`);
+    const response = await apiClient.get(`/performance/feedback/${employeeId}`);
     return response.data;
   },
 
@@ -123,32 +123,32 @@ export const performanceService = {
   // ============ PIPs ============
 
   initiatePIP: async (data: any) => {
-    const response = await apiClient.post('/performance/pips', data);
+    const response = await apiClient.post('/performance/pip', data);
     return response.data;
   },
 
   getPIP: async (id: string) => {
-    const response = await apiClient.get(`/performance/pips/${id}`);
+    const response = await apiClient.get(`/performance/pip/${id}`);
     return response.data;
   },
 
   getActivePIPs: async () => {
-    const response = await apiClient.get('/performance/pips/active');
+    const response = await apiClient.get('/performance/pip/active');
     return response.data;
   },
 
   getEmployeePIPs: async (employeeId: string) => {
-    const response = await apiClient.get(`/performance/pips/employee/${employeeId}`);
+    const response = await apiClient.get(`/performance/pip/employee/${employeeId}`);
     return response.data;
   },
 
   recordPIPCheckIn: async (pipId: string, data: any) => {
-    const response = await apiClient.post(`/performance/pips/${pipId}/check-in`, data);
+    const response = await apiClient.put(`/performance/pip/${pipId}/check-in`, data);
     return response.data;
   },
 
   recordPIPOutcome: async (pipId: string, outcome: string, notes?: string) => {
-    const response = await apiClient.put(`/performance/pips/${pipId}/outcome`, {
+    const response = await apiClient.put(`/performance/pip/${pipId}/outcome`, {
       outcome,
       notes,
     });

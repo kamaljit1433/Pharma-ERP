@@ -18,7 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Clock, CalendarCheck, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAttendanceStore } from '../../store/attendanceStore';
-import { AttendanceFilters } from '../../services/attendanceService';
+import attendanceService, { AttendanceFilters, AttendanceStats } from '../../services/attendanceService';
 import { useAuth } from '../../hooks/useAuth';
 
 interface AttendanceHistoryProps {
@@ -129,8 +129,9 @@ export const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({
   employeeId: propEmployeeId,
 }) => {
   const { user } = useAuth();
-  const { records, stats, loading, error, fetchRecords, fetchStats } = useAttendanceStore();
-  
+  const { records, loading, error, fetchRecords } = useAttendanceStore();
+  const [localStats, setLocalStats] = useState<AttendanceStats | null>(null);
+
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [fromDate, setFromDate] = useState<string>('');
@@ -150,14 +151,16 @@ export const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({
     try {
       const monthStart = new Date(currentYear, currentMonth - 1, 1);
       const monthEnd = new Date(currentYear, currentMonth, 0);
-      
+
       const from = monthStart.toISOString().split('T')[0]!;
       const to = monthEnd.toISOString().split('T')[0]!;
 
       const filters: AttendanceFilters = { employee_id: employeeId, from_date: from, to_date: to };
       await fetchRecords(filters);
 
-      await fetchStats(employeeId, from, to);
+      // Use local state so navigating months doesn't overwrite the global store stats
+      const stats = await attendanceService.getStats(employeeId, from, to);
+      setLocalStats(stats);
     } catch (err) {
       console.error('Failed to load attendance data:', err);
     }
@@ -225,16 +228,16 @@ export const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({
   return (
     <div className="space-y-6">
       {/* Statistics Cards */}
-      {stats && (
+      {localStats && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium">Present Days</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats.present_days}</div>
+              <div className="text-2xl font-bold text-green-600">{localStats.present_days}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                out of {stats.total_days} days
+                out of {localStats.total_days} days
               </p>
             </CardContent>
           </Card>
@@ -244,9 +247,9 @@ export const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({
               <CardTitle className="text-sm font-medium">Absent Days</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-600">{stats.absent_days}</div>
+              <div className="text-2xl font-bold text-red-600">{localStats.absent_days}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                {stats.half_days} half days
+                {localStats.half_days} half days
               </p>
             </CardContent>
           </Card>
@@ -256,9 +259,9 @@ export const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({
               <CardTitle className="text-sm font-medium">Late Arrivals</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">{stats.late_arrivals}</div>
+              <div className="text-2xl font-bold text-yellow-600">{localStats.late_arrivals}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                Avg: {stats.average_working_hours.toFixed(1)}h/day
+                Avg: {Number(localStats.average_working_hours).toFixed(1)}h/day
               </p>
             </CardContent>
           </Card>
@@ -268,7 +271,7 @@ export const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({
               <CardTitle className="text-sm font-medium">On Leave</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-600">{stats.on_leave_days}</div>
+              <div className="text-2xl font-bold text-blue-600">{localStats.on_leave_days}</div>
               <p className="text-xs text-muted-foreground mt-1">
                 Leave days
               </p>
@@ -475,7 +478,7 @@ export const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({
                         </TableCell>
                         <TableCell>{formatTime(record.check_out_time)}</TableCell>
                         <TableCell>
-                          {record.working_hours ? `${record.working_hours.toFixed(1)}h` : '-'}
+                          {record.working_hours != null ? `${Number(record.working_hours).toFixed(1)}h` : '-'}
                         </TableCell>
                         <TableCell>
                           <Badge className={getStatusColor(record.status)}>

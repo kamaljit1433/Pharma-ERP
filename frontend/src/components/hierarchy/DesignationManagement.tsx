@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -28,7 +28,7 @@ import {
 } from '../ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 import { Skeleton } from '../ui/skeleton';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import hierarchyService, { Designation, Department } from '../../services/hierarchyService';
 
 interface DesignationManagementProps {
@@ -52,6 +52,8 @@ export const DesignationManagement: React.FC<DesignationManagementProps> = ({
     departmentId: '',
     level: 1,
   });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => {
     fetchData();
@@ -121,6 +123,17 @@ export const DesignationManagement: React.FC<DesignationManagementProps> = ({
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete designation');
     }
+  };
+
+  const totalPages = Math.max(1, Math.ceil(designations.length / pageSize));
+  const paginatedDesignations = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return designations.slice(start, start + pageSize);
+  }, [designations, page, pageSize]);
+
+  const handlePageSizeChange = (value: string) => {
+    setPageSize(Number(value));
+    setPage(1);
   };
 
   if (loading) {
@@ -252,14 +265,14 @@ export const DesignationManagement: React.FC<DesignationManagementProps> = ({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {designations.length === 0 ? (
+              {paginatedDesignations.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                     No designations found
                   </TableCell>
                 </TableRow>
               ) : (
-                designations.map((desig) => (
+                paginatedDesignations.map((desig) => (
                   <TableRow key={desig.id}>
                     <TableCell className="font-medium">{desig.name}</TableCell>
                     <TableCell className="text-sm">
@@ -295,6 +308,50 @@ export const DesignationManagement: React.FC<DesignationManagementProps> = ({
               )}
             </TableBody>
           </Table>
+        </div>
+
+        {/* Pagination */}
+        <div className="flex items-center justify-between mt-4 gap-4 flex-wrap">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>Rows per page:</span>
+            <Select value={String(pageSize)} onValueChange={handlePageSizeChange}>
+              <SelectTrigger className="w-20 h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            <span>
+              {designations.length === 0
+                ? '0 of 0'
+                : `${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, designations.length)} of ${designations.length}`}
+            </span>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
         </div>
       </CardContent>
 

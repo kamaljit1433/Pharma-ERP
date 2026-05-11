@@ -5,8 +5,8 @@ interface InsurancePlan {
   id: string;
   name: string;
   provider: string;
-  coverage_amount: number;
-  premium: number;
+  coverage_type: string;
+  premium_amount: number;
   is_active: boolean;
 }
 

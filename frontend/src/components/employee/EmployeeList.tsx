@@ -12,6 +12,14 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
 import { Card, CardContent } from '../ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '../ui/dialog';
 import { Pencil, Trash2, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useAuthStore } from '@/store/authStore';
@@ -60,6 +68,7 @@ export const EmployeeList: React.FC<EmployeeListProps> = ({
   const [sortBy, setSortBy] = useState<'name' | 'id' | 'date'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [currentPage, setCurrentPage] = useState(1);
+  const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
   const itemsPerPage = 10;
 
   // Check permissions
@@ -315,7 +324,7 @@ export const EmployeeList: React.FC<EmployeeListProps> = ({
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => onDelete(employee.id)}
+                              onClick={() => setDeleteTarget(employee)}
                               className="h-8 w-8 p-0 text-destructive hover:text-destructive"
                               aria-label={`Delete ${employee.first_name} ${employee.last_name}`}
                               title="Delete employee"
@@ -364,6 +373,37 @@ export const EmployeeList: React.FC<EmployeeListProps> = ({
           )}
         </div>
       </CardContent>
+
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Employee</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete{' '}
+              <span className="font-semibold">
+                {deleteTarget?.first_name} {deleteTarget?.last_name}
+              </span>{' '}
+              ({deleteTarget?.employee_id})? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (deleteTarget && onDelete) {
+                  onDelete(deleteTarget.id);
+                }
+                setDeleteTarget(null);
+              }}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };

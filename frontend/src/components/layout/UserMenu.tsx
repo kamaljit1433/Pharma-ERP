@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { User, LogOut, Settings, ChevronDown } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
@@ -19,6 +20,7 @@ import { cn } from '@/lib/utils';
  */
 export const UserMenu: React.FC = () => {
   const { user, logout } = useAuthStore();
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -121,10 +123,7 @@ export const UserMenu: React.FC = () => {
             <Button
               variant="ghost"
               className="w-full justify-start"
-              onClick={() => {
-                setIsOpen(false);
-                window.location.href = '/profile';
-              }}
+              onClick={() => { setIsOpen(false); navigate('/profile'); }}
               role="menuitem"
             >
               <User className="mr-2 h-4 w-4" aria-hidden="true" />
@@ -133,10 +132,7 @@ export const UserMenu: React.FC = () => {
             <Button
               variant="ghost"
               className="w-full justify-start"
-              onClick={() => {
-                setIsOpen(false);
-                window.location.href = '/settings';
-              }}
+              onClick={() => { setIsOpen(false); navigate('/settings'); }}
               role="menuitem"
             >
               <Settings className="mr-2 h-4 w-4" aria-hidden="true" />

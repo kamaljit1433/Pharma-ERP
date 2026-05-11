@@ -53,7 +53,7 @@ export const getEmployee = async (req: Request, res: Response, next: NextFunctio
 export const deleteEmployee = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const id = req.params['id'] as string;
-    const { reason = 'Archived by admin' } = req.body as { reason?: string };
+    const reason: string = req.body?.reason ?? 'Archived by admin';
     await employeeService.archiveEmployee(id, reason);
     res.status(200).json({
       success: true,
@@ -158,6 +158,20 @@ export const searchEmployees = async (req: Request, res: Response, next: NextFun
     if (employment_type) filters.employment_type = employment_type as AllowedEmploymentType;
     if (search) filters.search = search as string;
 
+    // Department managers only see their own direct reports
+    const user = (req as any).user;
+    if (user?.role === 'department_manager' || user?.role === 'hr_manager') {
+      if (user?.employeeId) {
+        const managerEmployee = await db('employees')
+          .where({ employee_id: user.employeeId })
+          .select('id')
+          .first();
+        if (managerEmployee) {
+          filters.reporting_manager_id = managerEmployee.id;
+        }
+      }
+    }
+
     const employees = await employeeService.searchEmployees(filters);
     const total = await employeeService.getEmployeeCount(filters);
 
@@ -201,6 +215,20 @@ export const getAllEmployees = async (req: Request, res: Response, next: NextFun
     if (status) filters.status = status as AllowedStatus;
     if (employment_type) filters.employment_type = employment_type as AllowedEmploymentType;
     if (search) filters.search = search as string;
+
+    // Department managers only see their own direct reports
+    const user = (req as any).user;
+    if (user?.role === 'department_manager' || user?.role === 'hr_manager') {
+      if (user?.employeeId) {
+        const managerEmployee = await db('employees')
+          .where({ employee_id: user.employeeId })
+          .select('id')
+          .first();
+        if (managerEmployee) {
+          filters.reporting_manager_id = managerEmployee.id;
+        }
+      }
+    }
 
     const employees = await employeeService.searchEmployees(filters);
     const countFilters: EmployeeFilters = { ...filters };

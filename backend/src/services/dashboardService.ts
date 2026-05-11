@@ -31,10 +31,11 @@ export class DashboardService {
   }
 
   private async getEmployeeStatistics(): Promise<EmployeeStatistics> {
-    const totalResult = await this.knex('employees').count('* as count').first();
+    const totalResult = await this.knex('employees').whereNull('archived_at').count('* as count').first();
     const total = Number(totalResult?.['count'] ?? 0);
 
     const statusCounts = await this.knex('employees')
+      .whereNull('archived_at')
       .select('status')
       .count('* as count')
       .groupBy('status');
@@ -45,23 +46,27 @@ export class DashboardService {
     });
 
     const departmentCounts = await this.knex('employees')
-      .select('department_id')
-      .count('* as count')
-      .groupBy('department_id');
+      .leftJoin('departments', 'employees.department_id', 'departments.id')
+      .select(this.knex.raw("COALESCE(departments.name, 'Unknown') as dept_name"))
+      .count('employees.id as count')
+      .whereNull('employees.archived_at')
+      .groupBy('departments.name');
 
     const byDepartment: Record<string, number> = {};
     departmentCounts.forEach((row: any) => {
-      byDepartment[row.department_id] = Number(row.count ?? 0);
+      byDepartment[row.dept_name] = Number(row.count ?? 0);
     });
 
     const designationCounts = await this.knex('employees')
-      .select('designation_id')
-      .count('* as count')
-      .groupBy('designation_id');
+      .leftJoin('designations', 'employees.designation_id', 'designations.id')
+      .select(this.knex.raw("COALESCE(designations.name, 'Unknown') as desig_name"))
+      .count('employees.id as count')
+      .whereNull('employees.archived_at')
+      .groupBy('designations.name');
 
     const byDesignation: Record<string, number> = {};
     designationCounts.forEach((row: any) => {
-      byDesignation[row.designation_id] = Number(row.count ?? 0);
+      byDesignation[row.desig_name] = Number(row.count ?? 0);
     });
 
     const currentMonth = new Date();

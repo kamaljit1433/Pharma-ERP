@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Textarea } from '../ui/textarea';
+import { SearchableSelect } from '../ui/searchable-select';
 import { recruitmentService } from '../../services/recruitmentService';
+import hierarchyService, { Department } from '../../services/hierarchyService';
 import { jobPostingSchema, type JobPostingFormData } from '../../utils/schemas';
 import { Briefcase, Plus, X, AlertCircle } from 'lucide-react';
 import { ZodError } from 'zod';
@@ -24,19 +26,25 @@ export const JobPostingForm: React.FC<JobPostingFormProps> = ({ onSuccess, initi
     required_skills: initialData?.required_skills || [],
     experience_min: initialData?.experience_min || 0,
     experience_max: initialData?.experience_max || 0,
+    positions_count: initialData?.positions_count || 1,
     application_deadline: initialData?.application_deadline || '',
   });
 
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [skillInput, setSkillInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [generalError, setGeneralError] = useState('');
 
+  useEffect(() => {
+    hierarchyService.getDepartments().then(setDepartments).catch(() => {});
+  }, []);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name.includes('experience') ? parseInt(value) || 0 : value,
+      [name]: name.includes('experience') || name === 'positions_count' ? parseInt(value) || 0 : value,
     }));
     // Clear error for this field when user starts typing
     if (errors[name]) {
@@ -96,6 +104,7 @@ export const JobPostingForm: React.FC<JobPostingFormProps> = ({ onSuccess, initi
         required_skills: [],
         experience_min: 0,
         experience_max: 0,
+        positions_count: 1,
         application_deadline: '',
       });
       onSuccess?.();
@@ -166,15 +175,33 @@ export const JobPostingForm: React.FC<JobPostingFormProps> = ({ onSuccess, initi
 
           <div>
             <Label htmlFor="department_id">Department *</Label>
-            <Input
-              id="department_id"
-              name="department_id"
+            <SearchableSelect
+              options={departments}
               value={formData.department_id}
-              onChange={handleInputChange}
-              placeholder="Select or enter department ID"
-              className={errors.department_id ? 'border-destructive' : ''}
+              onChange={(id) => {
+                setFormData((prev) => ({ ...prev, department_id: id }));
+                if (errors.department_id) {
+                  setErrors((prev) => { const e = { ...prev }; delete e.department_id; return e; });
+                }
+              }}
+              placeholder="Select department"
+              className={errors.department_id ? '[&>button]:border-destructive' : ''}
             />
             {errors.department_id && <p className="text-destructive text-sm mt-1">{errors.department_id}</p>}
+          </div>
+
+          <div>
+            <Label htmlFor="positions_count">Number of Positions *</Label>
+            <Input
+              id="positions_count"
+              name="positions_count"
+              type="number"
+              value={formData.positions_count}
+              onChange={handleInputChange}
+              min="1"
+              className={errors.positions_count ? 'border-destructive' : ''}
+            />
+            {errors.positions_count && <p className="text-destructive text-sm mt-1">{errors.positions_count}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-4">

@@ -134,6 +134,7 @@ export const Attendance: React.FC = () => {
         <AttendanceMarker
           employeeId={user?.employeeId || ''}
           employeePhotoUrl={employeePhotoUrl}
+          currentStatus={currentStatus}
           onSuccess={loadAttendanceData}
         />
       </div>
@@ -193,7 +194,7 @@ export const Attendance: React.FC = () => {
               <p className="text-lg font-semibold">
                 {(() => {
                   const wh = (currentStatus as any)?.working_hours ?? (currentStatus as any)?.workingHours;
-                  return wh ? `${Number(wh).toFixed(1)}h` : '-';
+                  return wh != null ? `${Number(wh).toFixed(1)}h` : '-';
                 })()}
               </p>
             </div>
@@ -235,7 +236,7 @@ export const Attendance: React.FC = () => {
             <CardContent>
               <div className="text-2xl font-bold text-warning">{stats.late_arrivals}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                Avg: {stats.average_working_hours.toFixed(1)}h/day
+                Avg: {Number(stats.average_working_hours).toFixed(1)}h/day
               </p>
             </CardContent>
           </Card>
@@ -243,25 +244,29 @@ export const Attendance: React.FC = () => {
       )}
 
       {/* Tabs */}
-      <Tabs defaultValue="history" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="history">History</TabsTrigger>
-          <TabsTrigger value="reports">Reports</TabsTrigger>
-          <TabsTrigger value="regularization">Regularization</TabsTrigger>
-        </TabsList>
+      {isManager ? (
+        <Tabs defaultValue="history" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="history">History</TabsTrigger>
+            <TabsTrigger value="reports">Reports</TabsTrigger>
+            <TabsTrigger value="regularization">Regularization</TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="history" className="space-y-4">
-          <AttendanceHistory employeeId={user?.employeeId || ''} />
-        </TabsContent>
+          <TabsContent value="history" className="space-y-4">
+            <AttendanceHistory employeeId={user?.employeeId || ''} />
+          </TabsContent>
 
-        <TabsContent value="reports" className="space-y-4">
-          <AttendanceReports employeeId={user?.employeeId || ''} />
-        </TabsContent>
+          <TabsContent value="reports" className="space-y-4">
+            <AttendanceReports employeeId={user?.employeeId || ''} />
+          </TabsContent>
 
-        <TabsContent value="regularization">
-          <RegularizationRequest employeeId={user?.employeeId || ''} onSuccess={loadAttendanceData} />
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="regularization">
+            <RegularizationRequest employeeId={user?.employeeId || ''} onSuccess={loadAttendanceData} />
+          </TabsContent>
+        </Tabs>
+      ) : (
+        <AttendanceHistory employeeId={user?.employeeId || ''} />
+      )}
     </div>
   );
 };

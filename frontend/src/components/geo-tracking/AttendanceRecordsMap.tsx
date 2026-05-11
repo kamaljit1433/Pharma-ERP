@@ -323,7 +323,7 @@ export const AttendanceRecordsMap: React.FC<AttendanceRecordsMapProps> = ({
                   </div>
                   {record.workingHours && (
                     <div className="text-right">
-                      <p className="text-sm font-medium">{record.workingHours.toFixed(1)}h</p>
+                      <p className="text-sm font-medium">{Number(record.workingHours).toFixed(1)}h</p>
                     </div>
                   )}
                 </div>
@@ -368,7 +368,7 @@ export const AttendanceRecordsMap: React.FC<AttendanceRecordsMapProps> = ({
               {selectedRecord.workingHours && (
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Working Hours</p>
-                  <p className="text-sm font-medium">{selectedRecord.workingHours.toFixed(1)}h</p>
+                  <p className="text-sm font-medium">{Number(selectedRecord.workingHours).toFixed(1)}h</p>
                 </div>
               )}
             </div>

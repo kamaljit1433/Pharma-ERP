@@ -13,6 +13,7 @@ import {
 } from '../types/employee';
 import { isValidEmail, isValidPhone } from '../utils/validation';
 import { logAuditEvent } from '../utils/auditLog';
+import { AppError } from '../middleware/errorHandler';
 
 export class EmployeeService {
   private employeeRepository: EmployeeRepository;
@@ -24,25 +25,28 @@ export class EmployeeService {
   async createEmployee(data: CreateEmployeeDTO): Promise<Employee> {
     // Validate required fields
     if (!data.first_name || !data.last_name || !data.email || !data.date_of_joining) {
-      throw new Error('Missing required fields: first_name, last_name, email, date_of_joining');
+      throw new AppError('Missing required fields: first_name, last_name, email, date_of_joining', 400);
     }
 
     // Validate email format
     if (!isValidEmail(data.email)) {
-      throw new Error('Invalid email format');
+      throw new AppError('Invalid email format', 400);
     }
 
-    // Check if email already exists
+    // Check if email already exists among active (non-archived) employees
     const existingEmployee = await this.employeeRepository.getEmployeeByEmail(data.email);
     if (existingEmployee) {
-      throw new Error('Employee with this email already exists');
+      throw new AppError('Employee with this email already exists', 409);
     }
 
     return this.employeeRepository.createEmployee(data);
   }
 
   async getEmployee(id: string): Promise<Employee> {
-    const employee = await this.employeeRepository.getEmployee(id);
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    const employee = isUuid
+      ? await this.employeeRepository.getEmployee(id)
+      : await this.employeeRepository.getEmployeeByEmployeeId(id);
     if (!employee) {
       throw new Error('Employee not found');
     }

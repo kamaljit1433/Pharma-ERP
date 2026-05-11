@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { Checkbox } from '../ui/checkbox';
@@ -14,28 +13,24 @@ import {
 } from '../ui/select';
 import { usePerformanceStore } from '../../store/performanceStore';
 import { AlertCircle, CheckCircle2, MessageSquare } from 'lucide-react';
+import { EmployeeSearch } from './EmployeeSearch';
 
 interface FeedbackFormProps {
-  fromEmployeeId: string;
+  excludeEmployeeId?: string;
   onSuccess?: () => void;
 }
 
-export const FeedbackForm: React.FC<FeedbackFormProps> = ({ fromEmployeeId, onSuccess }) => {
+export const FeedbackForm: React.FC<FeedbackFormProps> = ({ excludeEmployeeId, onSuccess }) => {
   const { provideFeedback, error, clearError } = usePerformanceStore();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [toEmployeeId, setToEmployeeId] = useState('');
   const [formData, setFormData] = useState({
-    toEmployeeId: '',
     type: 'Positive' as 'Positive' | 'Constructive' | 'Neutral',
     content: '',
     isAnonymous: false,
     visibility: 'Private' as 'Private' | 'Manager Only' | 'Public',
   });
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
 
   const handleSelectChange = (name: string, value: string) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -46,35 +41,28 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ fromEmployeeId, onSu
   };
 
   const validateForm = (): boolean => {
-    if (!formData.toEmployeeId.trim()) {
-      return false;
-    }
-    if (formData.content.length < 10 || formData.content.length > 5000) {
-      return false;
-    }
+    if (!toEmployeeId) return false;
+    if (formData.content.length < 10 || formData.content.length > 5000) return false;
     return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     try {
       setLoading(true);
       clearError();
       await provideFeedback({
-        toEmployeeId: formData.toEmployeeId,
-        fromEmployeeId,
+        toEmployeeId,
         type: formData.type,
         content: formData.content,
         isAnonymous: formData.isAnonymous,
         visibility: formData.visibility,
       });
       setSuccess(true);
+      setToEmployeeId('');
       setFormData({
-        toEmployeeId: '',
         type: 'Positive',
         content: '',
         isAnonymous: false,
@@ -119,25 +107,20 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ fromEmployeeId, onSu
             </div>
           )}
 
-          <div>
-            <Label htmlFor="toEmployeeId">Employee ID</Label>
-            <Input
-              id="toEmployeeId"
-              name="toEmployeeId"
-              value={formData.toEmployeeId}
-              onChange={handleInputChange}
-              placeholder="Enter employee ID or search"
-              aria-label="Recipient employee ID"
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              Enter the ID of the employee you want to provide feedback to
-            </p>
-          </div>
+          <EmployeeSearch
+            label="Recipient Employee"
+            placeholder="Search employee by name or ID..."
+            onChange={(id) => setToEmployeeId(id)}
+            excludeId={excludeEmployeeId}
+          />
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="type">Feedback Type</Label>
-              <Select value={formData.type} onValueChange={(value) => handleSelectChange('type', value)}>
+              <Select
+                value={formData.type}
+                onValueChange={(value: string) => handleSelectChange('type', value)}
+              >
                 <SelectTrigger id="type">
                   <SelectValue />
                 </SelectTrigger>
@@ -153,7 +136,7 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ fromEmployeeId, onSu
               <Label htmlFor="visibility">Visibility</Label>
               <Select
                 value={formData.visibility}
-                onValueChange={(value) => handleSelectChange('visibility', value)}
+                onValueChange={(value: string) => handleSelectChange('visibility', value)}
               >
                 <SelectTrigger id="visibility">
                   <SelectValue />
@@ -173,15 +156,12 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ fromEmployeeId, onSu
               id="content"
               name="content"
               value={formData.content}
-              onChange={handleInputChange}
+              onChange={(e) => setFormData((prev) => ({ ...prev, content: e.target.value }))}
               placeholder="Share your feedback (10-5000 characters)"
               rows={5}
-              aria-label="Feedback content"
             />
             <div className="flex justify-between items-center mt-1">
-              <p className="text-xs text-muted-foreground">
-                {contentLength} / 5000 characters
-              </p>
+              <p className="text-xs text-muted-foreground">{contentLength} / 5000 characters</p>
               {!isValidLength && contentLength > 0 && (
                 <p className="text-xs text-destructive">
                   {contentLength < 10 ? 'Minimum 10 characters' : 'Maximum 5000 characters'}
@@ -195,14 +175,17 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ fromEmployeeId, onSu
               id="isAnonymous"
               checked={formData.isAnonymous}
               onCheckedChange={handleCheckboxChange}
-              aria-label="Submit feedback anonymously"
             />
             <Label htmlFor="isAnonymous" className="cursor-pointer">
               Submit Anonymously
             </Label>
           </div>
 
-          <Button type="submit" disabled={loading || !isValidLength} className="w-full">
+          <Button
+            type="submit"
+            disabled={loading || !isValidLength || !toEmployeeId}
+            className="w-full"
+          >
             {loading ? 'Submitting Feedback...' : 'Submit Feedback'}
           </Button>
         </form>

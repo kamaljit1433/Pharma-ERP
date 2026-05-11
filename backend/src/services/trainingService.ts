@@ -66,12 +66,8 @@ export class TrainingService {
       throw new Error('Training program not found');
     }
 
-    // Prevent deleting programs with active enrollments
-    const enrollments = await this.trainingEnrollmentRepository.getProgramEnrollments(id);
-    const activeEnrollments = enrollments.filter(e => e.status !== 'cancelled' && e.status !== 'completed');
-    if (activeEnrollments.length > 0) {
-      throw new Error('Cannot delete training program with active enrollments');
-    }
+    // Remove all enrollments for this program before deleting it
+    await this.db('training_enrollments').where('training_program_id', id).delete();
 
     return this.trainingProgramRepository.deleteTrainingProgram(id);
   }

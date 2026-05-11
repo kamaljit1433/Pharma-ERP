@@ -17,7 +17,9 @@ router.delete('/programs/:id', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANA
 
 // Training Enrollment Routes
 router.post('/enroll', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER, UserRole.EMPLOYEE]) as any, TrainingController.enrollEmployee);
+router.get('/programs/:id/enrollments', TrainingController.getProgramEnrollments);
 router.get('/enrollments/:employeeId', TrainingController.getEmployeeEnrollments);
+router.delete('/enrollments/:enrollmentId', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER]) as any, TrainingController.deleteTrainingEnrollment);
 router.put('/enrollments/:enrollmentId/complete', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER]) as any, TrainingController.markEnrollmentComplete);
 
 // Certification Routes

@@ -316,35 +316,87 @@ export class HierarchyService {
   }
 
   // Generate organizational chart
-  async generateOrgChart(rootEmployeeId?: string): Promise<OrgChartNode> {
-    let root: OrgChartNode;
-
+  async generateOrgChart(rootEmployeeId?: string): Promise<OrgChartNode | null> {
     if (rootEmployeeId) {
       const employee = await this.employeeRepository.getEmployee(rootEmployeeId);
-      if (!employee) {
-        throw new Error('Employee not found');
-      }
-      root = await this.buildOrgChartNode(rootEmployeeId);
-    } else {
-      // Find the top-level employee (no manager)
-      const allNodes = await this.hierarchyNodeRepository.getAllHierarchyNodes();
-      let topLevelNode: HierarchyNode | null = null;
-
-      for (const node of allNodes) {
-        if (!node.manager_id) {
-          topLevelNode = node;
-          break;
-        }
-      }
-
-      if (!topLevelNode) {
-        throw new Error('No top-level employee found in hierarchy');
-      }
-
-      root = await this.buildOrgChartNode(topLevelNode.employee_id);
+      if (!employee) throw new Error('Employee not found');
+      return this.buildOrgChartNode(rootEmployeeId);
     }
 
-    return root;
+    // Try hierarchy_nodes table first
+    const allNodes = await this.hierarchyNodeRepository.getAllHierarchyNodes();
+    if (allNodes.length > 0) {
+      const topLevelNode = allNodes.find((n) => !n.manager_id) ?? null;
+      if (topLevelNode) {
+        return this.buildOrgChartNode(topLevelNode.employee_id);
+      }
+    }
+
+    // Fall back to building from employees table via reporting_manager_id
+    return this.buildOrgChartFromEmployees();
+  }
+
+  private async buildOrgChartFromEmployees(): Promise<OrgChartNode | null> {
+    const employees = await this.db('employees')
+      .whereNull('archived_at')
+      .where('status', 'active')
+      .select('id', 'employee_id', 'first_name', 'last_name', 'reporting_manager_id', 'department_id', 'designation_id');
+
+    if (employees.length === 0) return null;
+
+    // Load departments and designations for name lookups
+    const departments = await this.db('departments').select('id', 'name');
+    const designations = await this.db('designations').select('id', 'name');
+
+    const deptMap: Record<string, string> = {};
+    departments.forEach((d: any) => { deptMap[d.id] = d.name; });
+
+    const desigMap: Record<string, string> = {};
+    designations.forEach((d: any) => { desigMap[d.id] = d.name; });
+
+    // Build tree recursively by employee id
+    const buildNode = (emp: any, visited: Set<string>): OrgChartNode => {
+      visited.add(emp.id);
+      const children = employees
+        .filter((e: any) => e.reporting_manager_id === emp.id && !visited.has(e.id))
+        .map((e: any) => buildNode(e, new Set(visited)));
+
+      return {
+        id: emp.id,
+        employee_id: emp.employee_id,
+        first_name: emp.first_name,
+        last_name: emp.last_name,
+        designation: desigMap[emp.designation_id] ?? 'Unknown',
+        department: deptMap[emp.department_id] ?? 'Unknown',
+        department_id: emp.department_id ?? undefined,
+        designation_id: emp.designation_id ?? undefined,
+        children,
+      };
+    };
+
+    // Find roots: employees whose reporting_manager_id is null or points to nobody active
+    const activeIds = new Set(employees.map((e: any) => e.id));
+    const roots = employees.filter(
+      (e: any) => !e.reporting_manager_id || !activeIds.has(e.reporting_manager_id)
+    );
+
+    if (roots.length === 0) return null;
+
+    if (roots.length === 1) {
+      return buildNode(roots[0], new Set());
+    }
+
+    // Multiple top-level employees: wrap in a virtual root
+    const children = roots.map((r: any) => buildNode(r, new Set()));
+    return {
+      id: 'virtual-root',
+      employee_id: '',
+      first_name: 'Organization',
+      last_name: '',
+      designation: '',
+      department: '',
+      children,
+    };
   }
 
   private async buildOrgChartNode(
@@ -377,13 +429,17 @@ export class HierarchyService {
       children.push(child);
     }
 
+    const department = node ? await this.departmentRepository.getDepartmentById(node.department_id) : null;
+
     return {
       id: employee.id,
       employee_id: employee.employee_id,
       first_name: employee.first_name,
       last_name: employee.last_name,
       designation: designation?.name || 'Unknown',
-      department: node ? (await this.departmentRepository.getDepartmentById(node.department_id))?.name || 'Unknown' : 'Unknown',
+      department: department?.name || 'Unknown',
+      department_id: node?.department_id ?? undefined,
+      designation_id: node?.designation_id ?? undefined,
       children,
     };
   }

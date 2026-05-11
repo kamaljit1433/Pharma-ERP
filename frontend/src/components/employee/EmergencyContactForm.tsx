@@ -3,7 +3,17 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
-import { Save, Plus, Trash2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../ui/alert-dialog';
+import { Save, Plus, Trash2, Pencil, ChevronDown, Phone, User } from 'lucide-react';
 import apiClient from '../../services/api';
 
 interface EmergencyContact {
@@ -22,18 +32,27 @@ interface EmergencyContactFormProps {
   maxContacts?: number;
 }
 
+interface ContactFieldErrors {
+  name?: string;
+  relationship?: string;
+  phone?: string;
+  email?: string;
+}
+
+const RELATIONSHIPS = ['Spouse', 'Parent', 'Child', 'Sibling', 'Friend', 'Other'];
+
 export const EmergencyContactForm: React.FC<EmergencyContactFormProps> = ({
   employeeId,
   readOnly = false,
   maxContacts = 3,
 }) => {
-  interface ContactFieldErrors { name?: string; relationship?: string; phone?: string; email?: string; }
-
   const [contacts, setContacts] = useState<EmergencyContact[]>([]);
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [errors, setErrors] = useState<Record<number, ContactFieldErrors>>({});
-  const [isLoading, setIsLoading] = useState(false);
+  const [savingIndex, setSavingIndex] = useState<number | null>(null);
+  const [deletingIndex, setDeletingIndex] = useState<number | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ index: number; name: string } | null>(null);
   const [isFetching, setIsFetching] = useState(true);
-  const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!employeeId) return;
@@ -45,51 +64,40 @@ export const EmergencyContactForm: React.FC<EmergencyContactFormProps> = ({
       .finally(() => setIsFetching(false));
   }, [employeeId]);
 
-  const validateContact = (contact: EmergencyContact, index: number): boolean => {
-    const contactErrors: ContactFieldErrors = {};
-    if (!contact.name?.trim()) contactErrors.name = 'Name is required';
-    if (!contact.relationship?.trim()) contactErrors.relationship = 'Relationship is required';
+  const validate = (contact: EmergencyContact, index: number): boolean => {
+    const e: ContactFieldErrors = {};
+    if (!contact.name?.trim()) e.name = 'Name is required';
+    if (!contact.relationship?.trim()) e.relationship = 'Relationship is required';
     if (!contact.phone?.trim()) {
-      contactErrors.phone = 'Phone is required';
+      e.phone = 'Phone is required';
     } else if (!/^\d{10,}$/.test(contact.phone.replace(/\D/g, ''))) {
-      contactErrors.phone = 'Invalid phone number';
+      e.phone = 'Invalid phone number';
     }
     if (contact.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email)) {
-      contactErrors.email = 'Invalid email format';
+      e.email = 'Invalid email format';
     }
-    if (Object.keys(contactErrors).length > 0) {
-      setErrors((prev) => ({ ...prev, [index]: contactErrors }));
+    if (Object.keys(e).length > 0) {
+      setErrors((prev) => ({ ...prev, [index]: e }));
       return false;
     }
     return true;
   };
 
-  const handleAddContact = () => {
-    if (contacts.length < maxContacts) {
-      setContacts([...contacts, { name: '', relationship: '', phone: '', email: '', address: '', priority: contacts.length + 1 }]);
-    }
+  const handleAdd = () => {
+    const newContact: EmergencyContact = {
+      name: '',
+      relationship: '',
+      phone: '',
+      email: '',
+      address: '',
+      priority: contacts.length + 1,
+    };
+    setContacts((prev) => [...prev, newContact]);
+    setExpandedIndex(contacts.length);
   };
 
-  const handleRemoveContact = async (index: number) => {
-    const contact = contacts[index];
-    if (contact?.id) {
-      try {
-        await apiClient.delete(`/employees/${employeeId}/emergency-contacts/${contact.id}`);
-      } catch {
-        // ignore — remove locally anyway
-      }
-    }
-    setContacts(contacts.filter((_, i) => i !== index));
-    const newErrors = { ...errors };
-    delete newErrors[index];
-    setErrors(newErrors);
-  };
-
-  const handleContactChange = (index: number, field: keyof EmergencyContact, value: string | number) => {
-    const updated = [...contacts];
-    if (!updated[index]) return;
-    updated[index] = { ...updated[index]!, [field]: value };
-    setContacts(updated);
+  const handleChange = (index: number, field: keyof EmergencyContact, value: string) => {
+    setContacts((prev) => prev.map((c, i) => (i === index ? { ...c, [field]: value } : c)));
     const errorKey = field as keyof ContactFieldErrors;
     if (errors[index]?.[errorKey]) {
       setErrors((prev) => {
@@ -103,36 +111,83 @@ export const EmergencyContactForm: React.FC<EmergencyContactFormProps> = ({
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    let isValid = true;
-    for (let i = 0; i < contacts.length; i++) {
-      const contact = contacts[i];
-      if (contact && !validateContact(contact, i)) isValid = false;
-    }
-    if (!isValid || contacts.length === 0) return;
+  const handleSave = async (index: number) => {
+    const contact = contacts[index];
+    if (!contact || !validate(contact, index)) return;
 
-    setIsLoading(true);
+    setSavingIndex(index);
     try {
-      const saved: EmergencyContact[] = [];
-      for (const contact of contacts) {
-        if (contact.id) {
-          const res = await apiClient.put(`/employees/${employeeId}/emergency-contacts/${contact.id}`, contact);
-          saved.push(res.data?.data ?? res.data);
-        } else {
-          const res = await apiClient.post(`/employees/${employeeId}/emergency-contacts`, contact);
-          saved.push(res.data?.data ?? res.data);
-        }
+      if (contact.id) {
+        const res = await apiClient.put(
+          `/employees/${employeeId}/emergency-contacts/${contact.id}`,
+          contact
+        );
+        const saved = res.data?.data ?? res.data;
+        setContacts((prev) => prev.map((c, i) => (i === index ? saved : c)));
+      } else {
+        const res = await apiClient.post(
+          `/employees/${employeeId}/emergency-contacts`,
+          contact
+        );
+        const saved = res.data?.data ?? res.data;
+        setContacts((prev) => prev.map((c, i) => (i === index ? saved : c)));
       }
-      setContacts(saved);
-      setSaveMessage('Saved successfully');
-      setTimeout(() => setSaveMessage(null), 3000);
+      setExpandedIndex(null);
     } catch {
-      setSaveMessage('Failed to save. Please try again.');
-      setTimeout(() => setSaveMessage(null), 4000);
+      setErrors((prev) => ({
+        ...prev,
+        [index]: { name: 'Failed to save. Please try again.' },
+      }));
     } finally {
-      setIsLoading(false);
+      setSavingIndex(null);
     }
+  };
+
+  const handleDelete = (index: number) => {
+    const contact = contacts[index];
+    setDeleteTarget({ index, name: contact?.name || 'this contact' });
+  };
+
+  const executeDelete = async () => {
+    if (deleteTarget === null) return;
+    const { index } = deleteTarget;
+    const contact = contacts[index];
+    setDeleteTarget(null);
+    setDeletingIndex(index);
+    try {
+      if (contact?.id) {
+        await apiClient.delete(
+          `/employees/${employeeId}/emergency-contacts/${contact.id}`
+        );
+      }
+      setContacts((prev) => prev.filter((_, i) => i !== index));
+      if (expandedIndex === index) setExpandedIndex(null);
+      else if (expandedIndex !== null && expandedIndex > index)
+        setExpandedIndex(expandedIndex - 1);
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next[index];
+        return next;
+      });
+    } catch {
+      // ignore — entry stays
+    } finally {
+      setDeletingIndex(null);
+    }
+  };
+
+  const handleCancel = (index: number) => {
+    const contact = contacts[index];
+    if (!contact?.id) {
+      // unsaved new entry — remove it
+      setContacts((prev) => prev.filter((_, i) => i !== index));
+    }
+    setExpandedIndex(null);
+    setErrors((prev) => {
+      const next = { ...prev };
+      delete next[index];
+      return next;
+    });
   };
 
   if (isFetching) {
@@ -147,99 +202,237 @@ export const EmergencyContactForm: React.FC<EmergencyContactFormProps> = ({
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Emergency Contacts</CardTitle>
-        <CardDescription>
-          {readOnly ? 'Emergency contacts on file.' : `Add up to ${maxContacts} emergency contacts.`}
-        </CardDescription>
+      <CardHeader className="flex flex-row items-start justify-between">
+        <div>
+          <CardTitle>Emergency Contacts</CardTitle>
+          <CardDescription>
+            {readOnly
+              ? 'Emergency contacts on file.'
+              : `Up to ${maxContacts} emergency contacts.`}
+          </CardDescription>
+        </div>
+        {!readOnly && contacts.length < maxContacts && expandedIndex === null && (
+          <Button type="button" variant="outline" size="sm" onClick={handleAdd} className="gap-1 shrink-0">
+            <Plus className="h-4 w-4" />
+            Add Contact
+          </Button>
+        )}
       </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {contacts.map((contact, index) => (
-            <div key={contact.id ?? index} className="border rounded-lg p-4 space-y-3">
-              <div className="flex items-center justify-between mb-3">
-                <Badge variant="secondary">Contact {index + 1}</Badge>
-                {!readOnly && contacts.length > 0 && (
-                  <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveContact(index)} className="text-destructive hover:text-destructive">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium">Name {!readOnly && '*'}</label>
-                  <Input value={contact.name} onChange={(e) => handleContactChange(index, 'name', e.target.value)} placeholder="John Doe" disabled={readOnly} className={errors[index]?.name ? 'border-destructive' : ''} />
-                  {errors[index]?.name && <p className="text-sm text-destructive mt-1">{errors[index].name}</p>}
-                </div>
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove emergency contact?</AlertDialogTitle>
+            <AlertDialogDescription>
+              &ldquo;{deleteTarget?.name}&rdquo; will be permanently removed. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={executeDelete}
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-                <div>
-                  <label className="text-sm font-medium">Relationship {!readOnly && '*'}</label>
-                  {readOnly ? (
-                    <p className="mt-1 font-medium">{contact.relationship}</p>
-                  ) : (
-                    <select value={contact.relationship} onChange={(e) => handleContactChange(index, 'relationship', e.target.value)} className={`w-full px-3 py-2 border rounded-md bg-background ${errors[index]?.relationship ? 'border-destructive' : 'border-input'}`}>
-                      <option value="">Select relationship</option>
-                      {['Spouse', 'Parent', 'Child', 'Sibling', 'Friend', 'Other'].map((r) => <option key={r} value={r}>{r}</option>)}
-                    </select>
+      <CardContent className="space-y-3">
+        {contacts.length === 0 && (
+          <div className="text-center py-6 text-muted-foreground">
+            <p className="text-sm">No emergency contacts on file.</p>
+            {!readOnly && (
+              <Button type="button" variant="outline" size="sm" onClick={handleAdd} className="mt-3 gap-1">
+                <Plus className="h-4 w-4" />
+                Add First Contact
+              </Button>
+            )}
+          </div>
+        )}
+
+        {contacts.map((contact, index) => {
+          const isExpanded = expandedIndex === index;
+          const isSaving = savingIndex === index;
+          const isDeleting = deletingIndex === index;
+
+          return (
+            <div key={contact.id ?? `new-${index}`} className="border rounded-lg overflow-hidden">
+              {/* Collapsed summary row */}
+              {!isExpanded && (
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted shrink-0">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-sm truncate">{contact.name || '—'}</span>
+                      {contact.relationship && (
+                        <Badge variant="secondary" className="text-xs shrink-0">
+                          {contact.relationship}
+                        </Badge>
+                      )}
+                    </div>
+                    {contact.phone && (
+                      <div className="flex items-center gap-1 mt-0.5 text-xs text-muted-foreground">
+                        <Phone className="h-3 w-3" />
+                        <span>{contact.phone}</span>
+                      </div>
+                    )}
+                  </div>
+                  {!readOnly && (
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setExpandedIndex(index)}
+                        className="h-7 w-7 p-0"
+                        title="Edit"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(index)}
+                        disabled={isDeleting}
+                        className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                        title="Delete"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   )}
-                  {errors[index]?.relationship && <p className="text-sm text-destructive mt-1">{errors[index].relationship}</p>}
                 </div>
+              )}
 
-                <div>
-                  <label className="text-sm font-medium">Phone {!readOnly && '*'}</label>
-                  <Input value={contact.phone} onChange={(e) => handleContactChange(index, 'phone', e.target.value)} placeholder="+1 (555) 000-0000" disabled={readOnly} className={errors[index]?.phone ? 'border-destructive' : ''} />
-                  {errors[index]?.phone && <p className="text-sm text-destructive mt-1">{errors[index].phone}</p>}
+              {/* Expanded edit form */}
+              {isExpanded && (
+                <div className="p-4 space-y-3 bg-muted/30">
+                  <div className="flex items-center justify-between mb-1">
+                    <Badge variant="secondary">Contact {index + 1}</Badge>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleCancel(index)}
+                      className="h-7 w-7 p-0"
+                    >
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-medium mb-1 block">Name *</label>
+                      <Input
+                        value={contact.name}
+                        onChange={(e) => handleChange(index, 'name', e.target.value)}
+                        placeholder="Jane Doe"
+                        className={errors[index]?.name ? 'border-destructive' : ''}
+                      />
+                      {errors[index]?.name && (
+                        <p className="text-xs text-destructive mt-1">{errors[index].name}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-medium mb-1 block">Relationship *</label>
+                      <select
+                        value={contact.relationship}
+                        onChange={(e) => handleChange(index, 'relationship', e.target.value)}
+                        className={`w-full px-3 py-2 text-sm border rounded-md bg-background ${
+                          errors[index]?.relationship ? 'border-destructive' : 'border-input'
+                        }`}
+                      >
+                        <option value="">Select…</option>
+                        {RELATIONSHIPS.map((r) => (
+                          <option key={r} value={r}>{r}</option>
+                        ))}
+                      </select>
+                      {errors[index]?.relationship && (
+                        <p className="text-xs text-destructive mt-1">{errors[index].relationship}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-medium mb-1 block">Phone *</label>
+                      <Input
+                        value={contact.phone}
+                        onChange={(e) => handleChange(index, 'phone', e.target.value)}
+                        placeholder="+91 98765 43210"
+                        className={errors[index]?.phone ? 'border-destructive' : ''}
+                      />
+                      {errors[index]?.phone && (
+                        <p className="text-xs text-destructive mt-1">{errors[index].phone}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-medium mb-1 block">Email</label>
+                      <Input
+                        type="email"
+                        value={contact.email ?? ''}
+                        onChange={(e) => handleChange(index, 'email', e.target.value)}
+                        placeholder="jane@example.com"
+                        className={errors[index]?.email ? 'border-destructive' : ''}
+                      />
+                      {errors[index]?.email && (
+                        <p className="text-xs text-destructive mt-1">{errors[index].email}</p>
+                      )}
+                    </div>
+
+                    <div className="col-span-2">
+                      <label className="text-xs font-medium mb-1 block">Address</label>
+                      <Input
+                        value={contact.address ?? ''}
+                        onChange={(e) => handleChange(index, 'address', e.target.value)}
+                        placeholder="123 Main Street, City"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(index)}
+                      disabled={isDeleting}
+                      className="text-destructive hover:text-destructive gap-1"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      {isDeleting ? 'Removing…' : 'Remove'}
+                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleCancel(index)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => handleSave(index)}
+                        disabled={isSaving}
+                        className="gap-1"
+                      >
+                        <Save className="h-3.5 w-3.5" />
+                        {isSaving ? 'Saving…' : 'Save'}
+                      </Button>
+                    </div>
+                  </div>
                 </div>
-
-                <div>
-                  <label className="text-sm font-medium">Email</label>
-                  <Input type="email" value={contact.email ?? ''} onChange={(e) => handleContactChange(index, 'email', e.target.value)} placeholder="john@example.com" disabled={readOnly} className={errors[index]?.email ? 'border-destructive' : ''} />
-                  {errors[index]?.email && <p className="text-sm text-destructive mt-1">{errors[index].email}</p>}
-                </div>
-
-                <div className="col-span-2">
-                  <label className="text-sm font-medium">Address</label>
-                  <Input value={contact.address ?? ''} onChange={(e) => handleContactChange(index, 'address', e.target.value)} placeholder="123 Main Street, City, State" disabled={readOnly} />
-                </div>
-              </div>
-            </div>
-          ))}
-
-          {contacts.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              <p>No emergency contacts on file.</p>
-              {!readOnly && (
-                <Button type="button" variant="outline" onClick={handleAddContact} className="mt-4 gap-2">
-                  <Plus className="h-4 w-4" />
-                  Add First Contact
-                </Button>
               )}
             </div>
-          )}
-
-          {!readOnly && contacts.length < maxContacts && contacts.length > 0 && (
-            <Button type="button" variant="outline" onClick={handleAddContact} className="w-full gap-2">
-              <Plus className="h-4 w-4" />
-              Add Emergency Contact
-            </Button>
-          )}
-
-          {saveMessage && (
-            <p className={`text-sm text-center ${saveMessage.startsWith('Failed') ? 'text-destructive' : 'text-green-600'}`}>
-              {saveMessage}
-            </p>
-          )}
-
-          {!readOnly && contacts.length > 0 && (
-            <div className="flex gap-3 justify-end pt-4 border-t">
-              <Button type="submit" disabled={isLoading} className="gap-2">
-                <Save className="h-4 w-4" />
-                {isLoading ? 'Saving…' : 'Save Contacts'}
-              </Button>
-            </div>
-          )}
-        </form>
+          );
+        })}
       </CardContent>
     </Card>
   );

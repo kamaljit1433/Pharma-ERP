@@ -31,6 +31,10 @@ export const jobPostingSchema = z.object({
     .number()
     .min(0, 'Maximum experience cannot be negative')
     .max(100, 'Maximum experience cannot exceed 100 years'),
+  positions_count: z
+    .number()
+    .int('Positions count must be a whole number')
+    .min(1, 'At least 1 position is required'),
   application_deadline: z
     .string()
     .min(1, 'Application deadline is required')

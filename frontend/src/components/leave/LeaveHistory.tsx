@@ -141,6 +141,7 @@ export const LeaveHistory: React.FC<LeaveHistoryProps> = ({ leaves, loading }) =
                     <TableHead>Leave Type</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Reason</TableHead>
+                    <TableHead>Rejection Reason</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -166,6 +167,9 @@ export const LeaveHistory: React.FC<LeaveHistoryProps> = ({ leaves, loading }) =
                       <TableCell>{getStatusBadge(leave.status)}</TableCell>
                       <TableCell className="text-sm text-muted-foreground max-w-xs truncate">
                         {leave.reason || '-'}
+                      </TableCell>
+                      <TableCell className="text-sm text-destructive max-w-xs truncate">
+                        {leave.status === 'rejected' ? (leave.approval_notes || '-') : '-'}
                       </TableCell>
                       <TableCell className="text-right">
                         {canCancelLeave(leave) && (

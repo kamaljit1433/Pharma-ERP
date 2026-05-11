@@ -285,7 +285,7 @@ export const AttendanceReports: React.FC<AttendanceReportsProps> = ({
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground">Avg Hours/Day</p>
                 <p className="text-2xl font-bold">
-                  {stats.average_working_hours.toFixed(1)}h
+                  {Number(stats.average_working_hours).toFixed(1)}h
                 </p>
               </div>
             </div>

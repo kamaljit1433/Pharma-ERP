@@ -86,12 +86,14 @@ const allNavigationItems: NavigationItem[] = [
     label: 'Organization',
     path: '/hierarchy',
     icon: 'Network',
+    requiredPermission: Permission.VIEW_ORGANIZATION,
   },
   {
     id: 'settings',
     label: 'Settings',
     path: '/settings',
     icon: 'Settings',
+    requiredPermission: Permission.VIEW_SETTINGS,
   },
 ];
 
@@ -135,8 +137,8 @@ export const getQuickActionsForRole = (role: UserRole): NavigationItem[] => {
       { id: 'payroll-reports', label: 'Payroll Reports', path: '/payroll/reports', icon: 'FileText' },
     ],
     [UserRole.EMPLOYEE]: [
-      { id: 'mark-attendance', label: 'Mark Attendance', path: '/attendance/mark', icon: 'Clock' },
-      { id: 'request-leave', label: 'Request Leave', path: '/leave/request', icon: 'CalendarDays' },
+      { id: 'mark-attendance', label: 'Mark Attendance', path: '/attendance', icon: 'Clock' },
+      { id: 'request-leave', label: 'Request Leave', path: '/leave', icon: 'CalendarDays' },
       { id: 'view-payslip', label: 'View Payslip', path: '/payroll/payslips', icon: 'FileText' },
     ],
     [UserRole.IT_ADMIN]: [

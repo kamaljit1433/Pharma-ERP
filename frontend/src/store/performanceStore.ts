@@ -56,7 +56,7 @@ interface PIP {
   id: string;
   employeeId: string;
   initiatedBy: string;
-  goalIds: string[];
+  goals: string[];
   startDate: string;
   endDate: string;
   status: 'Active' | 'Completed';
@@ -175,7 +175,16 @@ export const usePerformanceStore = create<PerformanceState>()(
         set({ loadingCycles: true, error: null });
         try {
           const data = await performanceService.getReviewCycles(status);
-          set({ reviewCycles: data });
+          // API returns snake_case — normalise to camelCase for the store
+          const mapped = (data as any[]).map((c) => ({
+            id: c.id,
+            name: c.name,
+            startDate: c.startDate ?? c.start_date,
+            endDate: c.endDate ?? c.end_date,
+            status: c.status,
+            createdAt: c.createdAt ?? c.created_at,
+          }));
+          set({ reviewCycles: mapped });
         } catch (error) {
           set({ error: (error as Error).message });
         } finally {
@@ -186,8 +195,20 @@ export const usePerformanceStore = create<PerformanceState>()(
         set({ error: null });
         try {
           await performanceService.createReviewCycle(data);
+          // Refresh the list so the new cycle appears immediately
+          const fresh = await performanceService.getReviewCycles();
+          const mapped = (fresh as any[]).map((c) => ({
+            id: c.id,
+            name: c.name,
+            startDate: c.startDate ?? c.start_date,
+            endDate: c.endDate ?? c.end_date,
+            status: c.status,
+            createdAt: c.createdAt ?? c.created_at,
+          }));
+          set({ reviewCycles: mapped });
         } catch (error) {
           set({ error: (error as Error).message });
+          throw error;
         }
       },
       updateReviewCycle: async (id, data) => {
@@ -196,6 +217,7 @@ export const usePerformanceStore = create<PerformanceState>()(
           await performanceService.updateReviewCycle(id, data);
         } catch (error) {
           set({ error: (error as Error).message });
+          throw error;
         }
       },
       transitionCycleStatus: async (id, newStatus) => {
@@ -204,6 +226,7 @@ export const usePerformanceStore = create<PerformanceState>()(
           await performanceService.transitionCycleStatus(id, newStatus);
         } catch (error) {
           set({ error: (error as Error).message });
+          throw error;
         }
       },
       deleteReviewCycle: async (id) => {

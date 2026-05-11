@@ -263,7 +263,7 @@ export class HierarchyController {
 
       res.status(200).json({
         success: true,
-        data: orgChart,
+        data: orgChart ?? null,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to generate org chart';

@@ -15,6 +15,8 @@ import Benefits from '../Benefits';
 import Separation from '../Separation';
 import Organization from '../Organization';
 import Settings from '../Settings';
+import Profile from '../Profile';
+import JobPostingCreate from '../JobPostingCreate';
 import ProtectedRoute from '../../routes/ProtectedRoute';
 import { UserRole } from '../../types/auth';
 
@@ -66,6 +68,14 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'employees/:id/edit',
+        element: (
+          <ProtectedRoute>
+            <EmployeeDetail />
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: 'attendance',
         element: (
           <ProtectedRoute>
@@ -94,6 +104,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute requiredRoles={[UserRole.HR_MANAGER, UserRole.SUPER_ADMIN]}>
             <Recruitment />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'recruitment/jobs/new',
+        element: (
+          <ProtectedRoute requiredRoles={[UserRole.HR_MANAGER, UserRole.SUPER_ADMIN]}>
+            <JobPostingCreate />
           </ProtectedRoute>
         ),
       },
@@ -142,6 +160,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <Settings />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'profile',
+        element: (
+          <ProtectedRoute>
+            <Profile />
           </ProtectedRoute>
         ),
       },

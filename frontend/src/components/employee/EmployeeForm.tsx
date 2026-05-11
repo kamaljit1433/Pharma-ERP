@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { SearchableSelect } from '../ui/searchable-select';
 import { UserPlus, Save, X } from 'lucide-react';
+import hierarchyService from '../../services/hierarchyService';
 
 interface EmployeeFormData {
   first_name: string;
@@ -62,8 +64,15 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
     employment_type: initialData?.employment_type || 'permanent',
   });
 
-  interface FormErrors { first_name?: string; last_name?: string; email?: string; date_of_joining?: string; }
+  interface FormErrors { first_name?: string; last_name?: string; email?: string; date_of_joining?: string; pan?: string; aadhar?: string; }
   const [errors, setErrors] = useState<FormErrors>({});
+  const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
+  const [designations, setDesignations] = useState<{ id: string; name: string }[]>([]);
+
+  useEffect(() => {
+    hierarchyService.getDepartments().then((d) => setDepartments(d.map((x) => ({ id: x.id, name: x.name }))));
+    hierarchyService.getDesignations().then((d) => setDesignations(d.map((x) => ({ id: x.id, name: x.name }))));
+  }, []);
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
@@ -82,6 +91,12 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
     if (!formData.date_of_joining) {
       newErrors.date_of_joining = 'Date of joining is required';
     }
+    if (formData.pan && !/^[A-Z0-9]{10}$/.test(formData.pan)) {
+      newErrors.pan = 'PAN must be exactly 10 alphanumeric characters';
+    }
+    if (formData.aadhar && !/^\d{12}$/.test(formData.aadhar)) {
+      newErrors.aadhar = 'Aadhaar must be exactly 12 digits';
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -90,7 +105,15 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
-    const { name, value } = e.target;
+    const { name } = e.target;
+    let value = e.target.value;
+
+    if (name === 'pan') {
+      value = value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10);
+    } else if (name === 'aadhar') {
+      value = value.replace(/\D/g, '').slice(0, 12);
+    }
+
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -322,21 +345,21 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
                 </select>
               </div>
               <div>
-                <label className="text-sm font-medium">Department ID</label>
-                <Input
-                  name="department_id"
+                <label className="text-sm font-medium">Department</label>
+                <SearchableSelect
+                  options={departments}
                   value={formData.department_id}
-                  onChange={handleChange}
-                  placeholder="Department UUID"
+                  onChange={(id) => setFormData((prev) => ({ ...prev, department_id: id }))}
+                  placeholder="Select department"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium">Designation ID</label>
-                <Input
-                  name="designation_id"
+                <label className="text-sm font-medium">Designation</label>
+                <SearchableSelect
+                  options={designations}
                   value={formData.designation_id}
-                  onChange={handleChange}
-                  placeholder="Designation UUID"
+                  onChange={(id) => setFormData((prev) => ({ ...prev, designation_id: id }))}
+                  placeholder="Select designation"
                 />
               </div>
             </div>
@@ -353,16 +376,33 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
                   value={formData.pan}
                   onChange={handleChange}
                   placeholder="ABCDE1234F"
+                  maxLength={10}
+                  className={errors.pan ? 'border-destructive' : ''}
                 />
+                <div className="flex justify-between mt-1">
+                  {errors.pan
+                    ? <p className="text-sm text-destructive">{errors.pan}</p>
+                    : <span />}
+                  <span className="text-xs text-muted-foreground">{formData.pan?.length ?? 0}/10</span>
+                </div>
               </div>
               <div>
-                <label className="text-sm font-medium">Aadhar</label>
+                <label className="text-sm font-medium">Aadhaar</label>
                 <Input
                   name="aadhar"
                   value={formData.aadhar}
                   onChange={handleChange}
                   placeholder="123456789012"
+                  maxLength={12}
+                  inputMode="numeric"
+                  className={errors.aadhar ? 'border-destructive' : ''}
                 />
+                <div className="flex justify-between mt-1">
+                  {errors.aadhar
+                    ? <p className="text-sm text-destructive">{errors.aadhar}</p>
+                    : <span />}
+                  <span className="text-xs text-muted-foreground">{formData.aadhar?.length ?? 0}/12</span>
+                </div>
               </div>
             </div>
           </div>

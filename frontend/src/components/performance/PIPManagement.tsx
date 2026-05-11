@@ -27,7 +27,7 @@ interface PIP {
   id: string;
   employeeId: string;
   initiatedBy: string;
-  goalIds: string[];
+  goals: string[];
   startDate: string;
   endDate: string;
   status: 'Active' | 'Completed';
@@ -292,7 +292,7 @@ export const PIPManagement: React.FC = () => {
                 <div>
                   <p className="text-sm text-muted-foreground">Goals</p>
                   <div className="flex flex-wrap gap-2 mt-2">
-                    {pip.goalIds.map((goalId) => (
+                    {pip.goals.map((goalId) => (
                       <Badge key={goalId} variant="outline">
                         {goalId}
                       </Badge>

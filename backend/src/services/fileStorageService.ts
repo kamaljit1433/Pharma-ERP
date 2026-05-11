@@ -29,8 +29,9 @@ export class FileStorageService {
     originalName: string,
     options: FileUploadOptions
   ): Promise<FileUploadResult> {
-    // Validate file with category-specific rules
-    const validation = this.validateFile(file, originalName, options);
+    // Validate against just the filename, not a full storage path that may contain '/'
+    const filenameForValidation = originalName.split(/[\\/]/).pop() || originalName;
+    const validation = this.validateFile(file, filenameForValidation, options);
     if (!validation.isValid) {
       throw new Error(`File validation failed: ${validation.errors.join(', ')}`);
     }

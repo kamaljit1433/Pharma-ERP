@@ -4,7 +4,15 @@ import { Button } from '../ui/button';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { benefitsService } from '../../services/benefitsService';
-import { Download } from 'lucide-react';
+import { Download, AlertCircle } from 'lucide-react';
+
+interface PFContribution {
+  month: number;
+  year: number;
+  basic_salary: number;
+  employee_contribution: number;
+  employer_contribution: number;
+}
 
 interface PFDetails {
   account: {
@@ -12,13 +20,7 @@ interface PFDetails {
     opening_balance: number;
     current_balance: number;
   };
-  contributions: Array<{
-    month: number;
-    year: number;
-    basic_salary: number;
-    employee_contribution: number;
-    employer_contribution: number;
-  }>;
+  contributions: PFContribution[];
   balance: number;
 }
 
@@ -29,21 +31,27 @@ interface PFStatementProps {
 export const PFStatement: React.FC<PFStatementProps> = ({ employeeId }) => {
   const [pfDetails, setPFDetails] = useState<PFDetails | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [fromMonth, setFromMonth] = useState(1);
   const [fromYear, setFromYear] = useState(new Date().getFullYear());
   const [toMonth, setToMonth] = useState(12);
   const [toYear, setToYear] = useState(new Date().getFullYear());
+  const [statementLoading, setStatementLoading] = useState(false);
+  const [statementError, setStatementError] = useState<string | null>(null);
+  const [generatedStatement, setGeneratedStatement] = useState<PFContribution[] | null>(null);
 
   useEffect(() => {
-    fetchPFDetails();
+    if (employeeId) fetchPFDetails();
   }, [employeeId]);
 
   const fetchPFDetails = async () => {
     try {
       setLoading(true);
+      setFetchError(null);
       const response = await benefitsService.getPFDetails(employeeId);
       setPFDetails(response.data);
     } catch (error) {
+      setFetchError('Failed to fetch PF details. Please try again.');
       console.error('Failed to fetch PF details:', error);
     } finally {
       setLoading(false);
@@ -52,6 +60,9 @@ export const PFStatement: React.FC<PFStatementProps> = ({ employeeId }) => {
 
   const handleGenerateStatement = async () => {
     try {
+      setStatementLoading(true);
+      setStatementError(null);
+      setGeneratedStatement(null);
       const response = await benefitsService.getPFStatement(
         employeeId,
         fromMonth,
@@ -59,15 +70,26 @@ export const PFStatement: React.FC<PFStatementProps> = ({ employeeId }) => {
         toMonth,
         toYear
       );
-      // Handle statement generation (could download PDF or display)
-      console.log('Statement generated:', response.data);
+      setGeneratedStatement(response.data?.contributions || []);
     } catch (error) {
+      setStatementError('Failed to generate statement. Please try again.');
       console.error('Failed to generate statement:', error);
+    } finally {
+      setStatementLoading(false);
     }
   };
 
   if (loading) {
     return <div className="text-center py-8">Loading PF details...</div>;
+  }
+
+  if (fetchError) {
+    return (
+      <div className="p-4 bg-destructive/10 border border-destructive rounded-lg flex gap-2 items-start">
+        <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+        <p className="text-sm text-destructive">{fetchError}</p>
+      </div>
+    );
   }
 
   if (!pfDetails) {
@@ -98,7 +120,9 @@ export const PFStatement: React.FC<PFStatementProps> = ({ employeeId }) => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">₹{pfDetails.account.opening_balance.toLocaleString()}</p>
+            <p className="text-2xl font-bold">
+              ₹{pfDetails.account.opening_balance.toLocaleString()}
+            </p>
           </CardContent>
         </Card>
 
@@ -165,14 +189,78 @@ export const PFStatement: React.FC<PFStatementProps> = ({ employeeId }) => {
               />
             </div>
           </div>
-          <Button onClick={handleGenerateStatement} className="gap-2">
+
+          {statementError && (
+            <div className="mb-4 p-3 bg-destructive/10 border border-destructive rounded-lg flex gap-2 items-center">
+              <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0" />
+              <p className="text-sm text-destructive">{statementError}</p>
+            </div>
+          )}
+
+          <Button onClick={handleGenerateStatement} disabled={statementLoading} className="gap-2">
             <Download className="w-4 h-4" />
-            Generate Statement
+            {statementLoading ? 'Generating...' : 'Generate Statement'}
           </Button>
         </CardContent>
       </Card>
 
-      {/* Contributions Table */}
+      {/* Generated Statement */}
+      {generatedStatement !== null && (
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              Statement: {fromMonth}/{fromYear} — {toMonth}/{toYear}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {generatedStatement.length === 0 ? (
+              <p className="text-center text-muted-foreground py-4">
+                No contributions found for the selected period
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-2 px-2">Month/Year</th>
+                      <th className="text-right py-2 px-2">Basic Salary</th>
+                      <th className="text-right py-2 px-2">Employee Contribution</th>
+                      <th className="text-right py-2 px-2">Employer Contribution</th>
+                      <th className="text-right py-2 px-2">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {generatedStatement.map((contrib, idx) => (
+                      <tr key={idx} className="border-b hover:bg-muted/50">
+                        <td className="py-2 px-2">
+                          {contrib.month}/{contrib.year}
+                        </td>
+                        <td className="text-right py-2 px-2">
+                          ₹{contrib.basic_salary.toLocaleString()}
+                        </td>
+                        <td className="text-right py-2 px-2">
+                          ₹{contrib.employee_contribution.toLocaleString()}
+                        </td>
+                        <td className="text-right py-2 px-2">
+                          ₹{contrib.employer_contribution.toLocaleString()}
+                        </td>
+                        <td className="text-right py-2 px-2 font-medium">
+                          ₹
+                          {(
+                            contrib.employee_contribution + contrib.employer_contribution
+                          ).toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Recent Contributions Table */}
       <Card>
         <CardHeader>
           <CardTitle>Recent Contributions</CardTitle>
@@ -206,7 +294,9 @@ export const PFStatement: React.FC<PFStatementProps> = ({ employeeId }) => {
                     </td>
                     <td className="text-right py-2 px-2 font-medium">
                       ₹
-                      {(contrib.employee_contribution + contrib.employer_contribution).toLocaleString()}
+                      {(
+                        contrib.employee_contribution + contrib.employer_contribution
+                      ).toLocaleString()}
                     </td>
                   </tr>
                 ))}

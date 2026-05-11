@@ -1,4 +1,5 @@
 export { GoalSetting } from './GoalSetting';
+export { EmployeeSearch } from './EmployeeSearch';
 export { GoalProgress } from './GoalProgress';
 export { PerformanceReviewForm } from './PerformanceReviewForm';
 export { ReviewCycleManagement } from './ReviewCycleManagement';

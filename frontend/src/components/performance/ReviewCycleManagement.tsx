@@ -52,6 +52,9 @@ export const ReviewCycleManagement: React.FC = () => {
     name: '',
     startDate: '',
     endDate: '',
+    selfReviewDeadline: '',
+    peerReviewDeadline: '',
+    managerReviewDeadline: '',
   });
 
   useEffect(() => {
@@ -64,7 +67,14 @@ export const ReviewCycleManagement: React.FC = () => {
   };
 
   const validateForm = (): boolean => {
-    if (!formData.name.trim() || !formData.startDate || !formData.endDate) {
+    if (
+      !formData.name.trim() ||
+      !formData.startDate ||
+      !formData.endDate ||
+      !formData.selfReviewDeadline ||
+      !formData.peerReviewDeadline ||
+      !formData.managerReviewDeadline
+    ) {
       return false;
     }
     if (new Date(formData.startDate) >= new Date(formData.endDate)) {
@@ -83,12 +93,20 @@ export const ReviewCycleManagement: React.FC = () => {
       clearError();
       await createReviewCycle(formData);
       setSuccess(true);
-      setFormData({ name: '', startDate: '', endDate: '' });
-      setTimeout(() => setSuccess(false), 2000);
-      setIsCreateOpen(false);
-      fetchReviewCycles();
+      setFormData({
+        name: '',
+        startDate: '',
+        endDate: '',
+        selfReviewDeadline: '',
+        peerReviewDeadline: '',
+        managerReviewDeadline: '',
+      });
+      setTimeout(() => {
+        setSuccess(false);
+        setIsCreateOpen(false);
+      }, 1500);
     } catch (err) {
-      console.error('Failed to create cycle:', err);
+      // error is already set in the store and shown inside the dialog
     } finally {
       setLoading(false);
     }
@@ -110,9 +128,9 @@ export const ReviewCycleManagement: React.FC = () => {
       await transitionCycleStatus(cycle.id, nextStatus);
       setSuccess(true);
       setTimeout(() => setSuccess(false), 2000);
-      fetchReviewCycles();
+      fetchReviewCycles();  // refresh so status badge updates
     } catch (err) {
-      console.error('Failed to transition status:', err);
+      // error shown via store error state
     } finally {
       setLoading(false);
     }
@@ -218,7 +236,6 @@ export const ReviewCycleManagement: React.FC = () => {
                     type="date"
                     value={formData.startDate}
                     onChange={handleInputChange}
-                    aria-label="Cycle start date"
                   />
                 </div>
 
@@ -230,9 +247,43 @@ export const ReviewCycleManagement: React.FC = () => {
                     type="date"
                     value={formData.endDate}
                     onChange={handleInputChange}
-                    aria-label="Cycle end date"
                   />
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="selfReviewDeadline">Self Review Deadline</Label>
+                  <Input
+                    id="selfReviewDeadline"
+                    name="selfReviewDeadline"
+                    type="date"
+                    value={formData.selfReviewDeadline}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="peerReviewDeadline">Peer Review Deadline</Label>
+                  <Input
+                    id="peerReviewDeadline"
+                    name="peerReviewDeadline"
+                    type="date"
+                    value={formData.peerReviewDeadline}
+                    onChange={handleInputChange}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="managerReviewDeadline">Manager Review Deadline</Label>
+                <Input
+                  id="managerReviewDeadline"
+                  name="managerReviewDeadline"
+                  type="date"
+                  value={formData.managerReviewDeadline}
+                  onChange={handleInputChange}
+                />
               </div>
 
               <Button onClick={handleCreateCycle} disabled={loading} className="w-full">

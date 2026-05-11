@@ -31,10 +31,10 @@ router.put('/:id/status', role('super_admin', 'hr_manager', 'department_manager'
 router.delete('/:id', role('super_admin', 'hr_manager'), employeeController.deleteEmployee);
 
 // Emergency Contact endpoints — contactId nested under employeeId for ownership enforcement
-router.post('/:employeeId/emergency-contacts', employeeController.addEmergencyContact);
+router.post('/:employeeId/emergency-contacts', role('super_admin', 'hr_manager', 'department_manager'), employeeController.addEmergencyContact);
 router.get('/:employeeId/emergency-contacts', employeeController.getEmergencyContacts);
-router.put('/:employeeId/emergency-contacts/:contactId', employeeController.updateEmergencyContact);
-router.delete('/:employeeId/emergency-contacts/:contactId', role('super_admin', 'hr_manager'), employeeController.deleteEmergencyContact);
+router.put('/:employeeId/emergency-contacts/:contactId', role('super_admin', 'hr_manager', 'department_manager'), employeeController.updateEmergencyContact);
+router.delete('/:employeeId/emergency-contacts/:contactId', role('super_admin', 'hr_manager', 'department_manager'), employeeController.deleteEmergencyContact);
 
 // Employment History endpoints
 router.post('/:employeeId/employment-history', role('super_admin', 'hr_manager'), employeeController.addEmploymentHistory);

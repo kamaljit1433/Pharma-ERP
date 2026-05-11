@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
-import { Label } from '../ui/label';
 import { benefitsService } from '../../services/benefitsService';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 
@@ -58,6 +57,7 @@ export const InsuranceEnrollment: React.FC<InsuranceEnrollmentProps> = ({ employ
   };
 
   const handleEnroll = async () => {
+    setMessage(null);
     if (!selectedPlanId) {
       setMessage({ type: 'error', text: 'Please select a plan' });
       return;
@@ -68,8 +68,8 @@ export const InsuranceEnrollment: React.FC<InsuranceEnrollmentProps> = ({ employ
       await benefitsService.enrollInInsurance({
         employee_id: employeeId,
         insurance_plan_id: selectedPlanId,
-        enrollment_date: new Date(),
-        effective_from: new Date(),
+        enrollment_date: new Date().toISOString(),
+        effective_from: new Date().toISOString(),
       });
       setMessage({ type: 'success', text: 'Successfully enrolled in insurance plan' });
       setSelectedPlanId('');

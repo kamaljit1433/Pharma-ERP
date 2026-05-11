@@ -143,7 +143,19 @@ export class LeaveController {
 
   async getPendingLeaves(req: Request, res: Response, next: NextFunction) {
     try {
-      const managerId = (req as any).user?.id;
+      const user = (req as any).user;
+      let managerId: string | undefined;
+
+      // reporting_manager_id references the employee UUID, not the user UUID.
+      // Look it up via the employeeId string from the JWT.
+      if (user?.role !== 'super_admin' && user?.employeeId) {
+        const employee = await this.knex('employees')
+          .where({ employee_id: user.employeeId })
+          .select('id')
+          .first();
+        managerId = employee?.id;
+      }
+
       const leaves = await this.leaveService.getPendingLeaves(managerId);
       res.json(leaves);
     } catch (error) {
@@ -172,7 +184,12 @@ export class LeaveController {
 
   async approveLeave(req: Request, res: Response, next: NextFunction) {
     try {
-      const approverId = (req as any).user?.id;
+      const user = (req as any).user;
+      const approverEmployee = await this.knex('employees')
+        .where({ employee_id: user?.employeeId })
+        .select('id')
+        .first();
+      const approverId = approverEmployee?.id;
       await this.leaveService.approveLeave(req.params['id'] as string, approverId);
       res.status(204).send();
     } catch (error) {
@@ -182,7 +199,12 @@ export class LeaveController {
 
   async rejectLeave(req: Request, res: Response, next: NextFunction) {
     try {
-      const approverId = (req as any).user?.id;
+      const user = (req as any).user;
+      const approverEmployee = await this.knex('employees')
+        .where({ employee_id: user?.employeeId })
+        .select('id')
+        .first();
+      const approverId = approverEmployee?.id;
       const { reason } = req.body;
       await this.leaveService.rejectLeave(req.params['id'] as string, approverId, reason);
       res.status(204).send();

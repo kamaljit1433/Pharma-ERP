@@ -8,7 +8,6 @@ export class PerformanceReviewService {
     data: PerformanceReviewDTO,
     userId: string
   ): Promise<PerformanceReview> {
-    // Validate rating
     if (data.rating < 1 || data.rating > 5) {
       throw new Error('Rating must be between 1 and 5');
     }
@@ -22,12 +21,20 @@ export class PerformanceReviewService {
       reviewerId: data.reviewerId || userId,
     });
 
-    // Update status based on review type
-    let newStatus = 'Pending';
-    if (data.reviewType === 'Self') {
-      newStatus = 'Self-Assessment Complete';
-    } else if (data.reviewType === 'Manager') {
-      newStatus = 'Manager Review Complete';
+    // Status transition depends on review type
+    let newStatus: string;
+    switch (data.reviewType) {
+      case 'Self':
+        newStatus = 'Self-Assessment Complete';
+        break;
+      case 'Manager':
+        newStatus = 'Manager Review Complete';
+        break;
+      case 'Peer':
+        newStatus = 'Pending';  // Peer reviews don't change the overall status alone
+        break;
+      default:
+        newStatus = 'Pending';
     }
 
     await this.performanceReviewRepository.updateReviewStatus(review.id, newStatus);
@@ -36,15 +43,16 @@ export class PerformanceReviewService {
   }
 
   async getReview(reviewId: string): Promise<PerformanceReview> {
-    const review = await this.performanceReviewRepository.getPerformanceReviewById(reviewId);
-    if (!review) {
+    const row = await this.performanceReviewRepository.getPerformanceReviewById(reviewId);
+    if (!row) {
       throw new Error(`Performance review with ID ${reviewId} not found`);
     }
-    return review as any;
+    return this.mapToPerformanceReview(row);
   }
 
   async getEmployeeReviews(employeeId: string): Promise<PerformanceReview[]> {
-    return this.performanceReviewRepository.getPerformanceReviewsByEmployee(employeeId) as any;
+    const rows = await this.performanceReviewRepository.getPerformanceReviewsByEmployee(employeeId);
+    return rows.map((r) => this.mapToPerformanceReview(r));
   }
 
   async generateReport(filters: {
@@ -55,15 +63,16 @@ export class PerformanceReviewService {
     let reviews: PerformanceReview[] = [];
 
     if (filters.employeeId && filters.cycleId) {
-      const review = await this.performanceReviewRepository.getReviewsByEmployee(filters.employeeId);
-      reviews = review as any;
+      const rows = await this.performanceReviewRepository.getReviewsByEmployee(filters.employeeId);
+      reviews = rows.map((r) => this.mapToPerformanceReview(r));
     } else if (filters.employeeId) {
-      reviews = await this.performanceReviewRepository.getPerformanceReviewsByEmployee(filters.employeeId) as any;
+      const rows = await this.performanceReviewRepository.getPerformanceReviewsByEmployee(filters.employeeId);
+      reviews = rows.map((r) => this.mapToPerformanceReview(r));
     } else if (filters.cycleId) {
-      reviews = await this.performanceReviewRepository.getPerformanceReviewsByCycle(filters.cycleId) as any;
+      const rows = await this.performanceReviewRepository.getPerformanceReviewsByCycle(filters.cycleId);
+      reviews = rows.map((r) => this.mapToPerformanceReview(r));
     }
 
-    // Generate report based on type
     if (filters.reportType === 'summary') {
       return this.generateSummaryReport(reviews);
     } else if (filters.reportType === 'detailed') {
@@ -117,52 +126,94 @@ export class PerformanceReviewService {
   }
 
   /**
-   * Calculate final rating from self, manager, and peer ratings
-   * Formula: (Self Rating × 0.25) + (Manager Rating × 0.50) + (Average Peer Rating × 0.25)
+   * Calculate final rating from self, manager, and peer ratings.
+   * Formula: (Self × 0.25) + (Manager × 0.50) + (Avg Peer × 0.25)
+   * Falls back gracefully when some rating types are absent.
    */
   async calculateFinalRating(reviewId: string): Promise<number> {
     const review = await this.getReview(reviewId);
 
     let finalRating = 0;
+    let totalWeight = 0;
 
-    // Self rating (25% weight)
     if (review.selfRating) {
       finalRating += review.selfRating * 0.25;
+      totalWeight += 0.25;
     }
 
-    // Manager rating (50% weight)
     if (review.managerRating) {
       finalRating += review.managerRating * 0.5;
+      totalWeight += 0.5;
     }
 
-    // Peer ratings (25% weight)
     if (review.peerRatings && review.peerRatings.length > 0) {
-      const avgPeerRating = review.peerRatings.reduce((a: number, b: number) => a + b, 0) / review.peerRatings.length;
-      finalRating += avgPeerRating * 0.25;
+      const avgPeer = review.peerRatings.reduce((a: number, b: number) => a + b, 0) / review.peerRatings.length;
+      finalRating += avgPeer * 0.25;
+      totalWeight += 0.25;
     }
 
-    return Math.round(finalRating * 100) / 100;
+    if (totalWeight === 0) return 0;
+
+    // Normalise in case not all types are present
+    return Math.round((finalRating / totalWeight) * 100) / 100;
   }
 
   async finalizeReview(reviewId: string): Promise<PerformanceReview> {
     const review = await this.getReview(reviewId);
 
-    // Validate that all required ratings are present
-    if (!review.selfRating || !review.managerRating || !review.peerRatings || review.peerRatings.length === 0) {
-      throw new Error('All review types (self, manager, peer) must be completed before finalization');
+    if (!review.selfRating || !review.managerRating) {
+      throw new Error('Self and manager reviews must be completed before finalization');
     }
 
     const finalRating = await this.calculateFinalRating(reviewId);
     await this.performanceReviewRepository.updateReview(reviewId, { rating: finalRating });
+    await this.performanceReviewRepository.updateReviewStatus(reviewId, 'Finalized');
 
     return this.getReview(reviewId);
   }
 
   async getReviewHistory(employeeId: string): Promise<PerformanceReview[]> {
-    return this.performanceReviewRepository.getReviewHistory(employeeId) as any;
+    const rows = await this.performanceReviewRepository.getReviewHistory(employeeId);
+    return rows.map((r) => this.mapToPerformanceReview(r));
   }
 
   async deleteReview(reviewId: string): Promise<void> {
     await this.performanceReviewRepository.deletePerformanceReview(reviewId);
+  }
+
+  // Maps the repository's snake_case row to the camelCase PerformanceReview type.
+  private mapToPerformanceReview(row: any): PerformanceReview {
+    const reviewType: string = row.review_type || '';
+    return {
+      id: row.id,
+      employeeId: row.employee_id,
+      cycleId: row.cycle_id,
+      selfRating: reviewType.toLowerCase() === 'self' ? (row.rating ?? undefined) : undefined,
+      managerRating: reviewType.toLowerCase() === 'manager' ? (row.rating ?? undefined) : undefined,
+      peerRatings: reviewType.toLowerCase() === 'peer' ? [row.rating].filter(Boolean) : [],
+      finalRating: row.rating || 0,
+      comments: row.comments || '',
+      status: this.normaliseStatus(row.status),
+      completedAt: row.submitted_at ? new Date(row.submitted_at) : undefined,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at),
+    };
+  }
+
+  private normaliseStatus(status: string): PerformanceReview['status'] {
+    const map: Record<string, PerformanceReview['status']> = {
+      draft: 'Pending',
+      pending: 'Pending',
+      submitted: 'Self-Assessment Complete',
+      'self-assessment complete': 'Self-Assessment Complete',
+      'manager review complete': 'Manager Review Complete',
+      finalized: 'Finalized',
+      approved: 'Finalized',
+      'Pending': 'Pending',
+      'Self-Assessment Complete': 'Self-Assessment Complete',
+      'Manager Review Complete': 'Manager Review Complete',
+      'Finalized': 'Finalized',
+    };
+    return map[status] ?? 'Pending';
   }
 }

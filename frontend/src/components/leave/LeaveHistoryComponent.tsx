@@ -104,6 +104,7 @@ export const LeaveHistoryComponent: React.FC<LeaveHistoryComponentProps> = ({
                   <TableHead>Days</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Reason</TableHead>
+                  <TableHead>Rejection Reason</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -123,6 +124,9 @@ export const LeaveHistoryComponent: React.FC<LeaveHistoryComponentProps> = ({
                     </TableCell>
                     <TableCell className="max-w-xs truncate">
                       {leave.reason || '-'}
+                    </TableCell>
+                    <TableCell className="max-w-xs truncate">
+                      {leave.status === 'rejected' ? (leave.approval_notes || '-') : '-'}
                     </TableCell>
                     <TableCell>
                       {leave.status === 'pending' && (

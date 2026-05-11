@@ -87,12 +87,12 @@ export const EmployeeDetails: React.FC<EmployeeDetailsProps> = ({ employee, onPh
                 <CardTitle className="text-2xl">
                   {employee.first_name} {employee.last_name}
                 </CardTitle>
-                <CardDescription className="flex items-center gap-2 mt-1">
-                  <span className="font-mono text-sm">{employee.employee_id}</span>
+                <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+                  <span className="font-mono">{employee.employee_id}</span>
                   <Badge className={getStatusColor(employee.status)}>
                     {employee.status?.replace('_', ' ') ?? ''}
                   </Badge>
-                </CardDescription>
+                </div>
               </div>
             </div>
           </div>

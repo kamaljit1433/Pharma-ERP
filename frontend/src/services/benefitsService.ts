@@ -95,6 +95,11 @@ export const benefitsService = {
     return response.data;
   },
 
+  getPendingClaims: async () => {
+    const response = await apiClient.get('/benefits/reimbursements/pending');
+    return response.data;
+  },
+
   approveClaim: async (id: string, approverId: string, approvalNotes?: string) => {
     const response = await apiClient.put(`/benefits/reimbursements/${id}/approve`, {
       approverId,

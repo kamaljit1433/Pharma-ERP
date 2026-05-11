@@ -69,6 +69,8 @@ export interface OrgChartNode {
   last_name: string;
   designation: string;
   department: string;
+  department_id?: string;
+  designation_id?: string;
   children: OrgChartNode[];
 }
 

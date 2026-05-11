@@ -5,7 +5,7 @@ import { Badge } from '../ui/badge';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { benefitsService } from '../../services/benefitsService';
-import { Plus, Edit2, Trash2, CheckCircle2, AlertCircle, Star } from 'lucide-react';
+import { Plus, Edit2, Trash2, CheckCircle2, AlertCircle } from 'lucide-react';
 
 interface Reward {
   id: string;
@@ -310,7 +310,7 @@ export const RewardManagement: React.FC<RewardManagementProps> = ({
                           {new Date(reward.awarded_date).toLocaleDateString()}
                         </p>
                       </div>
-                      <Badge className="bg-success">{reward.category}</Badge>
+                      <Badge className={getCategoryColor(reward.category)}>{reward.category}</Badge>
                     </div>
                     {reward.description && (
                       <p className="text-sm text-muted-foreground mb-3">{reward.description}</p>

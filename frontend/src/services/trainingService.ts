@@ -117,6 +117,15 @@ class TrainingService {
     return response.data;
   }
 
+  async getProgramEnrollments(programId: string): Promise<TrainingEnrollment[]> {
+    const response = await apiClient.get(`/training/programs/${programId}/enrollments`);
+    return response.data;
+  }
+
+  async deleteEnrollment(enrollmentId: string): Promise<void> {
+    await apiClient.delete(`/training/enrollments/${enrollmentId}`);
+  }
+
   async markEnrollmentComplete(enrollmentId: string): Promise<TrainingEnrollment> {
     const response = await apiClient.put(`/training/enrollments/${enrollmentId}/complete`);
     return response.data;

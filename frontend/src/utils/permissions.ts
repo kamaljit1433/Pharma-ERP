@@ -18,6 +18,7 @@ export enum Permission {
   VIEW_SEPARATION = 'separation:read',
   VIEW_SETTINGS = 'settings:read',
   VIEW_USERS = 'users:read',
+  VIEW_ORGANIZATION = 'organization:read',
 }
 
 /** Low-level permission shape used in role mappings */
@@ -60,6 +61,8 @@ const rolePermissions: Record<UserRole, PermissionDef[]> = {
     // Documents
     { resource: 'documents', action: 'read' },
     { resource: 'documents', action: 'update' },
+    // Organization chart
+    { resource: 'organization', action: 'read' },
   ],
   [UserRole.DEPARTMENT_MANAGER]: [
     // Employee read-only
@@ -73,6 +76,8 @@ const rolePermissions: Record<UserRole, PermissionDef[]> = {
     { resource: 'performance', action: 'create' },
     { resource: 'performance', action: 'read' },
     { resource: 'performance', action: 'update' },
+    // Organization chart
+    { resource: 'organization', action: 'read' },
   ],
   [UserRole.FINANCE]: [
     // Payroll management
@@ -84,9 +89,11 @@ const rolePermissions: Record<UserRole, PermissionDef[]> = {
     // Benefits
     { resource: 'benefits', action: 'read' },
     { resource: 'benefits', action: 'update' },
+    // Organization chart
+    { resource: 'organization', action: 'read' },
   ],
   [UserRole.EMPLOYEE]: [
-    // Self-service
+    // Self-service only — no organization or settings access
     { resource: 'attendance', action: 'create' },
     { resource: 'attendance', action: 'read' },
     { resource: 'leave', action: 'create' },
@@ -104,6 +111,8 @@ const rolePermissions: Record<UserRole, PermissionDef[]> = {
     { resource: 'users', action: 'create' },
     { resource: 'users', action: 'read' },
     { resource: 'users', action: 'update' },
+    // Organization chart
+    { resource: 'organization', action: 'read' },
   ],
 };
 

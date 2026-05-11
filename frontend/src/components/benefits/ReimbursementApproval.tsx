@@ -38,7 +38,7 @@ export const ReimbursementApproval: React.FC<ReimbursementApprovalProps> = ({ ap
       setLoading(true);
       // In a real app, this would fetch claims for the manager's team
       // For now, we'll fetch all pending claims
-      const response = await benefitsService.getEmployeeClaims('all');
+      const response = await benefitsService.getPendingClaims();
       const pendingClaims = response.data?.filter((c: ReimbursementClaim) => c.status === 'pending') || [];
       setClaims(pendingClaims);
     } catch (error) {

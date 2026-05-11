@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { Badge } from '../ui/badge';
 import {
   Select,
   SelectContent,
@@ -14,18 +13,19 @@ import {
 import { Textarea } from '../ui/textarea';
 import { usePerformanceStore } from '../../store/performanceStore';
 import { AlertCircle, CheckCircle2, Target } from 'lucide-react';
+import { EmployeeSearch } from './EmployeeSearch';
 
 interface GoalSettingProps {
-  employeeId: string;
-  cycleId: string;
   onSuccess?: () => void;
 }
 
-export const GoalSetting: React.FC<GoalSettingProps> = ({ employeeId, cycleId, onSuccess }) => {
-  const { createGoal, error, clearError } = usePerformanceStore();
+export const GoalSetting: React.FC<GoalSettingProps> = ({ onSuccess }) => {
+  const { createGoal, error, clearError, reviewCycles, fetchReviewCycles } = usePerformanceStore();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
   const [formData, setFormData] = useState({
+    cycleId: '',
     type: 'OKR' as 'OKR' | 'KPI',
     title: '',
     description: '',
@@ -34,6 +34,10 @@ export const GoalSetting: React.FC<GoalSettingProps> = ({ employeeId, cycleId, o
     weight: '',
     dueDate: '',
   });
+
+  useEffect(() => {
+    fetchReviewCycles();
+  }, [fetchReviewCycles]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -44,29 +48,26 @@ export const GoalSetting: React.FC<GoalSettingProps> = ({ employeeId, cycleId, o
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const validateForm = (): boolean => {
-    if (!formData.title.trim()) {
-      clearError();
-      return false;
-    }
-    if (!formData.targetValue || parseFloat(formData.targetValue) <= 0) {
-      clearError();
-      return false;
-    }
-    if (!formData.weight || parseFloat(formData.weight) < 0 || parseFloat(formData.weight) > 100) {
-      clearError();
-      return false;
-    }
-    if (!formData.dueDate) {
-      clearError();
-      return false;
-    }
-    return true;
+  const validateForm = (): string | null => {
+    if (!selectedEmployeeId) return 'Please select an employee';
+    if (!formData.cycleId) return 'Please select a review cycle';
+    if (!formData.title.trim()) return 'Goal title is required';
+    if (!formData.targetValue || parseFloat(formData.targetValue) <= 0)
+      return 'Target value must be greater than 0';
+    if (
+      !formData.weight ||
+      parseFloat(formData.weight) < 0 ||
+      parseFloat(formData.weight) > 100
+    )
+      return 'Weight must be between 0 and 100';
+    if (!formData.dueDate) return 'Due date is required';
+    return null;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm()) {
+    const validationError = validateForm();
+    if (validationError) {
       return;
     }
 
@@ -74,8 +75,8 @@ export const GoalSetting: React.FC<GoalSettingProps> = ({ employeeId, cycleId, o
       setLoading(true);
       clearError();
       await createGoal({
-        employeeId,
-        cycleId,
+        employeeId: selectedEmployeeId,
+        cycleId: formData.cycleId,
         type: formData.type,
         title: formData.title,
         description: formData.description,
@@ -85,7 +86,9 @@ export const GoalSetting: React.FC<GoalSettingProps> = ({ employeeId, cycleId, o
         dueDate: formData.dueDate,
       });
       setSuccess(true);
+      setSelectedEmployeeId('');
       setFormData({
+        cycleId: '',
         type: 'OKR',
         title: '',
         description: '',
@@ -103,6 +106,8 @@ export const GoalSetting: React.FC<GoalSettingProps> = ({ employeeId, cycleId, o
     }
   };
 
+  const validationError = validateForm();
+
   return (
     <Card>
       <CardHeader>
@@ -110,7 +115,7 @@ export const GoalSetting: React.FC<GoalSettingProps> = ({ employeeId, cycleId, o
           <Target className="w-5 h-5" />
           <div>
             <CardTitle>Create Goal</CardTitle>
-            <CardDescription>Set OKR or KPI for this review cycle</CardDescription>
+            <CardDescription>Set OKR or KPI for a review cycle</CardDescription>
           </div>
         </div>
       </CardHeader>
@@ -130,10 +135,44 @@ export const GoalSetting: React.FC<GoalSettingProps> = ({ employeeId, cycleId, o
             </div>
           )}
 
+          <EmployeeSearch
+            label="Employee"
+            placeholder="Search employee by name or ID..."
+            onChange={(id) => setSelectedEmployeeId(id)}
+          />
+
+          <div>
+            <Label htmlFor="cycleId">Review Cycle</Label>
+            <Select
+              value={formData.cycleId}
+              onValueChange={(value: string) => handleSelectChange('cycleId', value)}
+            >
+              <SelectTrigger id="cycleId">
+                <SelectValue placeholder="Select review cycle" />
+              </SelectTrigger>
+              <SelectContent>
+                {reviewCycles.length === 0 ? (
+                  <SelectItem value="_none" disabled>
+                    No review cycles available
+                  </SelectItem>
+                ) : (
+                  reviewCycles.map((cycle) => (
+                    <SelectItem key={cycle.id} value={cycle.id}>
+                      {cycle.name}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="type">Goal Type</Label>
-              <Select value={formData.type} onValueChange={(value) => handleSelectChange('type', value)}>
+              <Select
+                value={formData.type}
+                onValueChange={(value: string) => handleSelectChange('type', value)}
+              >
                 <SelectTrigger id="type">
                   <SelectValue />
                 </SelectTrigger>
@@ -156,7 +195,6 @@ export const GoalSetting: React.FC<GoalSettingProps> = ({ employeeId, cycleId, o
                 value={formData.weight}
                 onChange={handleChange}
                 placeholder="0-100"
-                aria-label="Goal weight percentage"
               />
             </div>
           </div>
@@ -169,7 +207,6 @@ export const GoalSetting: React.FC<GoalSettingProps> = ({ employeeId, cycleId, o
               value={formData.title}
               onChange={handleChange}
               placeholder="e.g., Increase sales by 20%"
-              aria-label="Goal title"
             />
           </div>
 
@@ -182,7 +219,6 @@ export const GoalSetting: React.FC<GoalSettingProps> = ({ employeeId, cycleId, o
               onChange={handleChange}
               placeholder="Provide context and details about this goal"
               rows={3}
-              aria-label="Goal description"
             />
           </div>
 
@@ -197,7 +233,6 @@ export const GoalSetting: React.FC<GoalSettingProps> = ({ employeeId, cycleId, o
                 value={formData.targetValue}
                 onChange={handleChange}
                 placeholder="e.g., 100"
-                aria-label="Target value"
               />
             </div>
 
@@ -209,7 +244,6 @@ export const GoalSetting: React.FC<GoalSettingProps> = ({ employeeId, cycleId, o
                 value={formData.unit}
                 onChange={handleChange}
                 placeholder="e.g., units, %"
-                aria-label="Measurement unit"
               />
             </div>
 
@@ -221,12 +255,11 @@ export const GoalSetting: React.FC<GoalSettingProps> = ({ employeeId, cycleId, o
                 type="date"
                 value={formData.dueDate}
                 onChange={handleChange}
-                aria-label="Goal due date"
               />
             </div>
           </div>
 
-          <Button type="submit" disabled={loading} className="w-full">
+          <Button type="submit" disabled={loading || !!validationError} className="w-full">
             {loading ? 'Creating Goal...' : 'Create Goal'}
           </Button>
         </form>

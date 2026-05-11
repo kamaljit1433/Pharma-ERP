@@ -5,10 +5,10 @@ export interface ReviewCycle {
   name: string;
   start_date: Date;
   end_date: Date;
+  self_review_deadline?: Date;
+  manager_review_deadline?: Date;
+  peer_review_deadline?: Date;
   status: string;
-  selfReviewDeadline?: Date;
-  managerReviewDeadline?: Date;
-  peerReviewDeadline?: Date;
   createdBy?: string;
   createdAt?: Date;
   created_at?: Date;
@@ -19,7 +19,11 @@ export interface CreateReviewCycleData {
   name: string;
   start_date: Date;
   end_date: Date;
-  status: string;
+  self_review_deadline?: Date;
+  manager_review_deadline?: Date;
+  peer_review_deadline?: Date;
+  status?: string;
+  created_by?: string;
 }
 
 export interface CreateReviewCycleLegacyDTO {
@@ -36,15 +40,19 @@ export class ReviewCycleRepository {
   constructor(private db: Knex) {}
 
   async createCycle(data: CreateReviewCycleData): Promise<ReviewCycle> {
-    const rows = await this.db('review_cycles')
-      .insert({
-        name: data.name,
-        start_date: data.start_date,
-        end_date: data.end_date,
-        status: data.status,
-        created_at: new Date(),
-      })
-      .returning('id');
+    const insertData: any = {
+      name: data.name,
+      start_date: data.start_date,
+      end_date: data.end_date,
+      status: data.status || 'Planning',
+      created_at: new Date(),
+    };
+    if (data.self_review_deadline) insertData.self_review_deadline = data.self_review_deadline;
+    if (data.manager_review_deadline) insertData.manager_review_deadline = data.manager_review_deadline;
+    if (data.peer_review_deadline) insertData.peer_review_deadline = data.peer_review_deadline;
+    if (data.created_by) insertData.created_by = data.created_by;
+
+    const rows = await this.db('review_cycles').insert(insertData).returning('id');
 
     const id = Array.isArray(rows) ? (rows[0]?.id ?? rows[0]) : rows;
     if (!id) {
@@ -72,7 +80,7 @@ export class ReviewCycleRepository {
 
   async getActiveCycles(): Promise<ReviewCycle[]> {
     const cycles = await this.db('review_cycles')
-      .where('status', 'active')
+      .where('status', 'Active')
       .orderBy('created_at', 'desc');
     return cycles.map((cycle: any) => this.mapCycle(cycle));
   }
@@ -91,6 +99,9 @@ export class ReviewCycleRepository {
     if (data.start_date !== undefined) updateData.start_date = data.start_date;
     if (data.end_date !== undefined) updateData.end_date = data.end_date;
     if (data.status !== undefined) updateData.status = data.status;
+    if (data.self_review_deadline !== undefined) updateData.self_review_deadline = data.self_review_deadline;
+    if (data.manager_review_deadline !== undefined) updateData.manager_review_deadline = data.manager_review_deadline;
+    if (data.peer_review_deadline !== undefined) updateData.peer_review_deadline = data.peer_review_deadline;
 
     await this.db('review_cycles').where('id', id).update(updateData);
     return this.getCycleById(id) as Promise<ReviewCycle>;
@@ -106,7 +117,11 @@ export class ReviewCycleRepository {
       name: data.name,
       start_date: data.startDate,
       end_date: data.endDate,
-      status: 'draft',
+      self_review_deadline: data.selfReviewDeadline,
+      manager_review_deadline: data.managerReviewDeadline,
+      peer_review_deadline: data.peerReviewDeadline,
+      status: 'Planning',
+      created_by: data.createdBy,
     });
   }
 
@@ -136,8 +151,6 @@ export class ReviewCycleRepository {
 
   private parseDate(value: any): Date {
     if (value instanceof Date) {
-      // pg returns date columns as Date objects set to midnight local time.
-      // Extract local year/month/day and construct a UTC midnight date to avoid timezone shift.
       return new Date(Date.UTC(value.getFullYear(), value.getMonth(), value.getDate()));
     }
     const s = String(value);
@@ -153,7 +166,17 @@ export class ReviewCycleRepository {
       name: dbCycle.name,
       start_date: this.parseDate(dbCycle.start_date),
       end_date: this.parseDate(dbCycle.end_date),
+      self_review_deadline: dbCycle.self_review_deadline
+        ? this.parseDate(dbCycle.self_review_deadline)
+        : undefined,
+      manager_review_deadline: dbCycle.manager_review_deadline
+        ? this.parseDate(dbCycle.manager_review_deadline)
+        : undefined,
+      peer_review_deadline: dbCycle.peer_review_deadline
+        ? this.parseDate(dbCycle.peer_review_deadline)
+        : undefined,
       status: dbCycle.status,
+      createdBy: dbCycle.created_by || undefined,
       created_at: dbCycle.created_at ? new Date(dbCycle.created_at) : undefined,
       updated_at: dbCycle.updated_at ? new Date(dbCycle.updated_at) : undefined,
     };

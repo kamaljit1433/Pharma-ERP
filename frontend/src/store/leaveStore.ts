@@ -209,6 +209,7 @@ export const useLeaveStore = create<LeaveState>()(
           await leaveService.applyLeave(data);
         } catch (error) {
           set({ error: (error as Error).message });
+          throw error;
         }
       },
       approveLeave: async (id) => {

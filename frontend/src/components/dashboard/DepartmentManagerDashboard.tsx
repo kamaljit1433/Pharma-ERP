@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Badge } from '../ui/badge';
@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { useDashboardStore } from '../../store/dashboardStore';
 import { useDashboardRefresh } from '../../hooks/useDashboardRefresh';
 import { useNotificationStore } from '../../store/notificationStore';
+import { useLeaveStore } from '../../store/leaveStore';
 import AttendanceStatsCard from './AttendanceStatsCard';
 import LeaveStatsCard from './LeaveStatsCard';
 import RecentNotifications from './RecentNotifications';
@@ -17,6 +18,11 @@ export default function DepartmentManagerDashboard() {
   const { stats, loading, error } = useDashboardStore();
   const { fetchStats } = useDashboardRefresh();
   const { notifications } = useNotificationStore();
+  const { pendingLeaves, fetchPendingLeaves } = useLeaveStore();
+
+  useEffect(() => {
+    fetchPendingLeaves();
+  }, [fetchPendingLeaves]);
 
   const handleManualRefresh = () => {
     fetchStats();
@@ -108,6 +114,45 @@ export default function DepartmentManagerDashboard() {
           Team Overview
         </Button>
       </div>
+
+      {/* Pending Leave Requests */}
+      {pendingLeaves.length > 0 && (
+        <Card className="border-warning">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-warning" />
+              Pending Leave Requests
+              <Badge className="bg-warning">{pendingLeaves.length}</Badge>
+            </CardTitle>
+            <CardDescription>Leave requests from your team awaiting approval</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {pendingLeaves.slice(0, 5).map((leave) => (
+                <div key={leave.id} className="flex items-center justify-between border-b pb-3 last:border-0">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">{leave.employee_name || 'Employee'}</p>
+                    <p className="text-xs text-muted-foreground">{leave.leave_type_name || leave.leave_type_id}</p>
+                  </div>
+                  <div className="text-right space-y-1">
+                    <p className="text-xs font-medium">
+                      {new Date(leave.from_date).toLocaleDateString()} – {new Date(leave.to_date).toLocaleDateString()}
+                    </p>
+                    <Button size="sm" variant="outline" onClick={() => navigate('/leave')}>
+                      Review
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {pendingLeaves.length > 5 && (
+              <Button variant="ghost" size="sm" className="mt-2 w-full" onClick={() => navigate('/leave')}>
+                View all {pendingLeaves.length} requests
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Main Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

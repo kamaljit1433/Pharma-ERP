@@ -6,7 +6,7 @@ export const documentService = {
   uploadDocument: async (data: FormData) => {
     const response = await apiClient.post('/documents', data, {
       headers: {
-        'Content-Type': 'multipart/form-data',
+        'Content-Type': undefined, // let the browser set multipart boundary automatically
       },
     });
     return response.data;

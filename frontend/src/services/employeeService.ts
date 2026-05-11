@@ -120,6 +120,14 @@ const employeeService = {
   },
 
   /**
+   * Update employee status
+   */
+  updateStatus: async (id: string, status: Employee['status']): Promise<Employee> => {
+    const response = await apiClient.put(`/employees/${id}/status`, { status });
+    return response.data.data ?? response.data;
+  },
+
+  /**
    * Upload employee profile photo
    */
   uploadPhoto: async (id: string, file: File): Promise<{ url: string }> => {

@@ -21,7 +21,24 @@ export const GratuityCalculator: React.FC<GratuityCalculatorProps> = ({ employee
   const [lastDrawnSalary, setLastDrawnSalary] = useState('');
   const [gratuityData, setGratuityData] = useState<GratuityData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [reportLoading, setReportLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const handleDownloadReport = async () => {
+    if (!lastDrawnSalary || parseFloat(lastDrawnSalary) <= 0) {
+      setError('Please enter a valid salary amount first');
+      return;
+    }
+    try {
+      setReportLoading(true);
+      setError(null);
+      await benefitsService.getGratuityReport(employeeId, parseFloat(lastDrawnSalary));
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to generate report');
+    } finally {
+      setReportLoading(false);
+    }
+  };
 
   const handleCalculate = async () => {
     if (!lastDrawnSalary || parseFloat(lastDrawnSalary) <= 0) {
@@ -80,6 +97,16 @@ export const GratuityCalculator: React.FC<GratuityCalculatorProps> = ({ employee
             <Button onClick={handleCalculate} disabled={loading} className="w-full">
               {loading ? 'Calculating...' : 'Calculate Gratuity'}
             </Button>
+            {gratuityData && (
+              <Button
+                variant="outline"
+                onClick={handleDownloadReport}
+                disabled={reportLoading}
+                className="w-full"
+              >
+                {reportLoading ? 'Generating Report...' : 'Download Full Report'}
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>

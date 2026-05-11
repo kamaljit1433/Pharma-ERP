@@ -7,9 +7,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { useUIStore } from '@/store/uiStore';
 import { isValidEmail, isValidPhone, isRequired } from '@/utils/validators';
 import { CreateEmployeeDTO, UpdateEmployeeDTO } from '@/services/employeeService';
+import employeeService from '@/services/employeeService';
+import hierarchyService from '@/services/hierarchyService';
 import { Upload, X } from 'lucide-react';
 
 interface Employee {
@@ -81,6 +84,29 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
     employee?.profile_photo_url || ''
   );
   const [touched, setTouched] = useState<Set<string>>(new Set());
+  const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
+  const [designations, setDesignations] = useState<{ id: string; name: string }[]>([]);
+  const [managers, setManagers] = useState<{ id: string; name: string }[]>([]);
+
+  useEffect(() => {
+    hierarchyService.getDepartments().then((d) =>
+      setDepartments(d.map((x) => ({ id: x.id, name: x.name })))
+    );
+    hierarchyService.getDesignations().then((d) =>
+      setDesignations(d.map((x) => ({ id: x.id, name: x.name })))
+    );
+    employeeService.getAll({ limit: 200, status: 'active' }).then((res) => {
+      const list = Array.isArray(res) ? res : (res as any).data ?? [];
+      setManagers(
+        list
+          .filter((e: any) => e.id !== employee?.id)
+          .map((e: any) => ({
+            id: e.id,
+            name: `${e.first_name} ${e.last_name}`,
+          }))
+      );
+    });
+  }, [employee?.id]);
 
   // Validation schema
   const validateField = (name: string, value: any): string | undefined => {
@@ -549,39 +575,33 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
 
           <div className="space-y-2">
             <Label htmlFor="department_id">Department</Label>
-            <Input
-              id="department_id"
-              name="department_id"
+            <SearchableSelect
+              options={departments}
               value={formData.department_id}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              placeholder="Department ID"
+              onChange={(id) => setFormData((prev) => ({ ...prev, department_id: id }))}
+              placeholder="Select department"
               disabled={isLoading}
             />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="designation_id">Designation</Label>
-            <Input
-              id="designation_id"
-              name="designation_id"
+            <SearchableSelect
+              options={designations}
               value={formData.designation_id}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              placeholder="Designation ID"
+              onChange={(id) => setFormData((prev) => ({ ...prev, designation_id: id }))}
+              placeholder="Select designation"
               disabled={isLoading}
             />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="reporting_manager_id">Reporting Manager</Label>
-            <Input
-              id="reporting_manager_id"
-              name="reporting_manager_id"
+            <SearchableSelect
+              options={managers}
               value={formData.reporting_manager_id}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              placeholder="Manager ID"
+              onChange={(id) => setFormData((prev) => ({ ...prev, reporting_manager_id: id }))}
+              placeholder="Select manager"
               disabled={isLoading}
             />
           </div>

@@ -235,7 +235,7 @@ export default function EmployeeDashboard() {
         <Button 
           variant="default" 
           size="sm"
-          onClick={() => navigate('/attendance/mark')}
+          onClick={() => navigate('/attendance')}
         >
           <Clock className="h-4 w-4 mr-2" />
           Mark Attendance
@@ -243,7 +243,7 @@ export default function EmployeeDashboard() {
         <Button 
           variant="outline" 
           size="sm"
-          onClick={() => navigate('/leave/request')}
+          onClick={() => navigate('/leave')}
         >
           <Calendar className="h-4 w-4 mr-2" />
           Request Leave
@@ -289,7 +289,7 @@ export default function EmployeeDashboard() {
               <div className="flex items-center gap-2">
                 <Clock className="h-5 w-5 text-primary" />
                 <p className="text-2xl font-bold">
-                  {stats.attendance.workingHours.toFixed(1)}h
+                  {Number(stats.attendance.workingHours).toFixed(1)}h
                 </p>
               </div>
             </div>

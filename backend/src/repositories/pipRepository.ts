@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto';
 export interface PIP {
   id: string;
   employee_id: string;
+  initiated_by: string;
   title: string;
   description?: string;
   start_date: Date;
@@ -205,6 +206,7 @@ export class PIPRepository {
     return {
       id: row.id,
       employee_id: row.employee_id,
+      initiated_by: row.initiated_by,
       title: row.title,
       description: row.description || undefined,
       start_date: this.parseDate(row.start_date),

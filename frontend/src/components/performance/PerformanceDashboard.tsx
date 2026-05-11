@@ -1,16 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Button } from '../ui/button';
+import React, { useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { Badge } from '../ui/badge';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../ui/select';
 import { usePerformanceStore } from '../../store/performanceStore';
 import { BarChart3, Target, Users, MessageSquare, TrendingUp } from 'lucide-react';
 
@@ -42,24 +31,9 @@ interface DashboardStats {
 
 export const PerformanceDashboard: React.FC = () => {
   const { dashboardStats, loadingDashboard, fetchDashboardStats, error } = usePerformanceStore();
-  const [filters, setFilters] = useState({
-    employeeId: '',
-    cycleId: '',
-    dateRange: 'all',
-  });
-
   useEffect(() => {
     fetchDashboardStats();
   }, [fetchDashboardStats]);
-
-  const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFilters((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSelectChange = (name: string, value: string) => {
-    setFilters((prev) => ({ ...prev, [name]: value }));
-  };
 
   const stats = dashboardStats as DashboardStats | null;
 
@@ -83,55 +57,6 @@ export const PerformanceDashboard: React.FC = () => {
         <h1 className="text-3xl font-bold">Performance Management Dashboard</h1>
         <p className="text-muted-foreground mt-1">Overview of performance metrics and activities</p>
       </div>
-
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Filters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="employeeId">Employee ID</Label>
-              <Input
-                id="employeeId"
-                name="employeeId"
-                value={filters.employeeId}
-                onChange={handleFilterChange}
-                placeholder="Filter by employee"
-                aria-label="Filter by employee ID"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="cycleId">Review Cycle</Label>
-              <Input
-                id="cycleId"
-                name="cycleId"
-                value={filters.cycleId}
-                onChange={handleFilterChange}
-                placeholder="Filter by cycle"
-                aria-label="Filter by review cycle"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="dateRange">Date Range</Label>
-              <Select value={filters.dateRange} onValueChange={(value) => handleSelectChange('dateRange', value)}>
-                <SelectTrigger id="dateRange">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Time</SelectItem>
-                  <SelectItem value="thisMonth">This Month</SelectItem>
-                  <SelectItem value="thisQuarter">This Quarter</SelectItem>
-                  <SelectItem value="thisYear">This Year</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -282,29 +207,6 @@ export const PerformanceDashboard: React.FC = () => {
         </Card>
       )}
 
-      {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-          <CardDescription>Common performance management tasks</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <Button variant="outline" className="justify-start">
-              <Target className="w-4 h-4 mr-2" />
-              Create Goal
-            </Button>
-            <Button variant="outline" className="justify-start">
-              <MessageSquare className="w-4 h-4 mr-2" />
-              Submit Review
-            </Button>
-            <Button variant="outline" className="justify-start">
-              <Users className="w-4 h-4 mr-2" />
-              Provide Feedback
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };
