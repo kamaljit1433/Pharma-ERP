@@ -61,7 +61,9 @@ export class EmployeeRepository {
   }
 
   async getEmployee(id: string): Promise<Employee | null> {
-    return this.db('employees').where('id', id).first();
+    const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const col = UUID_PATTERN.test(id) ? 'id' : 'employee_id';
+    return this.db('employees').where(col, id).first() ?? null;
   }
 
   async getEmployeeByEmployeeId(employeeId: string): Promise<Employee | null> {
@@ -99,7 +101,10 @@ export class EmployeeRepository {
   }
 
   async searchEmployees(filters: EmployeeFilters): Promise<Employee[]> {
-    let query = this.db('employees').whereNull('archived_at');
+    let query = this.db('employees');
+    if (!filters.include_archived) {
+      query = query.whereNull('archived_at');
+    }
 
     if (filters.department_id) {
       query = query.where('department_id', filters.department_id);
@@ -146,7 +151,10 @@ export class EmployeeRepository {
   }
 
   async getEmployeeCount(filters?: EmployeeFilters): Promise<number> {
-    let query = this.db('employees').whereNull('archived_at');
+    let query = this.db('employees');
+    if (!filters?.include_archived) {
+      query = query.whereNull('archived_at');
+    }
 
     if (filters) {
       if (filters.department_id) {

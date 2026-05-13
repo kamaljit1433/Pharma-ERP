@@ -82,6 +82,13 @@ const allNavigationItems: NavigationItem[] = [
     requiredPermission: Permission.VIEW_SEPARATION,
   },
   {
+    id: 'assets',
+    label: 'Assets',
+    path: '/assets',
+    icon: 'Package',
+    requiredPermission: Permission.VIEW_ASSETS,
+  },
+  {
     id: 'hierarchy',
     label: 'Organization',
     path: '/hierarchy',

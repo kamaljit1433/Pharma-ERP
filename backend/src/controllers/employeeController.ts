@@ -116,7 +116,7 @@ type AllowedEmploymentType = typeof ALLOWED_EMPLOYMENT_TYPES[number];
 
 export const searchEmployees = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { department_id, designation_id, status, employment_type, search, limit, offset } = req.query;
+    const { department_id, designation_id, status, employment_type, search, limit, offset, include_archived } = req.query;
 
     // Validate pagination parameters before any math operations
     const parsedLimit = limit ? parseInt(limit as string) : 50;
@@ -157,6 +157,7 @@ export const searchEmployees = async (req: Request, res: Response, next: NextFun
     if (status) filters.status = status as AllowedStatus;
     if (employment_type) filters.employment_type = employment_type as AllowedEmploymentType;
     if (search) filters.search = search as string;
+    if (include_archived === 'true') filters.include_archived = true;
 
     // Department managers only see their own direct reports
     const user = (req as any).user;
@@ -192,7 +193,7 @@ export const searchEmployees = async (req: Request, res: Response, next: NextFun
 
 export const getAllEmployees = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { limit = '10', page = '1', department_id, designation_id, status, employment_type, search } = req.query;
+    const { limit = '10', page = '1', department_id, designation_id, status, employment_type, search, include_archived } = req.query;
 
     const parsedLimit = parseInt(limit as string);
     const parsedPage = parseInt(page as string);
@@ -215,6 +216,7 @@ export const getAllEmployees = async (req: Request, res: Response, next: NextFun
     if (status) filters.status = status as AllowedStatus;
     if (employment_type) filters.employment_type = employment_type as AllowedEmploymentType;
     if (search) filters.search = search as string;
+    if (include_archived === 'true') filters.include_archived = true;
 
     // Department managers only see their own direct reports
     const user = (req as any).user;

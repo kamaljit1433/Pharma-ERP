@@ -28,6 +28,13 @@ const shouldRetry = (error: AxiosError): boolean => {
     return false;
   }
 
+  // Never retry non-idempotent methods — retrying a POST/PUT/PATCH/DELETE
+  // can cause duplicate mutations (e.g. double-inserting a termination record)
+  const method = error.config?.method?.toUpperCase();
+  if (method && method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
+    return false;
+  }
+
   // Don't retry client errors (4xx) except 408 (timeout) and 429 (rate limit)
   if (error.response) {
     const status = error.response.status;
@@ -36,7 +43,7 @@ const shouldRetry = (error: AxiosError): boolean => {
     }
   }
 
-  // Retry network errors and 5xx errors
+  // Retry network errors and 5xx errors (GET only, due to check above)
   return true;
 };
 

@@ -25,7 +25,8 @@
       "Bash(grep -E \"\\\\.\\(ts|tsx|js|jsx|json\\)$\")",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\kamal\\\\Downloads\\\\Pharma-ERP\\\\frontend\\\\src\\\\types\" -Name)",
       "Bash(findstr /i \"benefit\")",
-      "Bash(grep -E \"\\\\.\\(tsx?|json\\)$\")"
+      "Bash(grep -E \"\\\\.\\(tsx?|json\\)$\")",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\kamal\\\\Downloads\\\\Pharma-ERP\" -Directory)"
     ]
   }
 }

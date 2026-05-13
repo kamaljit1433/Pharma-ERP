@@ -22,14 +22,13 @@ export class PFService {
       return existingAccount as any;
     }
 
-    // Generate PF account number (format: PF + timestamp + random)
     const pfAccountNumber = `PF${Date.now()}${Math.random().toString(36).substring(2, 11).toUpperCase()}`;
 
     return this.pfRepository.createPFAccount({
       employee_id: employeeId,
       pf_number: pfAccountNumber,
       employee_contribution_rate: 12,
-      employer_contribution_rate: 3.67
+      employer_contribution_rate: 3.67,
     }) as any;
   }
 

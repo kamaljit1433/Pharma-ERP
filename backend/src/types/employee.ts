@@ -118,6 +118,7 @@ export interface EmployeeFilters {
   limit?: number;
   offset?: number;
   reporting_manager_id?: string;
+  include_archived?: boolean;
 }
 
 export interface CreateEmergencyContactDTO {

@@ -16,6 +16,7 @@ export enum Permission {
   VIEW_TRAINING = 'training:read',
   VIEW_BENEFITS = 'benefits:read',
   VIEW_SEPARATION = 'separation:read',
+  VIEW_ASSETS = 'assets:read',
   VIEW_SETTINGS = 'settings:read',
   VIEW_USERS = 'users:read',
   VIEW_ORGANIZATION = 'organization:read',
@@ -50,6 +51,9 @@ const rolePermissions: Record<UserRole, PermissionDef[]> = {
     { resource: 'leave', action: 'update' },
     // Payroll
     { resource: 'payroll', action: 'read' },
+    // Benefits
+    { resource: 'benefits', action: 'read' },
+    { resource: 'benefits', action: 'update' },
     // Recruitment
     { resource: 'recruitment', action: 'create' },
     { resource: 'recruitment', action: 'read' },
@@ -58,6 +62,11 @@ const rolePermissions: Record<UserRole, PermissionDef[]> = {
     { resource: 'separation', action: 'create' },
     { resource: 'separation', action: 'read' },
     { resource: 'separation', action: 'update' },
+    // Assets
+    { resource: 'assets', action: 'create' },
+    { resource: 'assets', action: 'read' },
+    { resource: 'assets', action: 'update' },
+    { resource: 'assets', action: 'delete' },
     // Documents
     { resource: 'documents', action: 'read' },
     { resource: 'documents', action: 'update' },
@@ -65,8 +74,12 @@ const rolePermissions: Record<UserRole, PermissionDef[]> = {
     { resource: 'organization', action: 'read' },
   ],
   [UserRole.DEPARTMENT_MANAGER]: [
+    // Assets read-only
+    { resource: 'assets', action: 'read' },
     // Employee read-only
     { resource: 'employees', action: 'read' },
+    // Benefits read-only
+    { resource: 'benefits', action: 'read' },
     // Attendance
     { resource: 'attendance', action: 'read' },
     // Leave approval
@@ -80,6 +93,8 @@ const rolePermissions: Record<UserRole, PermissionDef[]> = {
     { resource: 'organization', action: 'read' },
   ],
   [UserRole.FINANCE]: [
+    // Assets read-only
+    { resource: 'assets', action: 'read' },
     // Payroll management
     { resource: 'payroll', action: 'create' },
     { resource: 'payroll', action: 'read' },
@@ -104,6 +119,11 @@ const rolePermissions: Record<UserRole, PermissionDef[]> = {
     { resource: 'performance', action: 'read' },
   ],
   [UserRole.IT_ADMIN]: [
+    // Assets full access
+    { resource: 'assets', action: 'create' },
+    { resource: 'assets', action: 'read' },
+    { resource: 'assets', action: 'update' },
+    { resource: 'assets', action: 'delete' },
     // System settings
     { resource: 'settings', action: 'read' },
     { resource: 'settings', action: 'update' },

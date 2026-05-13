@@ -43,6 +43,13 @@ export class ExitInterviewRepository {
     return exitInterview ? this.mapToExitInterview(exitInterview) : null;
   }
 
+  async getAllByEmployeeId(employeeId: string): Promise<ExitInterview[]> {
+    const rows = await this.knex('exit_interviews')
+      .where({ employee_id: employeeId })
+      .orderBy('created_at', 'desc');
+    return rows.map((r) => this.mapToExitInterview(r));
+  }
+
   async getExitInterviewsByStatus(
     status: 'scheduled' | 'completed' | 'cancelled'
   ): Promise<ExitInterview[]> {

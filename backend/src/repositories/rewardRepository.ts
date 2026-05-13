@@ -1,5 +1,6 @@
 import { Knex } from 'knex';
 import { Reward, RewardNomination, RewardFilter, RewardCategory } from '../types/benefits';
+import { resolveEmployeeUUID } from '../utils/resolveEmployeeId';
 
 export class RewardRepository {
   constructor(private knex: Knex) {}
@@ -32,8 +33,10 @@ export class RewardRepository {
   }
 
   async getRewardsByEmployee(employeeId: string): Promise<Reward[]> {
+    const resolvedId = await resolveEmployeeUUID(this.knex, employeeId);
+    if (!resolvedId) return [];
     const rewards = await this.knex('rewards')
-      .where({ employee_id: employeeId })
+      .where({ employee_id: resolvedId })
       .orderBy('awarded_date', 'desc');
 
     return rewards.map((r) => this.mapToReward(r));
@@ -67,7 +70,9 @@ export class RewardRepository {
     let query = this.knex('rewards');
 
     if (filters.employee_id) {
-      query = query.where('employee_id', filters.employee_id);
+      const resolvedId = await resolveEmployeeUUID(this.knex, filters.employee_id);
+      if (!resolvedId) return [];
+      query = query.where('employee_id', resolvedId);
     }
 
     if (filters.category) {

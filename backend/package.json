@@ -14,12 +14,12 @@
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\"",
-    "migrate:make": "knex migrate:make --knexfile knexfile.js -x ts",
-    "migrate:latest": "knex migrate:latest --knexfile knexfile.js",
-    "migrate:rollback": "knex migrate:rollback --knexfile knexfile.js",
-    "migrate:status": "knex migrate:status --knexfile knexfile.js",
-    "seed:make": "knex seed:make --knexfile knexfile.js -x ts",
-    "seed:run": "knex seed:run --knexfile knexfile.js"
+    "migrate:make": "knex migrate:make --knexfile knexfile.ts -x ts",
+    "migrate:latest": "knex migrate:latest --knexfile knexfile.ts",
+    "migrate:rollback": "knex migrate:rollback --knexfile knexfile.ts",
+    "migrate:status": "knex migrate:status --knexfile knexfile.ts",
+    "seed:make": "knex seed:make --knexfile knexfile.ts -x ts",
+    "seed:run": "knex seed:run --knexfile knexfile.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.600",

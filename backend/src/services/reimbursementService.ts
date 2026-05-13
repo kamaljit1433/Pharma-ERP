@@ -142,12 +142,6 @@ export class ReimbursementService {
       throw new Error(`Cannot approve claim with status ${claim.status}`);
     }
 
-    // Verify approver is a manager or finance
-    const approver = await this.employeeRepository.getEmployee(approverId);
-    if (!approver) {
-      throw new Error(`Approver ${approverId} not found`);
-    }
-
     const approvedClaim = await this.claimRepository.approveClaim(
       claimId,
       approverId,

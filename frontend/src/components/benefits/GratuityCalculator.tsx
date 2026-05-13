@@ -32,7 +32,74 @@ export const GratuityCalculator: React.FC<GratuityCalculatorProps> = ({ employee
     try {
       setReportLoading(true);
       setError(null);
-      await benefitsService.getGratuityReport(employeeId, parseFloat(lastDrawnSalary));
+      const response = await benefitsService.getGratuityReport(employeeId, parseFloat(lastDrawnSalary));
+      const r = response.data;
+
+      const fmt = (n: number) =>
+        n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const fmtDate = (d: string | Date | undefined) =>
+        d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : '—';
+
+      const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Gratuity Report – ${r.employee_name}</title>
+  <style>
+    body { font-family: Arial, sans-serif; color: #111; max-width: 720px; margin: 40px auto; padding: 0 24px; }
+    h1 { font-size: 22px; margin-bottom: 4px; }
+    .subtitle { color: #555; font-size: 13px; margin-bottom: 32px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+    th, td { text-align: left; padding: 10px 12px; border: 1px solid #ddd; font-size: 14px; }
+    th { background: #f5f5f5; font-weight: 600; width: 40%; }
+    .highlight { background: #f0fdf4; }
+    .highlight td { font-weight: 700; font-size: 16px; color: #15803d; }
+    .badge { display: inline-block; padding: 2px 10px; border-radius: 9999px; font-size: 12px; font-weight: 600; }
+    .eligible { background: #dcfce7; color: #166534; }
+    .not-eligible { background: #f3f4f6; color: #374151; }
+    .footer { margin-top: 40px; font-size: 12px; color: #888; border-top: 1px solid #eee; padding-top: 12px; }
+  </style>
+</head>
+<body>
+  <h1>Gratuity Calculation Report</h1>
+  <p class="subtitle">Generated on ${fmtDate(new Date())}</p>
+
+  <table>
+    <tr><th>Employee Name</th><td>${r.employee_name}</td></tr>
+    <tr><th>Employee ID</th><td>${r.employee_id_number}</td></tr>
+    <tr><th>Date of Joining</th><td>${fmtDate(r.date_of_joining)}</td></tr>
+    <tr><th>Date of Separation</th><td>${fmtDate(r.date_of_separation)}</td></tr>
+    <tr><th>Years of Service</th><td>${r.years_of_service} year(s)</td></tr>
+    <tr><th>Last Drawn Salary</th><td>₹${fmt(r.last_drawn_salary)}</td></tr>
+    <tr><th>Eligibility Status</th><td>
+      <span class="badge ${r.is_eligible ? 'eligible' : 'not-eligible'}">
+        ${r.is_eligible ? 'Eligible' : 'Not Eligible'}
+      </span>
+    </td></tr>
+    <tr class="highlight"><th>Gratuity Amount</th><td>₹${fmt(r.gratuity_amount)}</td></tr>
+    ${r.remarks ? `<tr><th>Remarks</th><td>${r.remarks}</td></tr>` : ''}
+  </table>
+
+  <table>
+    <tr><th colspan="2" style="background:#f5f5f5">Calculation Formula</th></tr>
+    <tr><td colspan="2" style="font-family:monospace">(Last Salary × Years of Service × 15) ÷ 26</td></tr>
+  </table>
+
+  <div class="footer">
+    This is a system-generated report. Calculation date: ${fmtDate(r.calculation_date)}.
+  </div>
+</body>
+</html>`;
+
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `gratuity-report-${r.employee_id_number || employeeId}.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to generate report');
     } finally {

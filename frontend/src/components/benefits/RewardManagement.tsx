@@ -5,6 +5,7 @@ import { Badge } from '../ui/badge';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { benefitsService } from '../../services/benefitsService';
+import { EmployeeSearch } from '../performance/EmployeeSearch';
 import { Plus, Edit2, Trash2, CheckCircle2, AlertCircle } from 'lucide-react';
 
 interface Reward {
@@ -32,6 +33,7 @@ export const RewardManagement: React.FC<RewardManagementProps> = ({
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [selectedEmployeeLabel, setSelectedEmployeeLabel] = useState('');
   const [formData, setFormData] = useState({
     employee_id: employeeId || '',
     category: '',
@@ -90,6 +92,7 @@ export const RewardManagement: React.FC<RewardManagementProps> = ({
         awarded_date: new Date().toISOString().split('T')[0],
         is_public: true,
       });
+      setSelectedEmployeeLabel('');
       setShowForm(false);
       setEditingId(null);
       fetchRewards();
@@ -110,6 +113,7 @@ export const RewardManagement: React.FC<RewardManagementProps> = ({
       awarded_date: reward.awarded_date,
       is_public: reward.is_public,
     });
+    setSelectedEmployeeLabel(reward.employee_id);
     setEditingId(reward.id);
     setShowForm(true);
   };
@@ -186,14 +190,20 @@ export const RewardManagement: React.FC<RewardManagementProps> = ({
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <Label htmlFor="employee_id">Employee ID *</Label>
-                <Input
-                  id="employee_id"
-                  value={formData.employee_id}
-                  onChange={(e) => setFormData({ ...formData, employee_id: e.target.value })}
-                  placeholder="Enter employee ID"
-                  required
+                <EmployeeSearch
+                  label="Employee *"
+                  placeholder="Search by name or employee ID..."
+                  onChange={(id, emp) => {
+                    setFormData({ ...formData, employee_id: id });
+                    setSelectedEmployeeLabel(emp ? `${emp.first_name} ${emp.last_name} (${emp.employee_id})` : '');
+                  }}
                 />
+                {!formData.employee_id && (
+                  <p className="text-xs text-muted-foreground mt-1">Start typing to search for an employee</p>
+                )}
+                {selectedEmployeeLabel && (
+                  <p className="text-xs text-green-700 mt-1">Selected: {selectedEmployeeLabel}</p>
+                )}
               </div>
 
               <div>
@@ -269,6 +279,7 @@ export const RewardManagement: React.FC<RewardManagementProps> = ({
                   onClick={() => {
                     setShowForm(false);
                     setEditingId(null);
+                    setSelectedEmployeeLabel('');
                     setFormData({
                       employee_id: employeeId || '',
                       category: '',

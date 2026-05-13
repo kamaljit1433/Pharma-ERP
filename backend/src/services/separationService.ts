@@ -23,6 +23,7 @@ import {
   CreateExitInterviewDTO,
   FnFSettlement,
   CreateFnFSettlementDTO,
+  UpdateFnFSettlementDTO,
   AssetRecoveryChecklist,
   CreateAssetRecoveryDTO,
   NoticePeriodInfo,
@@ -52,6 +53,26 @@ export class SeparationService {
     this.advanceSalaryRepository = new AdvanceSalaryRepository(db);
     this.questionnaireTemplateRepository = new QuestionnaireTemplateRepository(db);
     this.fileStorageService = new FileStorageService();
+  }
+
+  /**
+   * Resolve an employee identifier (UUID or string code like "EMP001") to the
+   * internal UUID that separation tables use as a foreign key.
+   * Throws if no matching employee is found.
+   */
+  private async resolveEmployeeUUID(employeeIdOrCode: string): Promise<string> {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (uuidRegex.test(employeeIdOrCode)) {
+      return employeeIdOrCode;
+    }
+    const row = await this.db('employees')
+      .where('employee_id', employeeIdOrCode)
+      .select('id')
+      .first();
+    if (!row) {
+      throw new Error(`Employee not found: ${employeeIdOrCode}`);
+    }
+    return row.id as string;
   }
 
   /**
@@ -87,6 +108,7 @@ export class SeparationService {
    * creates resignation record, and auto-triggers offboarding workflow
    */
   async submitResignation(employeeId: string, data: CreateResignationDTO): Promise<Resignation> {
+    employeeId = await this.resolveEmployeeUUID(employeeId);
     // Validate employee exists
     const employee = await this.employeeRepository.getEmployee(employeeId);
     if (!employee) {
@@ -191,15 +213,20 @@ export class SeparationService {
    * Initiate termination for an employee
    * Creates termination record with reason tracking and auto-triggers offboarding
    */
-  async initiateTermination(employeeId: string, terminationDate: Date, reason: string): Promise<any> {
+  async initiateTermination(employeeId: string, terminationDate: Date, reason: string, terminationType?: string, finalSettlementDate?: Date): Promise<any> {
+    employeeId = await this.resolveEmployeeUUID(employeeId);
     // Validate employee exists
     const employee = await this.employeeRepository.getEmployee(employeeId);
     if (!employee) {
       throw new Error('Employee not found');
     }
 
-    // Validate termination date is not in the past
-    if (new Date(terminationDate) < new Date()) {
+    // Validate termination date is not before today (date-only comparison)
+    const inputDay = new Date(terminationDate);
+    inputDay.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (inputDay < today) {
       throw new Error('Termination date cannot be in the past');
     }
 
@@ -210,14 +237,18 @@ export class SeparationService {
 
     // Create termination record
     const id = uuidv4();
+    const insertData: Record<string, any> = {
+      id,
+      employee_id: employeeId,
+      termination_date: terminationDate,
+      reason,
+      status: 'pending',
+    };
+    if (terminationType) insertData['termination_type'] = terminationType;
+    if (finalSettlementDate) insertData['final_settlement_date'] = finalSettlementDate;
+
     const [termination] = await this.db('terminations')
-      .insert({
-        id,
-        employee_id: employeeId,
-        termination_date: terminationDate,
-        reason,
-        status: 'pending',
-      })
+      .insert(insertData)
       .returning('*');
 
     // Auto-trigger offboarding workflow
@@ -315,6 +346,7 @@ export class SeparationService {
    * Schedule exit interview
    */
   async scheduleExitInterview(employeeId: string, date: Date): Promise<ExitInterview> {
+    employeeId = await this.resolveEmployeeUUID(employeeId);
     // Validate employee exists
     const employee = await this.employeeRepository.getEmployee(employeeId);
     if (!employee) {
@@ -340,9 +372,10 @@ export class SeparationService {
     responses: Record<string, any>,
     feedback: string
   ): Promise<ExitInterview> {
+    const conductedByUUID = await this.resolveEmployeeUUID(conductedBy);
     return this.exitInterviewRepository.completeExitInterview(
       exitInterviewId,
-      conductedBy,
+      conductedByUUID,
       responses,
       feedback
     );
@@ -352,6 +385,7 @@ export class SeparationService {
    * Calculate Full & Final Settlement
    */
   async calculateFnFSettlement(employeeId: string): Promise<FnFSettlement> {
+    employeeId = await this.resolveEmployeeUUID(employeeId);
     // Validate employee exists
     const employee = await this.employeeRepository.getEmployee(employeeId);
     if (!employee) {
@@ -590,6 +624,7 @@ export class SeparationService {
    * Approve F&F Settlement (pending_approval → approved)
    */
   async approveFnFSettlement(fnfSettlementId: string, approvedBy: string): Promise<FnFSettlement> {
+    approvedBy = await this.resolveEmployeeUUID(approvedBy);
     const settlement = await this.fnfSettlementRepository.getFnFSettlement(fnfSettlementId);
     if (!settlement) {
       throw new Error('F&F Settlement not found');
@@ -599,25 +634,28 @@ export class SeparationService {
       throw new Error(`Cannot approve settlement with status: ${settlement.status}`);
     }
 
-    // Approve the settlement
     const approved = await this.fnfSettlementRepository.approveFnFSettlement(fnfSettlementId, approvedBy);
 
-    // Log audit trail
     await this.db('audit_logs').insert({
       id: uuidv4(),
       entity_type: 'fnf_settlement',
       entity_id: fnfSettlementId,
       action: 'approved',
       performed_by: approvedBy,
-      changes: {
-        status: 'approved',
-        approved_by: approvedBy,
-        approved_at: new Date(),
-      },
+      changes: { status: 'approved', approved_by: approvedBy, approved_at: new Date() },
       created_at: new Date(),
     });
 
     return approved;
+  }
+
+  async updateFnFDraft(fnfSettlementId: string, data: UpdateFnFSettlementDTO): Promise<FnFSettlement> {
+    const settlement = await this.fnfSettlementRepository.getFnFSettlement(fnfSettlementId);
+    if (!settlement) throw new Error('F&F Settlement not found');
+    if (settlement.status !== 'draft') {
+      throw new Error('Only draft settlements can be edited');
+    }
+    return this.fnfSettlementRepository.updateFnFSettlement(fnfSettlementId, data);
   }
 
   /**
@@ -875,11 +913,19 @@ export class SeparationService {
     // Get all assets assigned to employee
     const assets = await this.db('assets')
       .where('assigned_to', employeeId)
-      .where('status', 'active');
+      .where('status', 'assigned');
+
+    // Get already-existing checklist entries so we don't re-insert (unique constraint)
+    const existing = await this.db('asset_recovery_checklists')
+      .where('employee_id', employeeId)
+      .select('asset_id');
+    const existingAssetIds = new Set(existing.map((r: any) => r.asset_id));
 
     const checklists: AssetRecoveryChecklist[] = [];
 
     for (const asset of assets) {
+      if (existingAssetIds.has(asset.id)) continue;
+
       const checklistData: CreateAssetRecoveryDTO = {
         asset_id: asset.id,
         status: 'pending',
@@ -896,6 +942,11 @@ export class SeparationService {
    * Get asset recovery checklist for employee
    */
   async getAssetRecoveryChecklist(employeeId: string): Promise<AssetRecoveryChecklist[]> {
+    employeeId = await this.resolveEmployeeUUID(employeeId);
+
+    // Always try to generate missing entries first (safe — skips already-existing ones)
+    await this.generateAssetRecoveryChecklist(employeeId);
+
     return this.assetRecoveryRepository.getAssetRecoveriesByEmployeeId(employeeId);
   }
 
@@ -924,30 +975,53 @@ export class SeparationService {
   async checkOffboardingPreconditions(employeeId: string): Promise<{
     canDeactivate: boolean;
     missingItems: string[];
+    exitInterviewCompleted: boolean;
+    fnfSettlementApproved: boolean;
+    assetsRecovered: boolean;
+    systemAccessRevoked: boolean;
+    dataArchived: boolean;
   }> {
+    employeeId = await this.resolveEmployeeUUID(employeeId);
     const missingItems: string[] = [];
 
     // Check exit interview completed
     const exitInterview = await this.exitInterviewRepository.getExitInterviewByEmployeeId(employeeId);
-    if (!exitInterview || exitInterview.status !== 'completed') {
+    const exitInterviewCompleted = !!(exitInterview && exitInterview.status === 'completed');
+    if (!exitInterviewCompleted) {
       missingItems.push('Exit interview not completed');
     }
 
     // Check F&F settlement approved
     const fnfSettlement = await this.fnfSettlementRepository.getFnFSettlementByEmployeeId(employeeId);
-    if (!fnfSettlement || fnfSettlement.status !== 'approved') {
+    const fnfSettlementApproved = !!(fnfSettlement && (fnfSettlement.status === 'approved' || fnfSettlement.status === 'paid'));
+    if (!fnfSettlementApproved) {
       missingItems.push('F&F settlement not approved');
     }
 
     // Check all assets recovered
     const unreturned = await this.assetRecoveryRepository.getUnreturnedAssets(employeeId);
-    if (unreturned.length > 0) {
+    const assetsRecovered = unreturned.length === 0;
+    if (!assetsRecovered) {
       missingItems.push('Some assets not recovered');
     }
+
+    // Check system access revoked by querying the linked user account.
+    // users.employee_id stores the string code (e.g. "EMP001"), not the UUID.
+    const employee = await this.employeeRepository.getEmployee(employeeId);
+    const linkedUser = employee
+      ? await this.db('users').where('employee_id', (employee as any).employee_id).first()
+      : null;
+    const systemAccessRevoked = !!(linkedUser && linkedUser.is_active === false);
+    const dataArchived = !!(employee && (employee as any).archived_at);
 
     return {
       canDeactivate: missingItems.length === 0,
       missingItems,
+      exitInterviewCompleted,
+      fnfSettlementApproved,
+      assetsRecovered,
+      systemAccessRevoked,
+      dataArchived,
     };
   }
 
@@ -963,13 +1037,27 @@ export class SeparationService {
     const scopedLogger = logger.child('SeparationService.revokeSystemAccess');
 
     try {
-      // Get user associated with employee
+      // Resolve to UUID first so we can look up the employee record
+      employeeId = await this.resolveEmployeeUUID(employeeId);
+
+      // users.employee_id stores the string code (e.g. "EMP001"), not the UUID.
+      // Look up the employee to get their string code, then find the user.
+      const employee = await this.db('employees')
+        .where('id', employeeId)
+        .select('employee_id')
+        .first();
+
+      if (!employee) {
+        scopedLogger.warn('Employee not found', { employeeId });
+        return;
+      }
+
       const user = await this.db('users')
-        .where('employee_id', employeeId)
+        .where('employee_id', employee.employee_id)
         .first();
 
       if (!user) {
-        scopedLogger.warn('No user found for employee', { employeeId });
+        scopedLogger.warn('No user account found for employee', { employeeId, stringId: employee.employee_id });
         return;
       }
 
@@ -998,8 +1086,7 @@ export class SeparationService {
       scopedLogger.info('Deactivated user account', { userId });
 
       // 3. Clear any active sessions from Redis
-      // Sessions are typically stored with key pattern: session:{userId}
-      const redisClient = require('../config/redis').getClient();
+      const redisClient = require('../config/redis').default.getClient();
       const sessionKey = `session:${userId}`;
 
       try {
@@ -1050,6 +1137,7 @@ export class SeparationService {
    * updates employee status, and sends deactivation notification
    */
   async deactivateEmployee(employeeId: string): Promise<void> {
+    employeeId = await this.resolveEmployeeUUID(employeeId);
     // Validate employee exists
     const employee = await this.employeeRepository.getEmployee(employeeId);
     if (!employee) {
@@ -1112,18 +1200,16 @@ export class SeparationService {
         const errorMsg = `Failed to generate asset recovery checklist: ${error instanceof Error ? error.message : String(error)}`;
         errors.push(errorMsg);
         logger.error(errorMsg, { employeeId });
-
-        // Log to audit trail
-        await this.db('audit_logs').insert({
-          id: uuidv4(),
-          entity_type: 'employee',
-          entity_id: employeeId,
-          action: 'offboarding_asset_recovery_failed',
-          changes: {
-            error: errorMsg,
-          },
-          created_at: new Date(),
-        });
+        try {
+          await this.db('audit_logs').insert({
+            id: uuidv4(),
+            entity_type: 'employee',
+            entity_id: employeeId,
+            action: 'offboarding_asset_recovery_failed',
+            changes: { error: errorMsg },
+            created_at: new Date(),
+          });
+        } catch { /* non-critical audit log failure */ }
       }
 
       // Create F&F settlement (draft)
@@ -1134,18 +1220,16 @@ export class SeparationService {
         const errorMsg = `Failed to create F&F settlement: ${error instanceof Error ? error.message : String(error)}`;
         errors.push(errorMsg);
         logger.error(errorMsg, { employeeId });
-
-        // Log to audit trail
-        await this.db('audit_logs').insert({
-          id: uuidv4(),
-          entity_type: 'employee',
-          entity_id: employeeId,
-          action: 'offboarding_fnf_settlement_failed',
-          changes: {
-            error: errorMsg,
-          },
-          created_at: new Date(),
-        });
+        try {
+          await this.db('audit_logs').insert({
+            id: uuidv4(),
+            entity_type: 'employee',
+            entity_id: employeeId,
+            action: 'offboarding_fnf_settlement_failed',
+            changes: { error: errorMsg },
+            created_at: new Date(),
+          });
+        } catch { /* non-critical audit log failure */ }
       }
 
       // Send notification to employee about offboarding process
@@ -1169,35 +1253,34 @@ export class SeparationService {
         logger.error(errorMsg, { employeeId });
       }
 
-      // Log offboarding workflow trigger
-      await this.db('audit_logs').insert({
-        id: uuidv4(),
-        entity_type: 'employee',
-        entity_id: employeeId,
-        action: 'offboarding_workflow_triggered',
-        changes: {
-          asset_checklists_generated: assetChecklists.length,
-          fnf_settlement_created: fnfSettlement?.id || null,
-          workflow_errors: errors.length > 0 ? errors : null,
-        },
-        created_at: new Date(),
-      });
+      try {
+        await this.db('audit_logs').insert({
+          id: uuidv4(),
+          entity_type: 'employee',
+          entity_id: employeeId,
+          action: 'offboarding_workflow_triggered',
+          changes: {
+            asset_checklists_generated: assetChecklists.length,
+            fnf_settlement_created: fnfSettlement?.id || null,
+            workflow_errors: errors.length > 0 ? errors : null,
+          },
+          created_at: new Date(),
+        });
+      } catch { /* non-critical audit log failure */ }
     } catch (error) {
       const errorMsg = `Critical error in offboarding workflow: ${error instanceof Error ? error.message : String(error)}`;
       errors.push(errorMsg);
       logger.error(errorMsg, { employeeId });
-
-      // Log critical error to audit trail
-      await this.db('audit_logs').insert({
-        id: uuidv4(),
-        entity_type: 'employee',
-        entity_id: employeeId,
-        action: 'offboarding_workflow_critical_error',
-        changes: {
-          error: errorMsg,
-        },
-        created_at: new Date(),
-      });
+      try {
+        await this.db('audit_logs').insert({
+          id: uuidv4(),
+          entity_type: 'employee',
+          entity_id: employeeId,
+          action: 'offboarding_workflow_critical_error',
+          changes: { error: errorMsg },
+          created_at: new Date(),
+        });
+      } catch { /* non-critical audit log failure */ }
     }
 
     return { errors };
@@ -1299,6 +1382,7 @@ export class SeparationService {
    * Get resignation by employee ID
    */
   async getResignationByEmployeeId(employeeId: string): Promise<Resignation | null> {
+    employeeId = await this.resolveEmployeeUUID(employeeId);
     return this.resignationRepository.getResignationByEmployeeId(employeeId) as any;
   }
 
@@ -1324,6 +1408,14 @@ export class SeparationService {
   }
 
   /**
+   * Get all exit interviews for an employee
+   */
+  async getExitInterviewsByEmployeeId(employeeId: string): Promise<ExitInterview[]> {
+    employeeId = await this.resolveEmployeeUUID(employeeId);
+    return this.exitInterviewRepository.getAllByEmployeeId(employeeId);
+  }
+
+  /**
    * Get exit interview by ID
    */
   async getExitInterview(id: string): Promise<ExitInterview | null> {
@@ -1341,6 +1433,7 @@ export class SeparationService {
    * Get F&F settlement by employee ID
    */
   async getFnFSettlementByEmployeeId(employeeId: string): Promise<FnFSettlement | null> {
+    employeeId = await this.resolveEmployeeUUID(employeeId);
     return this.fnfSettlementRepository.getFnFSettlementByEmployeeId(employeeId);
   }
 
@@ -1486,6 +1579,7 @@ export class SeparationService {
     responses: Record<string, any>,
     feedback: string
   ): Promise<ExitInterview> {
+    conductedBy = await this.resolveEmployeeUUID(conductedBy);
     // Get exit interview
     const exitInterview = await this.exitInterviewRepository.getExitInterviewById(exitInterviewId);
     if (!exitInterview) {

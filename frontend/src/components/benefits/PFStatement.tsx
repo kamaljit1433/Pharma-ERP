@@ -16,8 +16,7 @@ interface PFContribution {
 
 interface PFDetails {
   account: {
-    pf_account_number: string;
-    opening_balance: number;
+    pf_number: string;
     current_balance: number;
   };
   contributions: PFContribution[];
@@ -92,8 +91,8 @@ export const PFStatement: React.FC<PFStatementProps> = ({ employeeId }) => {
     );
   }
 
-  if (!pfDetails) {
-    return <div className="text-center py-8">No PF account found</div>;
+  if (!pfDetails || !pfDetails.account) {
+    return <div className="text-center py-8">No PF account found. Contact HR to set up your PF account.</div>;
   }
 
   return (
@@ -101,7 +100,7 @@ export const PFStatement: React.FC<PFStatementProps> = ({ employeeId }) => {
       <h2 className="text-2xl font-bold">PF Statement</h2>
 
       {/* Account Summary */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -109,20 +108,7 @@ export const PFStatement: React.FC<PFStatementProps> = ({ employeeId }) => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold font-mono">{pfDetails.account.pf_account_number}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Opening Balance
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">
-              ₹{pfDetails.account.opening_balance.toLocaleString()}
-            </p>
+            <p className="text-2xl font-bold font-mono">{pfDetails.account.pf_number}</p>
           </CardContent>
         </Card>
 

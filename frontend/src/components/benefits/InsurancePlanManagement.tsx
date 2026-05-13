@@ -5,7 +5,9 @@ import { Badge } from '../ui/badge';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { benefitsService } from '../../services/benefitsService';
-import { Plus, Edit2, Trash2, AlertCircle } from 'lucide-react';
+import { EmployeeSearch } from '../performance/EmployeeSearch';
+import { Employee } from '../../services/employeeService';
+import { Plus, Edit2, Trash2, AlertCircle, X, Users } from 'lucide-react';
 
 interface InsurancePlan {
   id: string;
@@ -32,6 +34,7 @@ export const InsurancePlanManagement: React.FC = () => {
     enrollment_start_date: '',
     enrollment_end_date: '',
   });
+  const [assignedEmployees, setAssignedEmployees] = useState<Employee[]>([]);
 
   useEffect(() => {
     fetchPlans();
@@ -53,26 +56,46 @@ export const InsurancePlanManagement: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const payload = {
+        ...formData,
+        employee_ids: assignedEmployees.map((emp) => emp.id),
+      };
       if (editingId) {
-        await benefitsService.updateInsurancePlan(editingId, formData);
+        await benefitsService.updateInsurancePlan(editingId, payload);
       } else {
-        await benefitsService.createInsurancePlan(formData);
+        await benefitsService.createInsurancePlan(payload);
       }
-      setFormData({
-        name: '',
-        provider: '',
-        coverage_type: '',
-        premium_amount: '',
-        enrollment_start_date: '',
-        enrollment_end_date: '',
-      });
-      setShowForm(false);
-      setEditingId(null);
+      resetForm();
       fetchPlans();
     } catch (err) {
       setError('Failed to save insurance plan');
       console.error('Failed to save insurance plan:', err);
     }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      provider: '',
+      coverage_type: '',
+      premium_amount: '',
+      enrollment_start_date: '',
+      enrollment_end_date: '',
+    });
+    setAssignedEmployees([]);
+    setShowForm(false);
+    setEditingId(null);
+  };
+
+  const handleEmployeeAdd = (_id: string, employee: Employee | null) => {
+    if (!employee) return;
+    if (!assignedEmployees.find((e) => e.id === employee.id)) {
+      setAssignedEmployees((prev) => [...prev, employee]);
+    }
+  };
+
+  const handleEmployeeRemove = (id: string) => {
+    setAssignedEmployees((prev) => prev.filter((e) => e.id !== id));
   };
 
   const handleEdit = (plan: InsurancePlan) => {
@@ -84,6 +107,7 @@ export const InsurancePlanManagement: React.FC = () => {
       enrollment_start_date: plan.enrollment_start_date,
       enrollment_end_date: plan.enrollment_end_date,
     });
+    setAssignedEmployees([]);
     setEditingId(plan.id);
     setShowForm(true);
   };
@@ -189,24 +213,39 @@ export const InsurancePlanManagement: React.FC = () => {
                   />
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="col-span-2">
+                <div className="flex items-center gap-2 mb-2">
+                  <Users className="w-4 h-4 text-muted-foreground" />
+                  <Label>Assign Employees</Label>
+                </div>
+                <EmployeeSearch
+                  placeholder="Search employee by name or ID..."
+                  onChange={handleEmployeeAdd}
+                />
+                {assignedEmployees.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {assignedEmployees.map((emp) => (
+                      <span
+                        key={emp.id}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20"
+                      >
+                        {emp.first_name} {emp.last_name}
+                        <span className="text-muted-foreground">({emp.employee_id})</span>
+                        <button
+                          type="button"
+                          onClick={() => handleEmployeeRemove(emp.id)}
+                          className="ml-0.5 hover:text-destructive transition-colors"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-2 col-span-2">
                 <Button type="submit">Save Plan</Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setShowForm(false);
-                    setEditingId(null);
-                    setFormData({
-                      name: '',
-                      provider: '',
-                      coverage_type: '',
-                      premium_amount: '',
-                      enrollment_start_date: '',
-                      enrollment_end_date: '',
-                    });
-                  }}
-                >
+                <Button type="button" variant="outline" onClick={resetForm}>
                   Cancel
                 </Button>
               </div>

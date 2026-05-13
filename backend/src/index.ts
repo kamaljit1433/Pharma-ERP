@@ -21,6 +21,7 @@ import employeeRoutes from './routes/employees';
 import recruitmentRoutes from './routes/recruitment';
 import trainingRoutes from './routes/training';
 import separationRoutes from './routes/separation';
+import assetRoutes from './routes/assets';
 import { createGeoTrackingRoutes } from './routes/geo-tracking';
 import { createHierarchyRoutes } from './routes/hierarchy';
 import { createSuppliersRoutes } from './routes/suppliers';
@@ -161,6 +162,9 @@ app.use(`/api/${config.apiVersion}/training`, trainingRoutes);
 
 // Separation routes
 app.use(`/api/${config.apiVersion}/separation`, separationRoutes);
+
+// Asset routes
+app.use(`/api/${config.apiVersion}/assets`, assetRoutes);
 
 // Geo Tracking routes
 app.use(`/api/${config.apiVersion}/geo`, createGeoTrackingRoutes(knex));

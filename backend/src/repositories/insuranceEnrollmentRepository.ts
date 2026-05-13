@@ -1,5 +1,6 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { resolveEmployeeUUID as resolveUUID } from '../utils/resolveEmployeeId';
 
 export interface InsuranceEnrollmentRecord {
   id: string;
@@ -28,11 +29,13 @@ export class InsuranceEnrollmentRepository {
 
   async createEnrollment(data: CreateEnrollmentDTO): Promise<InsuranceEnrollmentRecord> {
     const id = uuidv4();
+    const resolvedEmployeeId = await this.resolveEmployeeUUID(data.employee_id);
+    if (!resolvedEmployeeId) throw new Error(`Employee not found: ${data.employee_id}`);
 
     const [enrollment] = await this.db('insurance_enrollments')
       .insert({
         id,
-        employee_id: data.employee_id,
+        employee_id: resolvedEmployeeId,
         insurance_plan_id: data.plan_id,
         enrollment_date: data.enrollment_date,
         effective_from: data.enrollment_date,
@@ -43,14 +46,21 @@ export class InsuranceEnrollmentRepository {
     return this.mapRow(enrollment);
   }
 
+  private resolveEmployeeUUID(employeeId: string): Promise<string | null> {
+    return resolveUUID(this.db, employeeId);
+  }
+
   async getEnrollmentById(id: string): Promise<InsuranceEnrollmentRecord | null> {
     const row = await this.db('insurance_enrollments').where('id', id).first();
     return row ? this.mapRow(row) : null;
   }
 
   async getEnrollmentsByEmployee(employeeId: string): Promise<InsuranceEnrollmentRecord[]> {
+    const resolvedId = await this.resolveEmployeeUUID(employeeId);
+    if (!resolvedId) return [];
+
     const rows = await this.db('insurance_enrollments')
-      .where('employee_id', employeeId)
+      .where('employee_id', resolvedId)
       .orderBy('created_at', 'desc');
 
     return rows.map((r: any) => this.mapRow(r));
@@ -94,8 +104,11 @@ export class InsuranceEnrollmentRepository {
     employeeId: string,
     insurancePlanId: string
   ): Promise<InsuranceEnrollmentRecord | null> {
+    const resolvedId = await this.resolveEmployeeUUID(employeeId);
+    if (!resolvedId) return null;
+
     const row = await this.db('insurance_enrollments')
-      .where('employee_id', employeeId)
+      .where('employee_id', resolvedId)
       .where('insurance_plan_id', insurancePlanId)
       .first();
 

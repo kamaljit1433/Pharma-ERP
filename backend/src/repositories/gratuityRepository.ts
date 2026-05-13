@@ -1,6 +1,7 @@
 import { Knex } from 'knex';
 import { Gratuity, CreateGratuityDTO } from '../types/benefits';
 import { v4 as uuidv4 } from 'uuid';
+import { resolveEmployeeUUID } from '../utils/resolveEmployeeId';
 
 export class GratuityRepository {
   constructor(private knex: Knex) {}
@@ -8,11 +9,13 @@ export class GratuityRepository {
   async createGratuity(data: CreateGratuityDTO & { years_of_service: number; gratuity_amount: number; is_eligible: boolean }): Promise<Gratuity> {
     const id = uuidv4();
     const eligibilityDate = new Date();
+    const resolvedEmployeeId = await resolveEmployeeUUID(this.knex, data.employee_id);
+    if (!resolvedEmployeeId) throw new Error(`Employee not found: ${data.employee_id}`);
 
     const [gratuity] = await this.knex('gratuities')
       .insert({
         id,
-        employee_id: data.employee_id,
+        employee_id: resolvedEmployeeId,
         eligibility_date: eligibilityDate,
         years_of_service: data.years_of_service,
         last_drawn_salary: data.last_drawn_salary,
@@ -26,8 +29,10 @@ export class GratuityRepository {
   }
 
   async getGratuity(employeeId: string): Promise<Gratuity | null> {
+    const resolvedId = await resolveEmployeeUUID(this.knex, employeeId);
+    if (!resolvedId) return null;
     const gratuity = await this.knex('gratuities')
-      .where('employee_id', employeeId)
+      .where('employee_id', resolvedId)
       .orderBy('calculation_date', 'desc')
       .first();
 
@@ -82,8 +87,10 @@ export class GratuityRepository {
   }
 
   async getGratuityHistory(employeeId: string): Promise<Gratuity[]> {
+    const resolvedId = await resolveEmployeeUUID(this.knex, employeeId);
+    if (!resolvedId) return [];
     const gratuities = await this.knex('gratuities')
-      .where('employee_id', employeeId)
+      .where('employee_id', resolvedId)
       .orderBy('calculation_date', 'desc');
 
     return gratuities.map((g) => this.mapToGratuity(g));

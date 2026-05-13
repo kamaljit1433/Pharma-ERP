@@ -82,6 +82,11 @@ export function createBenefitsRoutes(knex: Knex): Router {
     controller.submitReimbursementClaim(req, res)
   );
 
+  // Get pending claims (must be before /:id to avoid route conflict)
+  router.get('/reimbursements/pending', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER, UserRole.DEPARTMENT_MANAGER, UserRole.FINANCE]) as any, (req: Request, res: Response) =>
+    controller.getPendingClaims(req, res)
+  );
+
   // Get specific reimbursement claim
   router.get('/reimbursements/:id', (req: Request, res: Response) =>
     controller.getReimbursementClaim(req, res)

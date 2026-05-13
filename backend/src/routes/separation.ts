@@ -13,8 +13,8 @@ router.use(authenticateToken as any);
  * Resignation endpoints
  * POST /api/v1/separation/resignation - Submit resignation
  */
-router.post('/resignation', authorize([UserRole.HR_MANAGER, UserRole.EMPLOYEE]) as any, async (req, res, next): Promise<void> => {
-  const { employeeId } = req.body as { employeeId?: string };
+router.post('/resignation', authorize([UserRole.HR_MANAGER, UserRole.EMPLOYEE, UserRole.SUPER_ADMIN]) as any, async (req, res, next): Promise<void> => {
+  const employeeId = (req.body as any).employeeId ?? (req.body as any).employee_id;
   if (!employeeId) {
     res.status(400).json({
       success: false,
@@ -48,7 +48,7 @@ router.put(
  * POST /api/v1/separation/termination - Initiate termination
  */
 router.post('/termination', authorize([UserRole.HR_MANAGER, UserRole.SUPER_ADMIN]) as any, async (req, res, next): Promise<void> => {
-  const { employeeId } = req.body as { employeeId?: string };
+  const employeeId = (req.body as any).employeeId ?? (req.body as any).employee_id;
   if (!employeeId) {
     res.status(400).json({
       success: false,
@@ -65,7 +65,7 @@ router.post('/termination', authorize([UserRole.HR_MANAGER, UserRole.SUPER_ADMIN
  * POST /api/v1/separation/exit-interview - Schedule exit interview
  */
 router.post('/exit-interview', authorize([UserRole.HR_MANAGER, UserRole.SUPER_ADMIN]) as any, async (req, res, next): Promise<void> => {
-  const { employeeId } = req.body as { employeeId?: string };
+  const employeeId = (req.body as any).employeeId ?? (req.body as any).employee_id;
   if (!employeeId) {
     res.status(400).json({
       success: false,
@@ -76,6 +76,13 @@ router.post('/exit-interview', authorize([UserRole.HR_MANAGER, UserRole.SUPER_AD
   (req.params as Record<string, string>)['employeeId'] = employeeId;
   separationController.scheduleExitInterview(req, res, next);
 });
+
+// Get all exit interviews for an employee
+router.get(
+  '/exit-interview/employee/:employeeId',
+  authorize([UserRole.HR_MANAGER, UserRole.EMPLOYEE, UserRole.SUPER_ADMIN]) as any,
+  separationController.getExitInterviewsByEmployee
+);
 
 // Complete exit interview
 router.put(
@@ -93,13 +100,13 @@ router.put(
  */
 router.get(
   '/fnf/:employeeId',
-  authorize(['Finance / Payroll', UserRole.HR_MANAGER, UserRole.SUPER_ADMIN]) as any,
+  authorize([UserRole.FINANCE, UserRole.HR_MANAGER, UserRole.SUPER_ADMIN]) as any,
   separationController.calculateFnFSettlement
 );
 
 router.put(
   '/fnf/:id/submit',
-  authorize(['Finance / Payroll', UserRole.HR_MANAGER, UserRole.SUPER_ADMIN]) as any,
+  authorize([UserRole.FINANCE, UserRole.HR_MANAGER, UserRole.SUPER_ADMIN]) as any,
   async (req, res, next): Promise<void> => {
     (req.params as Record<string, string>)['fnfSettlementId'] = req.params['id'];
     separationController.submitFnFSettlementForApproval(req, res, next);
@@ -107,8 +114,17 @@ router.put(
 );
 
 router.put(
+  '/fnf/:id/update',
+  authorize([UserRole.HR_MANAGER, UserRole.FINANCE, UserRole.SUPER_ADMIN]) as any,
+  async (req, res, next): Promise<void> => {
+    (req.params as Record<string, string>)['fnfSettlementId'] = req.params['id'];
+    separationController.updateFnFSettlement(req, res, next);
+  }
+);
+
+router.put(
   '/fnf/:id/approve',
-  authorize(['Finance / Payroll', UserRole.SUPER_ADMIN]) as any,
+  authorize([UserRole.FINANCE, UserRole.HR_MANAGER, UserRole.SUPER_ADMIN]) as any,
   async (req, res, next): Promise<void> => {
     (req.params as Record<string, string>)['fnfSettlementId'] = req.params['id'];
     separationController.approveFnFSettlement(req, res, next);
@@ -116,8 +132,17 @@ router.put(
 );
 
 router.put(
+  '/fnf/:id/paid',
+  authorize([UserRole.FINANCE, UserRole.SUPER_ADMIN]) as any,
+  async (req, res, next): Promise<void> => {
+    (req.params as Record<string, string>)['fnfSettlementId'] = req.params['id'];
+    separationController.markFnFSettlementAsPaid(req, res, next);
+  }
+);
+
+router.put(
   '/fnf/:id/reject',
-  authorize(['Finance / Payroll', UserRole.SUPER_ADMIN]) as any,
+  authorize([UserRole.FINANCE, UserRole.SUPER_ADMIN]) as any,
   async (req, res, next): Promise<void> => {
     (req.params as Record<string, string>)['fnfSettlementId'] = req.params['id'];
     separationController.rejectFnFSettlement(req, res, next);
@@ -160,6 +185,26 @@ router.put(
   '/deactivate/:employeeId',
   authorize([UserRole.HR_MANAGER, UserRole.SUPER_ADMIN]) as any,
   separationController.deactivateEmployee
+);
+
+/**
+ * Revoke system access
+ * PUT /api/v1/separation/revoke-access/:employeeId
+ */
+router.put(
+  '/revoke-access/:employeeId',
+  authorize([UserRole.HR_MANAGER, UserRole.SUPER_ADMIN]) as any,
+  separationController.revokeSystemAccess
+);
+
+/**
+ * Archive employee data
+ * PUT /api/v1/separation/archive/:employeeId
+ */
+router.put(
+  '/archive/:employeeId',
+  authorize([UserRole.HR_MANAGER, UserRole.SUPER_ADMIN]) as any,
+  separationController.archiveEmployee
 );
 
 /**

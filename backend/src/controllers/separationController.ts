@@ -44,7 +44,7 @@ export const submitResignation = async (req: Request, res: Response, next: NextF
 export const initiateTermination = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const employeeId = req.params['employeeId'] as string;
-    const { termination_date, reason } = req.body;
+    const { termination_date, reason, termination_type, final_settlement_date } = req.body;
 
     if (!termination_date || !reason) {
       return res.status(400).json({
@@ -56,7 +56,9 @@ export const initiateTermination = async (req: Request, res: Response, next: Nex
     const termination = await separationService.initiateTermination(
       employeeId,
       new Date(termination_date),
-      reason
+      reason,
+      termination_type,
+      final_settlement_date ? new Date(final_settlement_date) : undefined
     );
 
     res.status(201).json({
@@ -173,6 +175,20 @@ export const scheduleExitInterview = async (req: Request, res: Response, next: N
 };
 
 /**
+ * Get all exit interviews for an employee
+ * GET /api/v1/separation/exit-interview/employee/:employeeId
+ */
+export const getExitInterviewsByEmployee = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const employeeId = req.params['employeeId'] as string;
+    const interviews = await separationService.getExitInterviewsByEmployeeId(employeeId);
+    res.status(200).json({ success: true, data: interviews });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/**
  * Complete exit interview
  * PUT /api/v1/separation/exit-interview/:exitInterviewId/complete
  */
@@ -281,6 +297,45 @@ export const approveFnFSettlement = async (req: Request, res: Response, next: Ne
       data: fnfSettlement,
       message: 'F&F settlement approved successfully',
     });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/**
+ * Update F&F Settlement (draft only)
+ * PUT /api/v1/separation/fnf/:fnfSettlementId/update
+ */
+export const updateFnFSettlement = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const fnfSettlementId = req.params['fnfSettlementId'];
+    const { bonus, other_benefits, other_deductions, pending_salary, leave_encashment, gratuity, advance_deduction } = req.body;
+
+    const updated = await separationService.updateFnFDraft(fnfSettlementId, {
+      bonus,
+      other_benefits,
+      other_deductions,
+      pending_salary,
+      leave_encashment,
+      gratuity,
+      advance_deduction,
+    });
+
+    res.status(200).json({ success: true, data: updated, message: 'F&F settlement updated successfully' });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/**
+ * Mark F&F Settlement as Paid
+ * PUT /api/v1/separation/fnf/:fnfSettlementId/paid
+ */
+export const markFnFSettlementAsPaid = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const fnfSettlementId = req.params['fnfSettlementId'];
+    const paid = await separationService.markFnFSettlementAsPaid(fnfSettlementId);
+    res.status(200).json({ success: true, data: paid, message: 'F&F settlement marked as paid' });
   } catch (error) {
     return next(error);
   }
@@ -446,6 +501,43 @@ export const deactivateEmployee = async (req: Request, res: Response, next: Next
     res.status(200).json({
       success: true,
       message: 'Employee deactivated successfully',
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/**
+ * Revoke system access for an employee
+ * PUT /api/v1/separation/revoke-access/:employeeId
+ */
+export const revokeSystemAccess = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const employeeId = req.params['employeeId'] as string;
+    await separationService.revokeSystemAccess(employeeId);
+
+    res.status(200).json({
+      success: true,
+      message: 'System access revoked successfully',
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/**
+ * Archive employee data for compliance
+ * PUT /api/v1/separation/archive/:employeeId
+ */
+export const archiveEmployee = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const employeeId = req.params['employeeId'] as string;
+    const { reason } = req.body;
+    await separationService.archiveEmployee(employeeId, reason || 'Employee Offboarding');
+
+    res.status(200).json({
+      success: true,
+      message: 'Employee data archived successfully',
     });
   } catch (error) {
     return next(error);

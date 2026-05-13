@@ -20,7 +20,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '../ui/dialog';
-import { Pencil, Trash2, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Pencil, Trash2, Search, ChevronLeft, ChevronRight, Archive } from 'lucide-react';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useAuthStore } from '@/store/authStore';
 import { canEditEmployees, canDeleteEmployees } from '@/utils/permissions';
@@ -36,6 +36,8 @@ export interface Employee {
   employment_type: 'permanent' | 'contract' | 'temporary' | 'intern';
   status: 'active' | 'on_leave' | 'suspended' | 'resigned' | 'terminated';
   date_of_joining: string;
+  archived_at?: string;
+  archive_reason?: string;
 }
 
 interface EmployeeListProps {
@@ -45,6 +47,8 @@ interface EmployeeListProps {
   onDelete?: (employeeId: string) => void;
   onAdd?: () => void;
   onFilterChange?: (filters: EmployeeFilters) => void;
+  includeArchived?: boolean;
+  onIncludeArchivedChange?: (value: boolean) => void;
 }
 
 export interface EmployeeFilters {
@@ -59,6 +63,8 @@ export const EmployeeList: React.FC<EmployeeListProps> = ({
   onEdit,
   onDelete,
   onFilterChange,
+  includeArchived = false,
+  onIncludeArchivedChange,
 }) => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
@@ -230,6 +236,18 @@ export const EmployeeList: React.FC<EmployeeListProps> = ({
               <option value="temporary">Temporary</option>
               <option value="intern">Intern</option>
             </select>
+            {onIncludeArchivedChange && (
+              <label className="flex items-center gap-2 text-sm cursor-pointer select-none whitespace-nowrap">
+                <input
+                  type="checkbox"
+                  checked={includeArchived}
+                  onChange={(e) => onIncludeArchivedChange(e.target.checked)}
+                  className="h-4 w-4 rounded border-input accent-primary"
+                />
+                <Archive className="h-4 w-4 text-muted-foreground" />
+                Show archived
+              </label>
+            )}
           </div>
 
           {/* Results count */}
@@ -287,12 +305,20 @@ export const EmployeeList: React.FC<EmployeeListProps> = ({
                   paginatedEmployees.map((employee) => (
                     <TableRow
                       key={employee.id}
-                      className="hover:bg-muted/50 cursor-pointer"
+                      className={`hover:bg-muted/50 cursor-pointer${employee.archived_at ? ' opacity-60' : ''}`}
                       onClick={() => navigate(`/employees/${employee.id}`)}
                     >
                       <TableCell className="font-mono text-sm">{employee.employee_id}</TableCell>
                       <TableCell className="font-medium">
-                        {employee.first_name} {employee.last_name}
+                        <div className="flex items-center gap-2">
+                          {employee.first_name} {employee.last_name}
+                          {employee.archived_at && (
+                            <Badge className="bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 text-xs gap-1">
+                              <Archive className="h-3 w-3" />
+                              Archived
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-sm">{employee.email}</TableCell>
                       <TableCell className="text-sm">

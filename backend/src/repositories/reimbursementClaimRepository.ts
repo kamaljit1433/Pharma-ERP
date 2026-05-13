@@ -3,6 +3,7 @@ import {
   ReimbursementClaim,
   ReimbursementClaimFilter,
 } from '../types/benefits';
+import { resolveEmployeeUUID } from '../utils/resolveEmployeeId';
 
 export type ReimbursementClaimResult = ReimbursementClaim & { category: string };
 
@@ -32,10 +33,12 @@ export class ReimbursementClaimRepository {
   async createClaim(data: CreateReimbursementClaimInput): Promise<ReimbursementClaimResult> {
     const claimType = data.claim_type || data.category || 'other';
     const status = data.status || 'pending';
+    const resolvedEmployeeId = await resolveEmployeeUUID(this.db, data.employee_id);
+    if (!resolvedEmployeeId) throw new Error(`Employee not found: ${data.employee_id}`);
 
     const [claim] = await this.db('reimbursement_claims')
       .insert({
-        employee_id: data.employee_id,
+        employee_id: resolvedEmployeeId,
         claim_type: claimType,
         amount: data.amount,
         description: data.description,
@@ -55,8 +58,10 @@ export class ReimbursementClaimRepository {
   }
 
   async getClaimsByEmployee(employeeId: string): Promise<ReimbursementClaimResult[]> {
+    const resolvedId = await resolveEmployeeUUID(this.db, employeeId);
+    if (!resolvedId) return [];
     const claims = await this.db('reimbursement_claims')
-      .where({ employee_id: employeeId })
+      .where({ employee_id: resolvedId })
       .orderBy('created_at', 'desc');
     return claims.map((c: any) => this.mapToClaim(c));
   }
@@ -71,7 +76,11 @@ export class ReimbursementClaimRepository {
   async searchClaims(filters: ReimbursementClaimFilter): Promise<ReimbursementClaimResult[]> {
     let query = this.db('reimbursement_claims');
 
-    if (filters.employee_id) query = query.where('employee_id', filters.employee_id);
+    if (filters.employee_id) {
+      const resolvedId = await resolveEmployeeUUID(this.db, filters.employee_id);
+      if (!resolvedId) return [];
+      query = query.where('employee_id', resolvedId);
+    }
     if (filters.status) query = query.where('status', filters.status);
     if (filters.claim_type) query = query.where('claim_type', filters.claim_type);
     if (filters.from_date) query = query.where('created_at', '>=', filters.from_date);

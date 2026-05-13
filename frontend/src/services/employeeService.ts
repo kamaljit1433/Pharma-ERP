@@ -29,6 +29,8 @@ export interface Employee {
   profile_photo_url?: string;
   created_at?: string;
   updated_at?: string;
+  archived_at?: string;
+  archive_reason?: string;
 }
 
 export interface CreateEmployeeDTO {
@@ -58,6 +60,7 @@ export interface EmployeeFilters {
   search?: string;
   page?: number;
   limit?: number;
+  include_archived?: boolean;
 }
 
 export interface PaginatedResponse<T> {

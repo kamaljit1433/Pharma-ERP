@@ -1,5 +1,6 @@
 ﻿import { Request, Response } from 'express';
 import { Knex } from 'knex';
+import { AuthenticatedRequest } from '../middleware/auth';
 import { InsuranceService } from '../services/insuranceService';
 import { PFService } from '../services/pfService';
 import { GratuityService } from '../services/gratuityService';
@@ -285,9 +286,22 @@ export class BenefitsController {
     }
   }
 
-  async approveClaim(req: Request, res: Response): Promise<void> {
+  async getPendingClaims(req: Request, res: Response): Promise<void> {
     try {
-      const { approverId, approvalNotes } = req.body;
+      const claims = await this.reimbursementService.getClaimsByStatus('pending');
+      res.status(200).json({ success: true, data: claims });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Failed to fetch pending claims',
+      });
+    }
+  }
+
+  async approveClaim(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const { approvalNotes } = req.body;
+      const approverId = req.user!.id;
       const claim = await this.reimbursementService.approveClaim(
         (req.params as any).id,
         approverId,
@@ -307,9 +321,10 @@ export class BenefitsController {
     }
   }
 
-  async rejectClaim(req: Request, res: Response): Promise<void> {
+  async rejectClaim(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const { approverId, approvalNotes } = req.body;
+      const { approvalNotes } = req.body;
+      const approverId = req.user!.id;
       const claim = await this.reimbursementService.rejectClaim(
         (req.params as any).id,
         approverId,

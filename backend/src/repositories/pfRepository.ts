@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+import { resolveEmployeeUUID } from '../utils/resolveEmployeeId';
 
 export interface PFAccount {
   id: string;
@@ -50,9 +51,12 @@ export class PFRepository {
   constructor(private knex: Knex) {}
 
   async createPFAccount(data: CreatePFAccountInput): Promise<PFAccount> {
+    const resolvedId = await resolveEmployeeUUID(this.knex, data.employee_id);
+    if (!resolvedId) throw new Error(`Employee not found: ${data.employee_id}`);
+
     const [row] = await this.knex('pf_accounts')
       .insert({
-        employee_id: data.employee_id,
+        employee_id: resolvedId,
         pf_number: data.pf_number,
         employee_contribution_rate: data.employee_contribution_rate,
         employer_contribution_rate: data.employer_contribution_rate,
@@ -72,8 +76,10 @@ export class PFRepository {
   }
 
   async getPFAccountByEmployee(employeeId: string): Promise<PFAccount | null> {
+    const resolvedId = await resolveEmployeeUUID(this.knex, employeeId);
+    if (!resolvedId) return null;
     const row = await this.knex('pf_accounts')
-      .where({ employee_id: employeeId })
+      .where({ employee_id: resolvedId })
       .orderBy('created_at', 'desc')
       .first();
     return row ? this.mapAccount(row) : null;
@@ -86,7 +92,6 @@ export class PFRepository {
 
   async updatePFAccount(id: string, data: UpdatePFAccountInput): Promise<PFAccount> {
     const updateData: any = { updated_at: new Date() };
-
     if (data.pf_number !== undefined) updateData.pf_number = data.pf_number;
     if (data.employee_contribution_rate !== undefined) updateData.employee_contribution_rate = data.employee_contribution_rate;
     if (data.employer_contribution_rate !== undefined) updateData.employer_contribution_rate = data.employer_contribution_rate;
@@ -113,7 +118,6 @@ export class PFRepository {
       })
       .returning('*');
 
-    // Update balance
     await this.knex('pf_accounts')
       .where({ id: pfAccountId })
       .update({
@@ -142,12 +146,18 @@ export class PFRepository {
     await this.knex('pf_accounts').where({ id }).delete();
   }
 
-  // Legacy methods from old interface
-  async recordPFContribution(data: { employee_id: string; month: number; year: number; basic_salary: number; employee_contribution_rate: number; employer_contribution_rate: number }): Promise<PFContribution> {
+  async recordPFContribution(data: {
+    employee_id: string;
+    month: number;
+    year: number;
+    basic_salary: number;
+    employee_contribution_rate: number;
+    employer_contribution_rate: number;
+  }): Promise<PFContribution> {
     const account = await this.getPFAccountByEmployee(data.employee_id);
     if (!account) throw new Error('PF account not found for employee');
-    const emp = data.employee_contribution_rate / 100 * data.basic_salary;
-    const emr = data.employer_contribution_rate / 100 * data.basic_salary;
+    const emp = (data.employee_contribution_rate / 100) * data.basic_salary;
+    const emr = (data.employer_contribution_rate / 100) * data.basic_salary;
     return this.recordContribution(account.id, {
       month: data.month,
       year: data.year,

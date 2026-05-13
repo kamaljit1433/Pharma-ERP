@@ -9,15 +9,6 @@ import { ReimbursementClaimForm } from '../components/benefits/ReimbursementClai
 import { ReimbursementApproval } from '../components/benefits/ReimbursementApproval';
 import { RewardManagement } from '../components/benefits/RewardManagement';
 
-const tabs = [
-  { id: 'insurance', label: 'Insurance' },
-  { id: 'pf', label: 'PF Statement' },
-  { id: 'gratuity', label: 'Gratuity' },
-  { id: 'reimbursement', label: 'Reimbursements' },
-  { id: 'approval', label: 'Approvals' },
-  { id: 'rewards', label: 'Rewards' },
-];
-
 const Benefits: React.FC = () => {
   const [activeTab, setActiveTab] = useState('insurance');
   const { user } = useAuth();
@@ -26,6 +17,20 @@ const Benefits: React.FC = () => {
   const userId = user?.id ?? '';
   const isAdmin =
     user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.HR_MANAGER;
+  const canApprove =
+    user?.role === UserRole.SUPER_ADMIN ||
+    user?.role === UserRole.HR_MANAGER ||
+    user?.role === UserRole.DEPARTMENT_MANAGER ||
+    user?.role === UserRole.FINANCE;
+
+  const tabs = [
+    { id: 'insurance', label: 'Insurance' },
+    { id: 'pf', label: 'PF Statement' },
+    { id: 'gratuity', label: 'Gratuity' },
+    { id: 'reimbursement', label: 'Reimbursements' },
+    ...(canApprove ? [{ id: 'approval', label: 'Approvals' }] : []),
+    { id: 'rewards', label: 'Rewards' },
+  ];
 
   return (
     <div className="space-y-4">

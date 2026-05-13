@@ -24,12 +24,13 @@ export const Employees: React.FC = () => {
 
   const [isImporting, setIsImporting] = useState(false);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [includeArchived, setIncludeArchived] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
 
-  // Fetch employees on mount
+  // Fetch employees on mount or when includeArchived changes
   useEffect(() => {
-    fetchItems();
-  }, [fetchItems]);
+    fetchItems({ include_archived: includeArchived });
+  }, [fetchItems, includeArchived]);
 
   // Show error toast if there's an error
   useEffect(() => {
@@ -224,6 +225,8 @@ export const Employees: React.FC = () => {
       <EmployeeList
         employees={employees}
         loading={loading}
+        includeArchived={includeArchived}
+        onIncludeArchivedChange={setIncludeArchived}
         {...(canManageEmployees && { onEdit: handleEditEmployee, onDelete: handleDeleteEmployee })}
       />
     </div>

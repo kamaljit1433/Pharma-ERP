@@ -36,8 +36,15 @@ export class AssetRecoveryRepository {
 
   async getAssetRecoveriesByEmployeeId(employeeId: string): Promise<AssetRecoveryChecklist[]> {
     const rows = await this.db('asset_recovery_checklists')
-      .where('employee_id', employeeId)
-      .orderBy('created_at', 'desc');
+      .leftJoin('assets', 'asset_recovery_checklists.asset_id', 'assets.id')
+      .where('asset_recovery_checklists.employee_id', employeeId)
+      .orderBy('asset_recovery_checklists.created_at', 'desc')
+      .select(
+        'asset_recovery_checklists.*',
+        'assets.name as asset_name',
+        'assets.asset_code as asset_code',
+        'assets.category as asset_category'
+      );
     return rows.map((r: any) => this.mapRow(r));
   }
 

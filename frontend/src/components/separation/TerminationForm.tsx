@@ -1,16 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
-import { AlertCircle, CheckCircle2 } from 'lucide-react';
-
-interface TerminationFormProps {
-  employeeId: string;
-  onSubmit: (data: TerminationData) => Promise<void>;
-  isLoading?: boolean;
-}
+import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { EmployeeSearch } from '../performance/EmployeeSearch';
+import { Employee } from '../../services/employeeService';
 
 interface TerminationData {
   termination_date: Date;
@@ -19,40 +15,53 @@ interface TerminationData {
   final_settlement_date?: Date;
 }
 
+interface TerminationFormProps {
+  onSubmit: (targetEmployeeId: string, data: TerminationData) => Promise<void>;
+  isLoading?: boolean;
+  onCancel?: () => void;
+  initialEmployee?: Employee | null;
+}
+
+const toDateString = (d: Date) => d.toISOString().split('T')[0];
+
 export const TerminationForm: React.FC<TerminationFormProps> = ({
-  employeeId,
   onSubmit,
   isLoading = false,
+  onCancel,
+  initialEmployee = null,
 }) => {
+  const [targetEmployeeId, setTargetEmployeeId] = useState(initialEmployee?.id ?? '');
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(initialEmployee);
   const [formData, setFormData] = useState<TerminationData>({
     termination_date: new Date(),
     reason: '',
     termination_type: 'involuntary',
     final_settlement_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
   });
-
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  const handleDateChange = (field: keyof TerminationData, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: new Date(value),
-    }));
-  };
+  useEffect(() => {
+    setTargetEmployeeId(initialEmployee?.id ?? '');
+    setSelectedEmployee(initialEmployee ?? null);
+  }, [initialEmployee?.id]);
 
-  const handleReasonChange = (value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      reason: value,
-    }));
-  };
-
-  const handleTypeChange = (value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      termination_type: value as TerminationData['termination_type'],
-    }));
+  const handleDateChange = (field: 'termination_date' | 'final_settlement_date', value: string) => {
+    const date = new Date(value);
+    if (isNaN(date.getTime())) return;
+    if (field === 'termination_date') {
+      setFormData((prev) => ({
+        ...prev,
+        termination_date: date,
+        // Keep final_settlement_date at least 30 days after new termination date
+        final_settlement_date:
+          !prev.final_settlement_date || prev.final_settlement_date < date
+            ? new Date(date.getTime() + 30 * 24 * 60 * 60 * 1000)
+            : prev.final_settlement_date,
+      }));
+    } else {
+      setFormData((prev) => ({ ...prev, [field]: date }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -60,28 +69,35 @@ export const TerminationForm: React.FC<TerminationFormProps> = ({
     setError(null);
     setSuccess(false);
 
-    // Validate required fields
+    if (!targetEmployeeId) {
+      setError('Please search and select an employee to terminate');
+      return;
+    }
     if (!formData.reason.trim()) {
       setError('Reason for termination is required');
       return;
     }
-
-    if (formData.final_settlement_date && formData.final_settlement_date < formData.termination_date) {
+    if (
+      formData.final_settlement_date &&
+      formData.final_settlement_date < formData.termination_date
+    ) {
       setError('Final settlement date must be on or after termination date');
       return;
     }
 
     try {
-      await onSubmit(formData);
+      await onSubmit(targetEmployeeId.trim(), formData);
       setSuccess(true);
+      setTargetEmployeeId('');
+      setSelectedEmployee(null);
       setFormData({
         termination_date: new Date(),
         reason: '',
         termination_type: 'involuntary',
         final_settlement_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to submit termination');
+    } catch (err: any) {
+      setError(err?.message || 'Failed to initiate termination');
     }
   };
 
@@ -90,38 +106,59 @@ export const TerminationForm: React.FC<TerminationFormProps> = ({
       <CardHeader>
         <CardTitle>Initiate Employee Termination</CardTitle>
         <CardDescription>
-          This action will initiate the employee termination process and trigger offboarding workflows.
-          This is an HR-only operation.
+          HR-only operation. This will trigger the offboarding workflow for the specified employee.
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
           {error && (
             <div className="flex items-center gap-2 p-3 bg-destructive/10 text-destructive rounded-md">
-              <AlertCircle className="h-4 w-4" />
+              <AlertCircle className="h-4 w-4 shrink-0" />
               <span className="text-sm">{error}</span>
             </div>
           )}
-
           {success && (
-            <div className="flex items-center gap-2 p-3 bg-success/10 text-success rounded-md">
-              <CheckCircle2 className="h-4 w-4" />
+            <div className="flex items-center gap-2 p-3 bg-green-50 text-green-700 border border-green-200 rounded-md">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
               <span className="text-sm">Termination initiated successfully</span>
             </div>
           )}
+
+          <div className="space-y-2">
+            {selectedEmployee ? (
+              <div className="flex items-center gap-3 p-3 bg-muted rounded-md text-sm">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-muted-foreground mb-0.5">Employee to Terminate</p>
+                  <p className="font-medium truncate">
+                    {selectedEmployee.first_name} {selectedEmployee.last_name}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {selectedEmployee.employee_id}
+                    {selectedEmployee.email ? ` · ${selectedEmployee.email}` : ''}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <EmployeeSearch
+                label="Employee to Terminate"
+                placeholder="Search by name or employee ID..."
+                onChange={(id, emp) => {
+                  setTargetEmployeeId(id);
+                  setSelectedEmployee(emp);
+                }}
+              />
+            )}
+          </div>
 
           <div className="space-y-2">
             <Label htmlFor="termination_date">Termination Date</Label>
             <Input
               id="termination_date"
               type="date"
-              value={formData.termination_date.toISOString().split('T')[0]}
+              value={toDateString(formData.termination_date)}
               onChange={(e) => handleDateChange('termination_date', e.target.value)}
               required
             />
-            <p className="text-xs text-muted-foreground">
-              The effective date of termination
-            </p>
           </div>
 
           <div className="space-y-2">
@@ -129,8 +166,13 @@ export const TerminationForm: React.FC<TerminationFormProps> = ({
             <select
               id="termination_type"
               value={formData.termination_type}
-              onChange={(e) => handleTypeChange(e.target.value)}
-              className="w-full px-3 py-2 border border-input rounded-md bg-background"
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  termination_type: e.target.value as TerminationData['termination_type'],
+                }))
+              }
+              className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm"
               required
             >
               <option value="involuntary">Involuntary Termination</option>
@@ -138,24 +180,18 @@ export const TerminationForm: React.FC<TerminationFormProps> = ({
               <option value="retirement">Retirement</option>
               <option value="contract_end">Contract End</option>
             </select>
-            <p className="text-xs text-muted-foreground">
-              Select the type of termination
-            </p>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="reason">Reason for Termination</Label>
             <Textarea
               id="reason"
-              placeholder="Please provide the reason for termination..."
+              placeholder="Provide a detailed reason for termination..."
               value={formData.reason}
-              onChange={(e) => handleReasonChange(e.target.value)}
+              onChange={(e) => setFormData((prev) => ({ ...prev, reason: e.target.value }))}
               rows={4}
               required
             />
-            <p className="text-xs text-muted-foreground">
-              Provide detailed reason for termination (required)
-            </p>
           </div>
 
           <div className="space-y-2">
@@ -163,41 +199,34 @@ export const TerminationForm: React.FC<TerminationFormProps> = ({
             <Input
               id="final_settlement_date"
               type="date"
-              value={formData.final_settlement_date?.toISOString().split('T')[0] || ''}
+              value={
+                formData.final_settlement_date ? toDateString(formData.final_settlement_date) : ''
+              }
               onChange={(e) => handleDateChange('final_settlement_date', e.target.value)}
             />
-            <p className="text-xs text-muted-foreground">
-              Expected date for final settlement payment
+            <p className="text-xs text-muted-foreground">Expected date for final settlement payment</p>
+          </div>
+
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-md text-sm">
+            <p className="font-semibold text-amber-800 mb-1">Important</p>
+            <p className="text-amber-700">
+              This action triggers the full offboarding workflow including asset recovery, exit
+              interview, and F&amp;F settlement. Ensure all approvals are in place before proceeding.
             </p>
           </div>
 
           <div className="flex gap-3">
-            <Button type="submit" disabled={isLoading} className="flex-1">
+            <Button type="submit" disabled={isLoading} variant="destructive" className="flex-1">
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : null}
               {isLoading ? 'Processing...' : 'Initiate Termination'}
             </Button>
-            <Button type="button" variant="outline" className="flex-1">
-              Cancel
-            </Button>
-          </div>
-
-          <div className="p-3 bg-muted rounded-md text-sm">
-            <p className="font-semibold mb-2">Termination Process</p>
-            <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-              <li>Employee status will be updated to "Terminated"</li>
-              <li>Offboarding workflow will be automatically triggered</li>
-              <li>Exit interview will be scheduled</li>
-              <li>Asset recovery checklist will be generated</li>
-              <li>Full & Final settlement will be calculated</li>
-              <li>System access will be revoked on termination date</li>
-            </ul>
-          </div>
-
-          <div className="p-3 bg-warning/10 border border-warning rounded-md text-sm">
-            <p className="font-semibold text-warning mb-2">⚠️ Important</p>
-            <p className="text-muted-foreground">
-              This is a critical HR operation. Ensure all necessary approvals and documentation are in place
-              before initiating termination. This action cannot be easily reversed.
-            </p>
+            {onCancel && (
+              <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
+                Cancel
+              </Button>
+            )}
           </div>
         </form>
       </CardContent>

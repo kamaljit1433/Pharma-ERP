@@ -40,6 +40,8 @@ export interface Termination {
   employee_id: string;
   termination_date: Date;
   reason: string;
+  termination_type?: 'voluntary' | 'involuntary' | 'retirement' | 'contract_end';
+  final_settlement_date?: Date;
   status: 'pending' | 'approved' | 'completed';
   approved_by?: string;
   approved_at?: Date;
@@ -50,6 +52,8 @@ export interface Termination {
 export interface CreateTerminationDTO {
   termination_date: Date;
   reason: string;
+  termination_type?: 'voluntary' | 'involuntary' | 'retirement' | 'contract_end';
+  final_settlement_date?: Date;
 }
 
 // Exit Interview Questionnaire Template
@@ -167,6 +171,9 @@ export interface AssetRecoveryChecklist {
   status: 'pending' | 'returned' | 'damaged' | 'missing';
   damage_cost?: number;
   notes?: string;
+  asset_name?: string;
+  asset_code?: string;
+  asset_category?: string;
   created_at: Date;
   updated_at: Date;
 }

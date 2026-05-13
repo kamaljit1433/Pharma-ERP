@@ -13,6 +13,7 @@ import Performance from '../Performance';
 import Training from '../Training';
 import Benefits from '../Benefits';
 import Separation from '../Separation';
+import Assets from '../Assets';
 import Organization from '../Organization';
 import Settings from '../Settings';
 import Profile from '../Profile';
@@ -144,6 +145,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <Separation />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'assets',
+        element: (
+          <ProtectedRoute requiredRoles={[UserRole.HR_MANAGER, UserRole.IT_ADMIN, UserRole.FINANCE, UserRole.SUPER_ADMIN, UserRole.DEPARTMENT_MANAGER]}>
+            <Assets />
           </ProtectedRoute>
         ),
       },

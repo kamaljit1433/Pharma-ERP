@@ -43,6 +43,9 @@ export interface AssetRecoveryItem {
   id: string;
   employee_id: string;
   asset_id: string;
+  asset_name?: string;
+  asset_code?: string;
+  asset_category?: string;
   status: 'pending' | 'returned' | 'damaged' | 'missing';
   damage_cost?: number;
   notes?: string;
@@ -60,10 +63,17 @@ export interface OffboardingStatus {
   dataArchived: boolean;
 }
 
+export interface ExitInterview {
+  id: string;
+  employee_id: string;
+  scheduled_at: Date;
+  status: 'scheduled' | 'completed';
+  conducted_by?: string;
+  questionnaire_responses?: Record<string, string>;
+  feedback?: string;
+}
+
 class SeparationService {
-  /**
-   * Submit resignation for an employee
-   */
   async submitResignation(employeeId: string, data: ResignationData): Promise<any> {
     const response = await apiClient.post(`/separation/resignation`, {
       employee_id: employeeId,
@@ -74,9 +84,6 @@ class SeparationService {
     return response.data;
   }
 
-  /**
-   * Initiate termination for an employee (HR only)
-   */
   async initiateTermination(employeeId: string, data: TerminationData): Promise<any> {
     const response = await apiClient.post(`/separation/termination`, {
       employee_id: employeeId,
@@ -88,58 +95,79 @@ class SeparationService {
     return response.data;
   }
 
-  /**
-   * Schedule exit interview
-   */
-  async scheduleExitInterview(employeeId: string, date: Date): Promise<any> {
+  async getExitInterviewsByEmployee(employeeId: string): Promise<ExitInterview[]> {
+    const response = await apiClient.get(`/separation/exit-interview/employee/${employeeId}`);
+    return response.data?.data ?? response.data ?? [];
+  }
+
+  async scheduleExitInterview(employeeId: string, date: Date): Promise<ExitInterview> {
     const response = await apiClient.post(`/separation/exit-interview`, {
       employee_id: employeeId,
-      scheduled_date: date,
+      scheduled_at: date,
     });
-    return response.data;
+    return response.data?.data ?? response.data;
   }
 
-  /**
-   * Submit exit interview responses
-   */
   async submitExitInterview(exitInterviewId: string, data: ExitInterviewData): Promise<any> {
-    const response = await apiClient.post(`/separation/exit-interview/${exitInterviewId}/submit`, {
-      conducted_by: data.conducted_by,
-      questionnaire_responses: data.questionnaire_responses,
-      feedback: data.feedback,
-    });
+    const response = await apiClient.put(
+      `/separation/exit-interview/${exitInterviewId}/complete`,
+      {
+        conducted_by: data.conducted_by,
+        questionnaire_responses: data.questionnaire_responses,
+        feedback: data.feedback,
+      }
+    );
     return response.data;
   }
 
-  /**
-   * Get F&F settlement for an employee
-   */
   async getFnFSettlement(employeeId: string): Promise<FnFSettlement> {
     const response = await apiClient.get(`/separation/fnf/${employeeId}`);
+    return response.data?.data ?? response.data;
+  }
+
+  async submitFnFForApproval(fnfId: string): Promise<any> {
+    const response = await apiClient.put(`/separation/fnf/${fnfId}/submit`, {});
     return response.data;
   }
 
-  /**
-   * Approve F&F settlement (Finance only)
-   */
+  async updateFnFSettlement(fnfId: string, data: {
+    bonus?: number;
+    other_benefits?: number;
+    other_deductions?: number;
+    pending_salary?: number;
+    leave_encashment?: number;
+    gratuity?: number;
+    advance_deduction?: number;
+  }): Promise<any> {
+    const response = await apiClient.put(`/separation/fnf/${fnfId}/update`, data);
+    return response.data;
+  }
+
   async approveFnFSettlement(fnfId: string, approvedBy: string): Promise<any> {
     const response = await apiClient.put(`/separation/fnf/${fnfId}/approve`, {
-      approved_by: approvedBy,
+      approvedBy,
     });
     return response.data;
   }
 
-  /**
-   * Get asset recovery checklist for an employee
-   */
-  async getAssetRecoveryChecklist(employeeId: string): Promise<AssetRecoveryItem[]> {
-    const response = await apiClient.get(`/separation/asset-recovery/${employeeId}`);
+  async markFnFAsPaid(fnfId: string): Promise<any> {
+    const response = await apiClient.put(`/separation/fnf/${fnfId}/paid`, {});
     return response.data;
   }
 
-  /**
-   * Update asset recovery status
-   */
+  async rejectFnFSettlement(fnfId: string, rejectedBy: string, reason: string): Promise<any> {
+    const response = await apiClient.put(`/separation/fnf/${fnfId}/reject`, {
+      rejectedBy,
+      reason,
+    });
+    return response.data;
+  }
+
+  async getAssetRecoveryChecklist(employeeId: string): Promise<AssetRecoveryItem[]> {
+    const response = await apiClient.get(`/separation/asset-recovery/${employeeId}`);
+    return response.data?.data ?? response.data ?? [];
+  }
+
   async updateAssetRecoveryStatus(
     assetRecoveryId: string,
     status: string,
@@ -152,19 +180,23 @@ class SeparationService {
     return response.data;
   }
 
-  /**
-   * Get offboarding status for an employee
-   */
   async getOffboardingStatus(employeeId: string): Promise<OffboardingStatus> {
-    const response = await apiClient.get(`/separation/offboarding-status/${employeeId}`);
+    const response = await apiClient.get(`/separation/offboarding-check/${employeeId}`);
+    return response.data?.data ?? response.data;
+  }
+
+  async deactivateEmployee(employeeId: string): Promise<any> {
+    const response = await apiClient.put(`/separation/deactivate/${employeeId}`, {});
     return response.data;
   }
 
-  /**
-   * Deactivate employee (HR only)
-   */
-  async deactivateEmployee(employeeId: string): Promise<any> {
-    const response = await apiClient.put(`/separation/deactivate/${employeeId}`, {});
+  async revokeSystemAccess(employeeId: string): Promise<any> {
+    const response = await apiClient.put(`/separation/revoke-access/${employeeId}`, {});
+    return response.data;
+  }
+
+  async archiveEmployee(employeeId: string): Promise<any> {
+    const response = await apiClient.put(`/separation/archive/${employeeId}`, {});
     return response.data;
   }
 }

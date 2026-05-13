@@ -21,7 +21,7 @@ import employeeService from '../services/employeeService';
 
 export const Attendance: React.FC = () => {
   const { user } = useAuth();
-  const { currentStatus, stats, fetchCurrentStatus, fetchStats } = useAttendanceStore();
+  const { currentStatus, fetchCurrentStatus, fetchStats } = useAttendanceStore();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [employeePhotoUrl, setEmployeePhotoUrl] = useState<string | null>(null);
@@ -201,47 +201,6 @@ export const Attendance: React.FC = () => {
           </div>
         </CardContent>
       </Card>
-
-      {/* Statistics Cards */}
-      {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Present Days</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.present_days}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                out of {stats.total_days} working days
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Absent Days</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-destructive">{stats.absent_days}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {stats.half_days} half days
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Late Arrivals</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-warning">{stats.late_arrivals}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Avg: {Number(stats.average_working_hours).toFixed(1)}h/day
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
 
       {/* Tabs */}
       {isManager ? (
