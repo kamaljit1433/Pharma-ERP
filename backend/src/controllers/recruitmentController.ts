@@ -6,6 +6,8 @@ import { InterviewManagementService } from '../services/interviewManagementServi
 import { OfferLetterService } from '../services/offerLetterService';
 import { OnboardingService } from '../services/onboardingService';
 import { AuthenticatedRequest } from '../middleware/auth';
+import { googleFormsService } from '../services/googleFormsService';
+import { FormResponseSyncService } from '../services/formResponseSyncService';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const VALID_STAGES = ['applied', 'screening', 'interview', 'offer', 'hired', 'rejected'] as const;
@@ -38,6 +40,7 @@ export class RecruitmentController {
   private interviewManagementService: InterviewManagementService;
   private offerLetterService: OfferLetterService;
   private onboardingService: OnboardingService;
+  private formSyncService: FormResponseSyncService;
 
   constructor() {
     this.jobPostingRepository = new JobPostingRepository(knex);
@@ -45,12 +48,13 @@ export class RecruitmentController {
     this.interviewManagementService = new InterviewManagementService(knex);
     this.offerLetterService = new OfferLetterService(knex);
     this.onboardingService = new OnboardingService(knex);
+    this.formSyncService = new FormResponseSyncService(knex);
   }
 
   // Job Posting endpoints
   async createJobPosting(req: Request, res: Response): Promise<void> {
     try {
-      const { title, department_id, designation_id, description, positions_count, application_deadline, closing_date } = req.body;
+      const { title, department_id, designation_id, description, positions_count, application_deadline, closing_date, status } = req.body;
 
       if (!title || typeof title !== 'string' || !title.trim()) {
         res.status(400).json({ success: false, error: 'Job title is required' });
@@ -69,9 +73,31 @@ export class RecruitmentController {
         description,
         positions_count: positionsNum,
         closing_date: closing_date ? new Date(closing_date) : application_deadline ? new Date(application_deadline) : undefined,
+        status: status === 'draft' ? 'draft' : 'open',
       });
 
+      // Respond immediately — form generation runs in the background
       res.status(201).json({ success: true, data: jobPosting });
+
+      // Fire-and-forget: generate Google Form after responding to client
+      if (googleFormsService.isEnabled()) {
+        googleFormsService
+          .createApplicationForm(jobPosting.id, jobPosting.title)
+          .then(({ formId, formUrl }) =>
+            this.jobPostingRepository.updateFormData(jobPosting.id, {
+              form_id: formId,
+              form_url: formUrl,
+              form_status: 'generated',
+            })
+          )
+          .catch((err) => {
+            const detail = err?.response?.data ?? err?.errors ?? err?.message ?? err;
+            console.error('[Forms] Failed to create form for job', jobPosting.id, JSON.stringify(detail));
+            this.jobPostingRepository
+              .updateFormData(jobPosting.id, { form_status: 'failed' })
+              .catch(() => {});
+          });
+      }
     } catch (error) {
       handleError(res, error);
     }
@@ -254,6 +280,32 @@ export class RecruitmentController {
     }
   }
 
+  async deleteInterview(req: Request, res: Response): Promise<void> {
+    try {
+      const interview_id = req.params['interview_id'] as string;
+      await this.interviewManagementService.deleteInterview(interview_id);
+      res.status(200).json({ success: true });
+    } catch (error) {
+      handleError(res, error);
+    }
+  }
+
+  async updateInterview(req: Request, res: Response): Promise<void> {
+    try {
+      const interview_id = req.params['interview_id'] as string;
+      const { scheduled_at, type, duration_minutes, notes } = req.body;
+      const interview = await this.interviewManagementService.updateInterview(interview_id, {
+        ...(scheduled_at && { scheduled_at: new Date(scheduled_at) }),
+        ...(type && { type }),
+        ...(duration_minutes && { duration_minutes: Number(duration_minutes) }),
+        ...(notes !== undefined && { notes }),
+      });
+      res.status(200).json({ success: true, data: interview });
+    } catch (error) {
+      handleError(res, error);
+    }
+  }
+
   async submitInterviewFeedback(req: Request, res: Response): Promise<void> {
     try {
       const interview_id = req.params['interview_id'] as string;
@@ -298,6 +350,15 @@ export class RecruitmentController {
   }
 
   // Offer Letter endpoints
+  async getOfferLetters(req: Request, res: Response): Promise<void> {
+    try {
+      const offerLetters = await this.offerLetterService.getOfferLetters();
+      res.status(200).json({ success: true, data: offerLetters });
+    } catch (error) {
+      handleError(res, error);
+    }
+  }
+
   async generateOfferLetter(req: Request, res: Response): Promise<void> {
     try {
       const { applicant_id, position, department, salary, start_date, terms } = req.body;
@@ -340,6 +401,16 @@ export class RecruitmentController {
       const offer_letter_id = req.params['offer_letter_id'] as string;
       const offerLetter = await this.offerLetterService.sendOfferLetter(offer_letter_id);
       res.status(200).json({ success: true, data: offerLetter });
+    } catch (error) {
+      handleError(res, error);
+    }
+  }
+
+  async deleteOfferLetter(req: Request, res: Response): Promise<void> {
+    try {
+      const offer_letter_id = req.params['offer_letter_id'] as string;
+      await this.offerLetterService.deleteOfferLetter(offer_letter_id);
+      res.status(200).json({ success: true });
     } catch (error) {
       handleError(res, error);
     }
@@ -409,6 +480,56 @@ export class RecruitmentController {
       }
 
       res.status(200).json({ success: true, data: checklist });
+    } catch (error) {
+      handleError(res, error);
+    }
+  }
+
+  async deleteJobPosting(req: Request, res: Response): Promise<void> {
+    try {
+      const id = req.params['id'] as string;
+      const existing = await this.jobPostingRepository.getJobPostingById(id);
+      if (!existing) {
+        res.status(404).json({ success: false, error: 'Job posting not found' });
+        return;
+      }
+      await this.jobPostingRepository.deleteJobPosting(id);
+      res.status(200).json({ success: true, message: 'Job posting deleted' });
+    } catch (error) {
+      handleError(res, error);
+    }
+  }
+
+  async updateJobPostingStatus(req: Request, res: Response): Promise<void> {
+    try {
+      const id = req.params['id'] as string;
+      const { status } = req.body;
+      const validStatuses = ['draft', 'open', 'closed', 'on_hold'];
+      if (!status || !validStatuses.includes(status)) {
+        res.status(400).json({ success: false, error: `status must be one of: ${validStatuses.join(', ')}` });
+        return;
+      }
+      const existing = await this.jobPostingRepository.getJobPostingById(id);
+      if (!existing) {
+        res.status(404).json({ success: false, error: 'Job posting not found' });
+        return;
+      }
+      const updated = await this.jobPostingRepository.updateJobPostingStatus(id, status);
+      res.status(200).json({ success: true, data: updated });
+    } catch (error) {
+      handleError(res, error);
+    }
+  }
+
+  // Manually trigger a form response sync (HR can call this on-demand)
+  async syncFormResponses(req: Request, res: Response): Promise<void> {
+    try {
+      if (!googleFormsService.isEnabled()) {
+        res.status(503).json({ success: false, error: 'Google Forms integration is not configured' });
+        return;
+      }
+      const result = await this.formSyncService.syncNow();
+      res.status(200).json({ success: true, data: result });
     } catch (error) {
       handleError(res, error);
     }

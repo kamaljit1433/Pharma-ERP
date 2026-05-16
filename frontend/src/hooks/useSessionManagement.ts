@@ -1,18 +1,26 @@
 import { useEffect, useRef } from 'react';
 import { useAuthStore } from '@/store/authStore';
 
-const SESSION_REFRESH_INTERVAL = 25 * 60 * 1000; // 25 minutes
-const SESSION_CHECK_INTERVAL = 60 * 1000; // 1 minute
+const SESSION_REFRESH_INTERVAL = 10 * 60 * 1000; // 10 min — well before 15-min JWT expiry
+const SESSION_CHECK_INTERVAL = 60 * 1000;         // 1 min
 const MAX_REFRESH_RETRIES = 3;
-const RETRY_BACKOFF_MS = 5000; // 5 seconds
+const RETRY_BACKOFF_MS = 5000;
 
-/**
- * Hook to manage user session
- * - Automatically refreshes session every 25 minutes
- * - Checks for session expiry every minute
- * - Implements retry logic for failed refreshes
- * - Redirects to login if session expires
- */
+export const IDLE_TIMEOUT_KEY = 'session-idle-timeout-minutes';
+export const LAST_ACTIVITY_KEY = 'session-last-activity';
+
+const ACTIVITY_EVENTS = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'] as const;
+
+function recordActivity() {
+  localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()));
+}
+
+function getIdleTimeoutMs(): number {
+  const raw = localStorage.getItem(IDLE_TIMEOUT_KEY);
+  const minutes = raw !== null ? parseInt(raw, 10) : 60;
+  return minutes > 0 ? minutes * 60 * 1000 : 0; // 0 means never
+}
+
 export const useSessionManagement = () => {
   const { isAuthenticated, sessionExpiresAt, refreshSession, logout } = useAuthStore();
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -22,82 +30,67 @@ export const useSessionManagement = () => {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      // Clear intervals if not authenticated
-      if (refreshIntervalRef.current) {
-        clearInterval(refreshIntervalRef.current);
-        refreshIntervalRef.current = null;
-      }
-      if (checkIntervalRef.current) {
-        clearInterval(checkIntervalRef.current);
-        checkIntervalRef.current = null;
-      }
+      if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current);
+      if (checkIntervalRef.current) clearInterval(checkIntervalRef.current);
+      refreshIntervalRef.current = null;
+      checkIntervalRef.current = null;
       refreshRetryCountRef.current = 0;
       isRefreshingRef.current = false;
       return;
     }
 
-    // Perform session refresh with retry logic
-    const performRefresh = async () => {
-      // Prevent concurrent refresh attempts
-      if (isRefreshingRef.current) {
-        console.log('Refresh already in progress, skipping...');
-        return;
-      }
+    // Track activity
+    recordActivity();
+    ACTIVITY_EVENTS.forEach((e) => window.addEventListener(e, recordActivity, { passive: true }));
 
+    const performRefresh = async () => {
+      if (isRefreshingRef.current) return;
       isRefreshingRef.current = true;
       try {
-        console.log('Refreshing session...');
         await refreshSession();
-        refreshRetryCountRef.current = 0; // Reset retry count on success
+        refreshRetryCountRef.current = 0;
       } catch (error) {
-        console.error('Session refresh failed:', error);
         refreshRetryCountRef.current++;
-
-        // If max retries exceeded, logout
         if (refreshRetryCountRef.current >= MAX_REFRESH_RETRIES) {
-          console.log('Max refresh retries exceeded, logging out...');
           logout();
           refreshRetryCountRef.current = 0;
         } else {
-          // Schedule retry with exponential backoff
-          const retryDelay = RETRY_BACKOFF_MS * refreshRetryCountRef.current;
-          console.log(`Scheduling refresh retry in ${retryDelay}ms (attempt ${refreshRetryCountRef.current}/${MAX_REFRESH_RETRIES})`);
+          const delay = RETRY_BACKOFF_MS * refreshRetryCountRef.current;
           setTimeout(() => {
             isRefreshingRef.current = false;
             performRefresh();
-          }, retryDelay);
+          }, delay);
         }
       } finally {
         isRefreshingRef.current = false;
       }
     };
 
-    // Set up automatic session refresh
-    refreshIntervalRef.current = setInterval(() => {
-      performRefresh();
-    }, SESSION_REFRESH_INTERVAL);
+    refreshIntervalRef.current = setInterval(performRefresh, SESSION_REFRESH_INTERVAL);
 
-    // Set up session expiry check
     checkIntervalRef.current = setInterval(() => {
+      // Hard session expiry
       if (sessionExpiresAt && Date.now() >= sessionExpiresAt) {
-        console.log('Session expired, logging out...');
         logout();
+        return;
+      }
+
+      // Inactivity timeout
+      const idleMs = getIdleTimeoutMs();
+      if (idleMs > 0) {
+        const lastActivity = parseInt(localStorage.getItem(LAST_ACTIVITY_KEY) || '0', 10);
+        if (lastActivity && Date.now() - lastActivity >= idleMs) {
+          logout();
+        }
       }
     }, SESSION_CHECK_INTERVAL);
 
-    // Cleanup on unmount
     return () => {
-      if (refreshIntervalRef.current) {
-        clearInterval(refreshIntervalRef.current);
-      }
-      if (checkIntervalRef.current) {
-        clearInterval(checkIntervalRef.current);
-      }
+      if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current);
+      if (checkIntervalRef.current) clearInterval(checkIntervalRef.current);
+      ACTIVITY_EVENTS.forEach((e) => window.removeEventListener(e, recordActivity));
     };
   }, [isAuthenticated, sessionExpiresAt, refreshSession, logout]);
 
-  return {
-    isAuthenticated,
-    sessionExpiresAt,
-  };
+  return { isAuthenticated, sessionExpiresAt };
 };

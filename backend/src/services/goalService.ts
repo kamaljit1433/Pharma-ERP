@@ -18,10 +18,7 @@ export class GoalService {
       throw new Error('Target value must be greater than 0');
     }
 
-    return this.goalRepository.createGoal({
-      ...data,
-      createdBy: userId,
-    });
+    return this.goalRepository.createGoal({ ...data });
   }
 
   async getGoal(goalId: string): Promise<Goal> {

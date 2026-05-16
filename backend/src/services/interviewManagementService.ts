@@ -117,6 +117,23 @@ export class InterviewManagementService {
     return interview;
   }
 
+  async deleteInterview(id: string): Promise<void> {
+    const interview = await this.interviewRepository.getInterviewById(id);
+    if (!interview) throw new Error('Interview not found');
+    await this.interviewRepository.deleteInterview(id);
+  }
+
+  async updateInterview(id: string, data: {
+    scheduled_at?: Date;
+    type?: 'phone' | 'video' | 'in_person';
+    duration_minutes?: number;
+    notes?: string;
+  }): Promise<Interview> {
+    const interview = await this.interviewRepository.getInterviewById(id);
+    if (!interview) throw new Error('Interview not found');
+    return this.interviewRepository.updateInterview(id, data);
+  }
+
   async getScheduledInterviews(startDate: Date, endDate: Date): Promise<Interview[]> {
     return this.interviewRepository.getScheduledInterviews(startDate, endDate);
   }

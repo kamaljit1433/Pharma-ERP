@@ -68,6 +68,7 @@ interface PerformanceState {
   // Goals
   goals: Goal[];
   loadingGoals: boolean;
+  fetchAllGoals: () => Promise<void>;
   fetchEmployeeGoals: (employeeId: string, cycleId?: string) => Promise<void>;
   createGoal: (data: any) => Promise<void>;
   updateGoal: (id: string, data: any) => Promise<void>;
@@ -121,6 +122,17 @@ export const usePerformanceStore = create<PerformanceState>()(
       // Goals
       goals: [],
       loadingGoals: false,
+      fetchAllGoals: async () => {
+        set({ loadingGoals: true, error: null });
+        try {
+          const data = await performanceService.getAllGoals();
+          set({ goals: data });
+        } catch (error) {
+          set({ error: (error as Error).message });
+        } finally {
+          set({ loadingGoals: false });
+        }
+      },
       fetchEmployeeGoals: async (employeeId, cycleId) => {
         set({ loadingGoals: true, error: null });
         try {
@@ -136,16 +148,22 @@ export const usePerformanceStore = create<PerformanceState>()(
         set({ error: null });
         try {
           await performanceService.createGoal(data);
+          const fresh = await performanceService.getAllGoals();
+          set({ goals: fresh });
         } catch (error) {
           set({ error: (error as Error).message });
+          throw error;
         }
       },
       updateGoal: async (id, data) => {
         set({ error: null });
         try {
           await performanceService.updateGoal(id, data);
+          const fresh = await performanceService.getAllGoals();
+          set({ goals: fresh });
         } catch (error) {
           set({ error: (error as Error).message });
+          throw error;
         }
       },
       updateGoalProgress: async (id, currentValue, comment) => {

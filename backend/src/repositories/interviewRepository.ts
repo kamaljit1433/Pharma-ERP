@@ -78,6 +78,22 @@ export class InterviewRepository {
     return this.knex('interview_feedback').where({ id }).first();
   }
 
+  async deleteInterview(id: string): Promise<void> {
+    await this.knex('interviews').where({ id }).del();
+  }
+
+  async updateInterview(id: string, data: {
+    scheduled_at?: Date;
+    type?: 'phone' | 'video' | 'in_person';
+    duration_minutes?: number;
+    notes?: string;
+  }): Promise<Interview> {
+    await this.knex('interviews').where({ id }).update({ ...data, updated_at: new Date() });
+    const interview = await this.getInterviewById(id);
+    if (!interview) throw new Error('Interview not found');
+    return interview;
+  }
+
   async getScheduledInterviews(startDate: Date, endDate: Date): Promise<Interview[]> {
     // Convert dates to ISO strings for SQLite compatibility
     const startDateStr = startDate.toISOString().substring(0, 10);

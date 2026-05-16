@@ -1,18 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Textarea } from '../ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { useRecruitmentStore } from '../../store/recruitmentStore';
-import { OfferLetter } from '../../types/recruitment';
 import { Award, Send, AlertCircle } from 'lucide-react';
+import { SearchableSelect } from '../ui/searchable-select';
+import { DatePicker } from '../ui/date-picker';
+import hierarchyService, { Department } from '../../services/hierarchyService';
 
 interface JobOfferFormProps {
   applicantId: string;
   applicantName: string;
   applicantEmail: string;
+  initialDepartment?: string;
+  initialPosition?: string;
   onSuccess?: () => void;
   onCancel?: () => void;
 }
@@ -21,22 +24,29 @@ export const JobOfferForm: React.FC<JobOfferFormProps> = ({
   applicantId,
   applicantName,
   applicantEmail,
+  initialDepartment = '',
+  initialPosition = '',
   onSuccess,
   onCancel,
 }) => {
   const { generateOffer, sendOffer, loading, error } = useRecruitmentStore();
 
   const [formData, setFormData] = useState({
-    position: '',
-    department: '',
+    position: initialPosition,
+    department: initialDepartment,
     salary: '',
     start_date: '',
     terms: '',
   });
 
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [generatedOfferId, setGeneratedOfferId] = useState<string | null>(null);
   const [localError, setLocalError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+
+  useEffect(() => {
+    hierarchyService.getDepartments().then(setDepartments).catch(() => {});
+  }, []);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -91,7 +101,9 @@ export const JobOfferForm: React.FC<JobOfferFormProps> = ({
       });
 
       setGeneratedOfferId(response.id);
-      setSuccessMessage('Offer letter generated successfully');
+      setSuccessMessage('Offer letter generated! You can send it now or later from Job Offer Tracker.');
+      // Move candidate to Offer stage immediately after generation
+      onSuccess?.();
     } catch (err) {
       setLocalError((err as Error).message || 'Failed to generate offer letter');
     }
@@ -175,12 +187,15 @@ export const JobOfferForm: React.FC<JobOfferFormProps> = ({
 
             <div>
               <Label htmlFor="department">Department *</Label>
-              <Input
-                id="department"
-                name="department"
-                value={formData.department}
-                onChange={handleInputChange}
-                placeholder="e.g., Engineering"
+              <SearchableSelect
+                options={departments}
+                value={departments.find((d) => d.name === formData.department)?.id ?? ''}
+                onChange={(id) => {
+                  const name = departments.find((d) => d.id === id)?.name ?? '';
+                  setFormData((p) => ({ ...p, department: name }));
+                  setLocalError('');
+                }}
+                placeholder="Search department..."
                 disabled={loading || !!generatedOfferId}
               />
             </div>
@@ -203,12 +218,11 @@ export const JobOfferForm: React.FC<JobOfferFormProps> = ({
 
             <div>
               <Label htmlFor="start_date">Start Date *</Label>
-              <Input
+              <DatePicker
                 id="start_date"
-                name="start_date"
-                type="date"
                 value={formData.start_date}
-                onChange={handleInputChange}
+                onChange={(val) => { setFormData((p) => ({ ...p, start_date: val })); setLocalError(''); }}
+                placeholder="Select start date"
                 disabled={loading || !!generatedOfferId}
               />
             </div>

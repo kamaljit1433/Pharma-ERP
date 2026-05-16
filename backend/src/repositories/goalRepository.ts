@@ -4,8 +4,8 @@ import { Goal, CreateGoalDTO, UpdateGoalProgressDTO } from '../types/performance
 export class GoalRepository {
   constructor(private db: Knex) {}
 
-  async createGoal(data: CreateGoalDTO & { createdBy: string }): Promise<Goal> {
-    const ids = await this.db('goals').insert({
+  async createGoal(data: CreateGoalDTO & { createdBy?: string }): Promise<Goal> {
+    const insertData: any = {
       employee_id: data.employeeId,
       cycle_id: data.cycleId,
       type: data.type,
@@ -18,16 +18,16 @@ export class GoalRepository {
       due_date: data.dueDate,
       status: 'On Track',
       completion_percentage: 0,
-      created_by: data.createdBy,
       created_at: new Date(),
       updated_at: new Date(),
-    });
+    };
+    const rows = await this.db('goals').insert(insertData).returning('id');
 
-    const id = Array.isArray(ids) ? ids[0] : ids;
+    const id = Array.isArray(rows) ? (rows[0]?.id ?? rows[0]) : rows;
     if (!id) {
       throw new Error('Failed to create goal');
     }
-    return this.getGoalById(id.toString()) as Promise<Goal>;
+    return this.getGoalById(String(id)) as Promise<Goal>;
   }
 
   async getGoalById(id: string): Promise<Goal | null> {
@@ -38,6 +38,11 @@ export class GoalRepository {
     }
 
     return this.mapGoal(goal);
+  }
+
+  async getAllGoals(): Promise<Goal[]> {
+    const goals = await this.db('goals').orderBy('created_at', 'desc');
+    return goals.map((goal) => this.mapGoal(goal));
   }
 
   async getGoalsByEmployee(employeeId: string): Promise<Goal[]> {
@@ -104,6 +109,29 @@ export class GoalRepository {
       });
     }
 
+    return this.getGoalById(goalId) as Promise<Goal>;
+  }
+
+  async updateGoalFull(goalId: string, data: {
+    title?: string;
+    description?: string;
+    type?: string;
+    targetValue?: number;
+    unit?: string;
+    weight?: number;
+    dueDate?: Date;
+    status?: string;
+  }): Promise<Goal> {
+    const update: any = { updated_at: new Date() };
+    if (data.title       !== undefined) update.title        = data.title;
+    if (data.description !== undefined) update.description  = data.description;
+    if (data.type        !== undefined) update.type         = data.type;
+    if (data.targetValue !== undefined) update.target_value = data.targetValue;
+    if (data.unit        !== undefined) update.unit         = data.unit;
+    if (data.weight      !== undefined) update.weight       = data.weight;
+    if (data.dueDate     !== undefined) update.due_date     = data.dueDate;
+    if (data.status      !== undefined) update.status       = data.status;
+    await this.db('goals').where('id', goalId).update(update);
     return this.getGoalById(goalId) as Promise<Goal>;
   }
 

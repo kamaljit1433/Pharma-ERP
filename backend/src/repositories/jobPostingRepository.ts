@@ -102,29 +102,40 @@ export class JobPostingRepository {
   }
 
   async searchJobPostings(searchOrFilters: string | JobPostingFilters): Promise<JobPosting[]> {
-    let query = this.knex('job_postings');
+    let query = this.knex('job_postings')
+      .leftJoin('departments', 'job_postings.department_id', 'departments.id')
+      .select('job_postings.*', 'departments.name as department_name');
 
     if (typeof searchOrFilters === 'string') {
       const term = searchOrFilters.toLowerCase();
-      query = query.where((q) => {
-        q.whereRaw('LOWER(title) LIKE ?', [`%${term}%`])
-          .orWhereRaw('LOWER(description) LIKE ?', [`%${term}%`]);
+      query = query.where((q: any) => {
+        q.whereRaw('LOWER(job_postings.title) LIKE ?', [`%${term}%`])
+          .orWhereRaw('LOWER(job_postings.description) LIKE ?', [`%${term}%`]);
       });
     } else {
       const filters = searchOrFilters;
-      if (filters.department_id) query = query.where('department_id', filters.department_id);
-      if (filters.status) query = query.where('status', filters.status);
+      if (filters.department_id) query = query.where('job_postings.department_id', filters.department_id);
+      if (filters.status) query = query.where('job_postings.status', filters.status);
       if (filters.search) {
         const term = filters.search.toLowerCase();
-        query = query.where((q) => {
-          q.whereRaw('LOWER(title) LIKE ?', [`%${term}%`])
-            .orWhereRaw('LOWER(description) LIKE ?', [`%${term}%`]);
+        query = query.where((q: any) => {
+          q.whereRaw('LOWER(job_postings.title) LIKE ?', [`%${term}%`])
+            .orWhereRaw('LOWER(job_postings.description) LIKE ?', [`%${term}%`]);
         });
       }
       query = query.limit(filters.limit || 50).offset(filters.offset || 0);
     }
 
-    return query.orderBy('created_at', 'desc');
+    return query.orderBy('job_postings.created_at', 'desc');
+  }
+
+  async updateFormData(
+    id: string,
+    data: { form_id?: string; form_url?: string; form_status: 'pending' | 'generated' | 'failed' }
+  ): Promise<void> {
+    await this.knex('job_postings')
+      .where('id', id)
+      .update({ ...data, updated_at: this.knex.fn.now() });
   }
 
   async deleteJobPosting(id: string): Promise<void> {

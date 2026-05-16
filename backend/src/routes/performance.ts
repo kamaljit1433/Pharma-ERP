@@ -18,6 +18,10 @@ export function createPerformanceRoutes(knex: Knex): Router {
 
   // ============ Goals ============
 
+  router.get('/goals', (req: Request, res: Response, next: NextFunction) =>
+    controller.listGoals(req, res, next)
+  );
+
   router.post(
     '/goals',
     authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER]) as any,

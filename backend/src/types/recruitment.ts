@@ -1,13 +1,18 @@
 export interface JobPosting {
   id: string;
   title: string;
-  department_id: string;
-  designation_id: string;
+  department_id?: string;
+  department_name?: string;
+  designation_id?: string;
   description: string;
   positions_count: number;
   status: 'draft' | 'open' | 'closed' | 'on_hold';
   posted_date?: Date;
   closing_date?: Date;
+  form_id?: string;
+  form_url?: string;
+  form_status: 'pending' | 'generated' | 'failed';
+  form_last_synced_at?: Date;
   created_at: Date;
   updated_at: Date;
 }

@@ -35,6 +35,11 @@ export class OfferLetterRepository {
     return row ? this.mapToOfferLetter(row) : null;
   }
 
+  async getOfferLettersByApplicant(applicantId: string): Promise<OfferLetter[]> {
+    const rows = await this.knex('offer_letters').where({ applicant_id: applicantId });
+    return rows.map((r: any) => this.mapToOfferLetter(r));
+  }
+
   async updateOfferLetter(id: string, data: Partial<OfferLetter>): Promise<OfferLetter> {
     await this.knex('offer_letters').where({ id }).update({
       ...data,
@@ -55,6 +60,11 @@ export class OfferLetterRepository {
 
   async deleteOfferLetter(id: string): Promise<void> {
     await this.knex('offer_letters').where({ id }).del();
+  }
+
+  async getAllOfferLetters(): Promise<OfferLetter[]> {
+    const rows = await this.knex('offer_letters').orderBy('created_at', 'desc');
+    return rows.map((r: any) => this.mapToOfferLetter(r));
   }
 
   async getOfferLettersByStatus(status: string): Promise<OfferLetter[]> {

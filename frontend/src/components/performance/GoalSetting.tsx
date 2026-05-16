@@ -14,6 +14,7 @@ import { Textarea } from '../ui/textarea';
 import { usePerformanceStore } from '../../store/performanceStore';
 import { AlertCircle, CheckCircle2, Target } from 'lucide-react';
 import { EmployeeSearch } from './EmployeeSearch';
+import { DatePicker } from '../ui/date-picker';
 
 interface GoalSettingProps {
   onSuccess?: () => void;
@@ -97,8 +98,10 @@ export const GoalSetting: React.FC<GoalSettingProps> = ({ onSuccess }) => {
         weight: '',
         dueDate: '',
       });
-      setTimeout(() => setSuccess(false), 3000);
-      onSuccess?.();
+      setTimeout(() => {
+        setSuccess(false);
+        onSuccess?.();
+      }, 1000);
     } catch (err) {
       console.error('Failed to create goal:', err);
     } finally {
@@ -248,13 +251,11 @@ export const GoalSetting: React.FC<GoalSettingProps> = ({ onSuccess }) => {
             </div>
 
             <div>
-              <Label htmlFor="dueDate">Due Date</Label>
-              <Input
-                id="dueDate"
-                name="dueDate"
-                type="date"
+              <Label>Due Date</Label>
+              <DatePicker
                 value={formData.dueDate}
-                onChange={handleChange}
+                onChange={(v) => setFormData((p) => ({ ...p, dueDate: v }))}
+                placeholder="Pick due date"
               />
             </div>
           </div>

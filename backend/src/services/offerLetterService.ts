@@ -122,6 +122,10 @@ export class OfferLetterService {
     return updated;
   }
 
+  async getOfferLetters(): Promise<OfferLetter[]> {
+    return this.offerLetterRepository.getAllOfferLetters();
+  }
+
   async getOfferLetter(id: string): Promise<OfferLetter> {
     const offerLetter = await this.offerLetterRepository.getOfferLetterById(id);
     if (!offerLetter) {
@@ -132,5 +136,16 @@ export class OfferLetterService {
 
   async getOfferLetterByApplicant(applicantId: string): Promise<OfferLetter | null> {
     return this.offerLetterRepository.getOfferLetterByApplicant(applicantId);
+  }
+
+  async deleteOfferLetter(offerLetterId: string): Promise<void> {
+    const offerLetter = await this.offerLetterRepository.getOfferLetterById(offerLetterId);
+    if (!offerLetter) {
+      throw new Error('Offer letter not found');
+    }
+    if (offerLetter.status !== 'draft') {
+      throw new Error('Only draft offer letters can be deleted');
+    }
+    await this.offerLetterRepository.deleteOfferLetter(offerLetterId);
   }
 }

@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { Button } from '../ui/button';
-import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { Input } from '../ui/input';
+import { DateTimePicker } from '../ui/date-time-picker';
 import { recruitmentService } from '../../services/recruitmentService';
-import { Calendar, Clock, Users } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 
 interface InterviewSchedulerProps {
   applicantId: string;
@@ -54,10 +55,11 @@ export const InterviewScheduler: React.FC<InterviewSchedulerProps> = ({ applican
     setError('');
 
     try {
+      const modeToType: Record<string, string> = { 'In-Person': 'in_person', 'Video': 'video', 'Phone': 'phone' };
       await recruitmentService.scheduleInterview({
         applicant_id: applicantId,
         scheduled_at: new Date(formData.scheduled_at),
-        mode: formData.mode,
+        type: modeToType[formData.mode] as any,
         interviewers: formData.interviewers,
       });
 
@@ -89,13 +91,11 @@ export const InterviewScheduler: React.FC<InterviewSchedulerProps> = ({ applican
 
           <div>
             <Label htmlFor="scheduled_at">Interview Date & Time</Label>
-            <Input
+            <DateTimePicker
               id="scheduled_at"
-              name="scheduled_at"
-              type="datetime-local"
               value={formData.scheduled_at}
-              onChange={handleInputChange}
-              required
+              onChange={(val) => setFormData((prev) => ({ ...prev, scheduled_at: val }))}
+              placeholder="Select date & time"
             />
           </div>
 

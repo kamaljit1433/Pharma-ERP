@@ -58,7 +58,13 @@ export class ApplicantRepository {
     stage?: string;
     search?: string;
   }): Promise<Applicant[]> {
-    let query = this.knex('applicants');
+    let query = this.knex('applicants').select(
+      'applicants.*',
+      this.knex.raw("CONCAT(first_name, ' ', last_name) as name"),
+      this.knex.raw("INITCAP(stage) as current_stage"),
+      'created_at as applied_at',
+      'phone as contact_number'
+    );
 
     if (filters.jobPostingId) {
       query = query.where({ job_posting_id: filters.jobPostingId });
@@ -69,7 +75,7 @@ export class ApplicantRepository {
     }
 
     if (filters.search) {
-      query = query.where((builder) => {
+      query = query.where((builder: any) => {
         builder
           .where('first_name', 'ilike', `%${filters.search}%`)
           .orWhere('last_name', 'ilike', `%${filters.search}%`)
@@ -77,6 +83,6 @@ export class ApplicantRepository {
       });
     }
 
-    return query;
+    return query.orderBy('created_at', 'desc');
   }
 }

@@ -8,6 +8,11 @@ export const performanceService = {
     return response.data;
   },
 
+  getAllGoals: async () => {
+    const response = await apiClient.get('/performance/goals');
+    return response.data;
+  },
+
   getGoal: async (id: string) => {
     const response = await apiClient.get(`/performance/goals/${id}`);
     return response.data;

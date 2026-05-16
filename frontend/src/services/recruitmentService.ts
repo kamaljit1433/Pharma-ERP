@@ -10,6 +10,19 @@ import {
   SendCommunicationDTO,
 } from '../types/recruitment';
 
+const TYPE_TO_MODE: Record<string, string> = {
+  in_person: 'In-Person',
+  video: 'Video',
+  phone: 'Phone',
+};
+
+const normalizeInterview = (i: any) => ({
+  ...i,
+  mode: TYPE_TO_MODE[i.type as string] ?? i.mode ?? i.type ?? '',
+  interviewers: i.interviewer_id ? [i.interviewer_id] : (i.interviewers ?? []),
+  status: i.status ? i.status.charAt(0).toUpperCase() + i.status.slice(1) : 'Scheduled',
+});
+
 export const recruitmentService = {
   // Job Postings
   createJobPosting: async (data: Partial<JobPosting>) => {
@@ -24,6 +37,16 @@ export const recruitmentService = {
 
   getJobPosting: async (id: string) => {
     const response = await apiClient.get(`/recruitment/jobs/${id}`);
+    return response.data.data;
+  },
+
+  deleteJobPosting: async (id: string) => {
+    const response = await apiClient.delete(`/recruitment/jobs/${id}`);
+    return response.data;
+  },
+
+  updateJobPostingStatus: async (id: string, status: 'draft' | 'open' | 'closed' | 'on_hold') => {
+    const response = await apiClient.put(`/recruitment/jobs/${id}/status`, { status });
     return response.data.data;
   },
 
@@ -46,22 +69,32 @@ export const recruitmentService = {
   // Interviews
   scheduleInterview: async (data: Partial<Interview>) => {
     const response = await apiClient.post('/recruitment/interviews', data);
-    return response.data;
+    return normalizeInterview(response.data.data ?? response.data);
   },
 
   getInterviews: async (filters?: { applicant_id?: string; status?: string }) => {
     const response = await apiClient.get('/recruitment/interviews', { params: filters });
-    return response.data.data || [];
+    return (response.data.data || []).map(normalizeInterview);
   },
 
   getInterview: async (id: string) => {
     const response = await apiClient.get(`/recruitment/interviews/${id}`);
-    return response.data.data;
+    return normalizeInterview(response.data.data);
   },
 
   cancelInterview: async (interviewId: string) => {
     const response = await apiClient.put(`/recruitment/interviews/${interviewId}/cancel`);
     return response.data;
+  },
+
+  deleteInterview: async (interviewId: string) => {
+    const response = await apiClient.delete(`/recruitment/interviews/${interviewId}`);
+    return response.data;
+  },
+
+  updateInterview: async (interviewId: string, data: any) => {
+    const response = await apiClient.put(`/recruitment/interviews/${interviewId}`, data);
+    return normalizeInterview(response.data.data);
   },
 
   submitInterviewFeedback: async (interviewId: string, data: Partial<InterviewFeedback>) => {
@@ -75,9 +108,14 @@ export const recruitmentService = {
   },
 
   // Offer Letters
+  getOfferLetters: async () => {
+    const response = await apiClient.get('/recruitment/offer-letters');
+    return response.data.data || [];
+  },
+
   generateOfferLetter: async (data: Partial<OfferLetter>) => {
     const response = await apiClient.post('/recruitment/offer-letters', data);
-    return response.data;
+    return response.data.data;
   },
 
   sendOfferLetter: async (offerLetterId: string) => {
@@ -87,6 +125,11 @@ export const recruitmentService = {
 
   acceptOfferLetter: async (offerLetterId: string) => {
     const response = await apiClient.post(`/recruitment/offer-letters/${offerLetterId}/accept`);
+    return response.data;
+  },
+
+  deleteOfferLetter: async (offerLetterId: string) => {
+    const response = await apiClient.delete(`/recruitment/offer-letters/${offerLetterId}`);
     return response.data;
   },
 
@@ -119,6 +162,11 @@ export const recruitmentService = {
 
   markCommunicationAsRead: async (communicationId: string) => {
     const response = await apiClient.put(`/recruitment/communications/${communicationId}/read`);
+    return response.data;
+  },
+
+  syncFormResponses: async () => {
+    const response = await apiClient.post('/recruitment/forms/sync');
     return response.data;
   },
 };

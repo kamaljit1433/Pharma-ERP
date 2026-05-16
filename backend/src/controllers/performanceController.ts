@@ -64,6 +64,16 @@ export class PerformanceController {
     }
   }
 
+  async listGoals(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const goalRepository = new GoalRepository(this.knex);
+      const goals = await goalRepository.getAllGoals();
+      res.json(goals);
+    } catch (error) {
+      return next(error);
+    }
+  }
+
   async getGoal(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const id = req.params['id'] as string;
@@ -118,12 +128,18 @@ export class PerformanceController {
     try {
       const id = req.params['id'] as string;
       if (!id) { res.status(400).json({ error: 'Goal ID is required' }); return; }
-      const { status } = req.body;
-      if (status) {
-        const goalRepository = new GoalRepository(this.knex);
-        await goalRepository.updateGoalStatus(id, status);
-      }
-      const goal = await this.goalService.getGoal(id);
+      const { title, description, type, targetValue, unit, weight, dueDate, status } = req.body;
+      const goalRepository = new GoalRepository(this.knex);
+      const goal = await goalRepository.updateGoalFull(id, {
+        title,
+        description,
+        type,
+        targetValue: targetValue !== undefined ? Number(targetValue) : undefined,
+        unit,
+        weight: weight !== undefined ? Number(weight) : undefined,
+        dueDate: dueDate ? new Date(dueDate) : undefined,
+        status,
+      });
       res.json(goal);
     } catch (error) {
       return next(error);
@@ -148,35 +164,33 @@ export class PerformanceController {
       const { name, startDate, endDate, selfReviewDeadline, managerReviewDeadline, peerReviewDeadline } =
         req.body;
 
-      if (!name || !startDate || !endDate || !selfReviewDeadline || !managerReviewDeadline || !peerReviewDeadline) {
-        res.status(400).json({ error: 'Missing required fields' });
+      if (!name || !startDate || !endDate) {
+        res.status(400).json({ error: 'Missing required fields: name, startDate, endDate' });
         return;
       }
 
       const start = new Date(startDate);
       const end = new Date(endDate);
-      const selfDeadline = new Date(selfReviewDeadline);
-      const managerDeadline = new Date(managerReviewDeadline);
-      const peerDeadline = new Date(peerReviewDeadline);
 
       if (start >= end) {
         res.status(400).json({ error: 'Start date must be before end date' });
         return;
       }
 
-      // Validate deadline ordering: self ≤ peer ≤ manager ≤ end
-      if (selfDeadline > end || managerDeadline > end || peerDeadline > end) {
-        res.status(400).json({ error: 'All deadlines must be on or before end date' });
+      const selfDeadline = selfReviewDeadline ? new Date(selfReviewDeadline) : undefined;
+      const managerDeadline = managerReviewDeadline ? new Date(managerReviewDeadline) : undefined;
+      const peerDeadline = peerReviewDeadline ? new Date(peerReviewDeadline) : undefined;
+
+      if (selfDeadline && selfDeadline > end) {
+        res.status(400).json({ error: 'Self-review deadline must be on or before end date' });
         return;
       }
-
-      if (selfDeadline > peerDeadline) {
-        res.status(400).json({ error: 'Self-review deadline must be on or before peer review deadline' });
+      if (peerDeadline && peerDeadline > end) {
+        res.status(400).json({ error: 'Peer review deadline must be on or before end date' });
         return;
       }
-
-      if (peerDeadline > managerDeadline) {
-        res.status(400).json({ error: 'Peer review deadline must be on or before manager review deadline' });
+      if (managerDeadline && managerDeadline > end) {
+        res.status(400).json({ error: 'Manager review deadline must be on or before end date' });
         return;
       }
 
@@ -187,7 +201,7 @@ export class PerformanceController {
         selfReviewDeadline: selfDeadline,
         managerReviewDeadline: managerDeadline,
         peerReviewDeadline: peerDeadline,
-        createdBy: (req as any).user.id,
+        createdBy: undefined,
       });
 
       res.status(201).json(cycle);

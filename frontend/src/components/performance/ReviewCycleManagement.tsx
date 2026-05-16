@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Badge } from '../ui/badge';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
+import { DatePicker } from '../ui/date-picker';
 import {
   Dialog,
   DialogContent,
@@ -21,7 +22,7 @@ import {
   AlertDialogTitle,
 } from '../ui/alert-dialog';
 import { usePerformanceStore } from '../../store/performanceStore';
-import { AlertCircle, CheckCircle2, Plus, Trash2, ArrowRight } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Plus, Trash2, ArrowRight, ChevronDown } from 'lucide-react';
 
 interface ReviewCycle {
   id: string;
@@ -48,6 +49,7 @@ export const ReviewCycleManagement: React.FC = () => {
   const [selectedCycle, setSelectedCycle] = useState<ReviewCycle | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [showDeadlines, setShowDeadlines] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     startDate: '',
@@ -67,14 +69,7 @@ export const ReviewCycleManagement: React.FC = () => {
   };
 
   const validateForm = (): boolean => {
-    if (
-      !formData.name.trim() ||
-      !formData.startDate ||
-      !formData.endDate ||
-      !formData.selfReviewDeadline ||
-      !formData.peerReviewDeadline ||
-      !formData.managerReviewDeadline
-    ) {
+    if (!formData.name.trim() || !formData.startDate || !formData.endDate) {
       return false;
     }
     if (new Date(formData.startDate) >= new Date(formData.endDate)) {
@@ -101,6 +96,7 @@ export const ReviewCycleManagement: React.FC = () => {
         peerReviewDeadline: '',
         managerReviewDeadline: '',
       });
+      setShowDeadlines(false);
       setTimeout(() => {
         setSuccess(false);
         setIsCreateOpen(false);
@@ -229,62 +225,62 @@ export const ReviewCycleManagement: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="startDate">Start Date</Label>
-                  <Input
-                    id="startDate"
-                    name="startDate"
-                    type="date"
+                  <Label>Start Date</Label>
+                  <DatePicker
                     value={formData.startDate}
-                    onChange={handleInputChange}
+                    onChange={(v) => setFormData((p) => ({ ...p, startDate: v }))}
+                    placeholder="Pick start date"
                   />
                 </div>
-
                 <div>
-                  <Label htmlFor="endDate">End Date</Label>
-                  <Input
-                    id="endDate"
-                    name="endDate"
-                    type="date"
+                  <Label>End Date</Label>
+                  <DatePicker
                     value={formData.endDate}
-                    onChange={handleInputChange}
+                    onChange={(v) => setFormData((p) => ({ ...p, endDate: v }))}
+                    placeholder="Pick end date"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="selfReviewDeadline">Self Review Deadline</Label>
-                  <Input
-                    id="selfReviewDeadline"
-                    name="selfReviewDeadline"
-                    type="date"
-                    value={formData.selfReviewDeadline}
-                    onChange={handleInputChange}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="peerReviewDeadline">Peer Review Deadline</Label>
-                  <Input
-                    id="peerReviewDeadline"
-                    name="peerReviewDeadline"
-                    type="date"
-                    value={formData.peerReviewDeadline}
-                    onChange={handleInputChange}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="managerReviewDeadline">Manager Review Deadline</Label>
-                <Input
-                  id="managerReviewDeadline"
-                  name="managerReviewDeadline"
-                  type="date"
-                  value={formData.managerReviewDeadline}
-                  onChange={handleInputChange}
+              <button
+                type="button"
+                onClick={() => setShowDeadlines((s) => !s)}
+                className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ChevronDown
+                  className={`w-4 h-4 transition-transform ${showDeadlines ? 'rotate-180' : ''}`}
                 />
-              </div>
+                {showDeadlines ? 'Hide' : 'Set'} review deadlines (optional)
+              </button>
+
+              {showDeadlines && (
+                <div className="grid grid-cols-1 gap-3 pl-1 border-l-2 border-border">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Self Review Deadline</Label>
+                    <DatePicker
+                      value={formData.selfReviewDeadline}
+                      onChange={(v) => setFormData((p) => ({ ...p, selfReviewDeadline: v }))}
+                      placeholder="Pick date"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Peer Review Deadline</Label>
+                    <DatePicker
+                      value={formData.peerReviewDeadline}
+                      onChange={(v) => setFormData((p) => ({ ...p, peerReviewDeadline: v }))}
+                      placeholder="Pick date"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Manager Review Deadline</Label>
+                    <DatePicker
+                      value={formData.managerReviewDeadline}
+                      onChange={(v) => setFormData((p) => ({ ...p, managerReviewDeadline: v }))}
+                      placeholder="Pick date"
+                    />
+                  </div>
+                </div>
+              )}
 
               <Button onClick={handleCreateCycle} disabled={loading} className="w-full">
                 {loading ? 'Creating...' : 'Create Cycle'}

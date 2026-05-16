@@ -28,6 +28,7 @@ import { createSuppliersRoutes } from './routes/suppliers';
 import { createBankDetailsRoutes } from './routes/bankDetails';
 import { createDocumentRoutes } from './routes/documents';
 import { createESignatureRoutes } from './routes/esignature';
+import { FormResponseSyncService } from './services/formResponseSyncService';
 import { createNotificationRoutes } from './routes/notifications';
 import attendanceRoutes from './routes/attendance';
 import dashboardRoutes from './routes/dashboard';
@@ -230,6 +231,10 @@ const startServer = async (): Promise<void> => {
     if (!redisConnected) {
       console.warn('Warning: Redis connection failed. Session management may not work properly.');
     }
+
+    // Start Google Forms response sync cron (no-ops if not configured)
+    const knexInstance = (await import('./config/knex')).default;
+    new FormResponseSyncService(knexInstance).start();
 
     app.listen(PORT, () => {
       console.log(`

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Offer Letter</title>
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #0A0A0A;
+            background-color: #FFFFFF;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            padding: 40px 0;
+            border-bottom: 1px solid #E5E5E5;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: 600;
+            color: #171717;
+        }
+        .content {
+            padding: 40px 0;
+        }
+        .title {
+            font-size: 26px;
+            font-weight: 600;
+            color: #171717;
+            margin-bottom: 16px;
+        }
+        .offer-box {
+            background-color: #F5F5F5;
+            padding: 24px;
+            border-radius: 8px;
+            margin: 24px 0;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #E5E5E5;
+        }
+        .info-row:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+        .info-label {
+            font-weight: 500;
+            color: #737373;
+        }
+        .info-value {
+            font-weight: 600;
+            color: #171717;
+        }
+        .highlight {
+            color: #16a34a;
+        }
+        .cta-button {
+            display: inline-block;
+            background-color: #171717;
+            color: #FAFAFA;
+            padding: 12px 28px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 500;
+            margin: 24px 0;
+        }
+        .validity-note {
+            background-color: #fef9c3;
+            border-left: 4px solid #eab308;
+            padding: 12px 16px;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #713f12;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px 0;
+            border-top: 1px solid #E5E5E5;
+            color: #737373;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">Pharma ERP — HR</div>
+        </div>
+
+        <div class="content">
+            <h1 class="title">Congratulations, {{candidateName}}!</h1>
+
+            <p>We are pleased to extend an offer of employment. Please review the details below:</p>
+
+            <div class="offer-box">
+                <div class="info-row">
+                    <span class="info-label">Position</span>
+                    <span class="info-value">{{jobTitle}}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Department</span>
+                    <span class="info-value">{{department}}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Annual Salary</span>
+                    <span class="info-value highlight">₹{{salary}}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Start Date</span>
+                    <span class="info-value">{{startDate}}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Reporting To</span>
+                    <span class="info-value">{{reportingManager}}</span>
+                </div>
+            </div>
+
+            <div class="validity-note">
+                This offer is valid until <strong>{{offerValidTill}}</strong>. Please accept before this date.
+            </div>
+
+            <p>To accept this offer, click the button below:</p>
+
+            <a href="{{acceptanceUrl}}" class="cta-button">Accept Offer</a>
+
+            <p>If you have any questions regarding this offer, please reach out to our HR team.</p>
+
+            <p>We look forward to welcoming you to the team!</p>
+        </div>
+
+        <div class="footer">
+            <p>This is an automated message from the Pharma ERP HR system.</p>
+        </div>
+    </div>
+</body>
+</html>

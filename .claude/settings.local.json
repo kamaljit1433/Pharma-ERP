@@ -26,7 +26,10 @@
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\kamal\\\\Downloads\\\\Pharma-ERP\\\\frontend\\\\src\\\\types\" -Name)",
       "Bash(findstr /i \"benefit\")",
       "Bash(grep -E \"\\\\.\\(tsx?|json\\)$\")",
-      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\kamal\\\\Downloads\\\\Pharma-ERP\" -Directory)"
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\kamal\\\\Downloads\\\\Pharma-ERP\" -Directory)",
+      "Bash(pip show *)",
+      "Bash(pip install *)",
+      "Bash(python generate_ppt.py)"
     ]
   }
 }

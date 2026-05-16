@@ -18,6 +18,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
 import { useToast } from '@/hooks/useToast';
 import apiClient from '@/services/api';
+import { IDLE_TIMEOUT_KEY } from '@/hooks/useSessionManagement';
 
 // ─── Notification Preferences ───────────────────────────────────────────────
 
@@ -136,11 +137,38 @@ const NotificationsTab: React.FC = () => {
   );
 };
 
+// ─── Session Timeout options ─────────────────────────────────────────────────
+
+const TIMEOUT_OPTIONS = [
+  { label: '15 minutes',  value: 15  },
+  { label: '30 minutes',  value: 30  },
+  { label: '1 hour',      value: 60  },
+  { label: '2 hours',     value: 120 },
+  { label: '4 hours',     value: 240 },
+  { label: '8 hours',     value: 480 },
+  { label: 'Never',       value: 0   },
+];
+
+function loadIdleTimeout(): number {
+  const raw = localStorage.getItem(IDLE_TIMEOUT_KEY);
+  return raw !== null ? parseInt(raw, 10) : 60;
+}
+
 // ─── Security Tab ────────────────────────────────────────────────────────────
 
 const SecurityTab: React.FC = () => {
   const { user, updateUser } = useAuthStore();
   const { toast } = useToast();
+
+  // Session timeout state
+  const [idleTimeout, setIdleTimeout] = useState<number>(loadIdleTimeout);
+  const [timeoutSaved, setTimeoutSaved] = useState(false);
+
+  const saveIdleTimeout = () => {
+    localStorage.setItem(IDLE_TIMEOUT_KEY, String(idleTimeout));
+    setTimeoutSaved(true);
+    setTimeout(() => setTimeoutSaved(false), 2500);
+  };
 
   // MFA state
   const [mfaStep, setMfaStep] = useState<'idle' | 'setup' | 'verify'>('idle');
@@ -385,6 +413,50 @@ const SecurityTab: React.FC = () => {
             {pwLoading && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
             Update Password
           </Button>
+        </CardContent>
+      </Card>
+
+      {/* Session Timeout */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Clock className="h-4 w-4" /> Session Timeout
+          </CardTitle>
+          <CardDescription>
+            Automatically sign you out after a period of inactivity.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {TIMEOUT_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setIdleTimeout(opt.value)}
+                className={`rounded-lg border-2 px-3 py-2 text-sm font-medium transition-colors ${
+                  idleTimeout === opt.value
+                    ? 'border-primary bg-primary/5 text-primary'
+                    : 'border-border hover:border-muted-foreground/50 text-muted-foreground'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          {idleTimeout === 0 && (
+            <p className="flex items-center gap-1.5 text-xs text-amber-600">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              Your session will stay active until you manually sign out.
+            </p>
+          )}
+          <div className="flex items-center gap-3">
+            <Button size="sm" onClick={saveIdleTimeout}>Save</Button>
+            {timeoutSaved && (
+              <span className="flex items-center gap-1.5 text-sm text-green-600">
+                <CheckCircle2 className="h-4 w-4" /> Saved
+              </span>
+            )}
+          </div>
         </CardContent>
       </Card>
 

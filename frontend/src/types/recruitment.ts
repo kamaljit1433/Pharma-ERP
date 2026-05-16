@@ -1,17 +1,18 @@
 export interface JobPosting {
   id: string;
   title: string;
-  department_id: string;
-  location: string;
+  department_id?: string;
+  department_name?: string;
+  designation_id?: string;
   description: string;
-  required_skills: string[];
-  experience_min: number;
-  experience_max: number;
-  application_deadline: Date;
-  status: 'Open' | 'Closed' | 'On Hold';
-  created_by: string;
+  positions_count: number;
+  closing_date?: string;
+  status: 'draft' | 'open' | 'closed' | 'on_hold';
   created_at: Date;
   updated_at: Date;
+  form_id?: string;
+  form_url?: string;
+  form_status?: 'pending' | 'generated' | 'failed';
 }
 
 export interface Applicant {
@@ -29,10 +30,14 @@ export interface Applicant {
 export interface Interview {
   id: string;
   applicant_id: string;
+  interviewer_id?: string;
+  type?: 'phone' | 'video' | 'in_person';
+  mode?: string;
+  interviewers?: string[];
   scheduled_at: Date;
-  mode: 'In-Person' | 'Video' | 'Phone';
-  interviewers: string[];
-  status: 'Scheduled' | 'Completed' | 'Cancelled';
+  duration_minutes?: number;
+  status: string;
+  notes?: string;
   created_at: Date;
   updated_at: Date;
 }

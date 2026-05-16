@@ -26,15 +26,20 @@ interface RecruitmentState {
   fetchJobs: (filters?: any) => Promise<void>;
   fetchJob: (id: string) => Promise<void>;
   createJob: (data: Partial<JobPosting>) => Promise<void>;
+  updateJobStatus: (id: string, status: 'draft' | 'open' | 'closed' | 'on_hold') => Promise<void>;
   fetchCandidates: (filters?: any) => Promise<void>;
   addCandidate: (jobPostingId: string, data: Partial<Applicant>) => Promise<void>;
   moveCandidateStage: (applicantId: string, stage: string) => Promise<void>;
   fetchInterviews: (filters?: any) => Promise<void>;
   scheduleInterview: (data: Partial<Interview>) => Promise<void>;
   cancelInterview: (interviewId: string) => Promise<void>;
+  deleteInterview: (interviewId: string) => Promise<void>;
+  updateInterview: (interviewId: string, data: any) => Promise<void>;
   submitFeedback: (interviewId: string, data: any) => Promise<void>;
-  generateOffer: (data: Partial<OfferLetter>) => Promise<void>;
+  fetchOffers: () => Promise<void>;
+  generateOffer: (data: Partial<OfferLetter>) => Promise<OfferLetter>;
   sendOffer: (offerLetterId: string) => Promise<void>;
+  deleteOffer: (offerLetterId: string) => Promise<void>;
   clearError: () => void;
   reset: () => void;
 }
@@ -79,6 +84,20 @@ export const useRecruitmentStore = create<RecruitmentState>((set, get) => ({
     try {
       const job = await recruitmentService.createJobPosting(data);
       set((state) => ({ jobs: [job, ...state.jobs], loading: false }));
+    } catch (error) {
+      set({ error: (error as Error).message, loading: false });
+      throw error;
+    }
+  },
+
+  updateJobStatus: async (id, status) => {
+    set({ loading: true, error: null });
+    try {
+      const updated = await recruitmentService.updateJobPostingStatus(id, status);
+      set((state) => ({
+        jobs: state.jobs.map((j) => j.id === id ? { ...j, ...updated } : j),
+        loading: false,
+      }));
     } catch (error) {
       set({ error: (error as Error).message, loading: false });
       throw error;
@@ -159,6 +178,34 @@ export const useRecruitmentStore = create<RecruitmentState>((set, get) => ({
     }
   },
 
+  deleteInterview: async (interviewId) => {
+    set({ loading: true, error: null });
+    try {
+      await recruitmentService.deleteInterview(interviewId);
+      set((state) => ({
+        interviews: state.interviews.filter((i) => i.id !== interviewId),
+        loading: false,
+      }));
+    } catch (error) {
+      set({ error: (error as Error).message, loading: false });
+      throw error;
+    }
+  },
+
+  updateInterview: async (interviewId, data) => {
+    set({ loading: true, error: null });
+    try {
+      const updated = await recruitmentService.updateInterview(interviewId, data);
+      set((state) => ({
+        interviews: state.interviews.map((i) => i.id === interviewId ? updated : i),
+        loading: false,
+      }));
+    } catch (error) {
+      set({ error: (error as Error).message, loading: false });
+      throw error;
+    }
+  },
+
   submitFeedback: async (interviewId, data) => {
     set({ loading: true, error: null });
     try {
@@ -175,11 +222,22 @@ export const useRecruitmentStore = create<RecruitmentState>((set, get) => ({
     }
   },
 
+  fetchOffers: async () => {
+    set({ loading: true, error: null });
+    try {
+      const offers = await recruitmentService.getOfferLetters();
+      set({ offers: Array.isArray(offers) ? offers : [], loading: false });
+    } catch (error) {
+      set({ error: (error as Error).message, loading: false, offers: [] });
+    }
+  },
+
   generateOffer: async (data) => {
     set({ loading: true, error: null });
     try {
       const offer = await recruitmentService.generateOfferLetter(data);
       set((state) => ({ offers: [offer, ...state.offers], loading: false }));
+      return offer;
     } catch (error) {
       set({ error: (error as Error).message, loading: false });
       throw error;
@@ -191,6 +249,20 @@ export const useRecruitmentStore = create<RecruitmentState>((set, get) => ({
     try {
       await recruitmentService.sendOfferLetter(offerLetterId);
       set({ loading: false });
+    } catch (error) {
+      set({ error: (error as Error).message, loading: false });
+      throw error;
+    }
+  },
+
+  deleteOffer: async (offerLetterId) => {
+    set({ loading: true, error: null });
+    try {
+      await recruitmentService.deleteOfferLetter(offerLetterId);
+      set((state) => ({
+        offers: state.offers.filter((o) => o.id !== offerLetterId),
+        loading: false,
+      }));
     } catch (error) {
       set({ error: (error as Error).message, loading: false });
       throw error;

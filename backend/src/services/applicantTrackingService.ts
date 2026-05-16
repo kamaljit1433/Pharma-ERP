@@ -1,17 +1,23 @@
 import { Knex } from 'knex';
 import { ApplicantRepository } from '../repositories/applicantRepository';
 import { JobPostingRepository } from '../repositories/jobPostingRepository';
+import { InterviewRepository } from '../repositories/interviewRepository';
+import { OfferLetterRepository } from '../repositories/offerLetterRepository';
 import { Applicant, CreateApplicantDTO } from '../types/recruitment';
 import { EmailService } from './emailService';
 
 export class ApplicantTrackingService {
   private applicantRepository: ApplicantRepository;
   private jobPostingRepository: JobPostingRepository;
+  private interviewRepository: InterviewRepository;
+  private offerLetterRepository: OfferLetterRepository;
   private emailService: EmailService;
 
   constructor(knex: Knex) {
     this.applicantRepository = new ApplicantRepository(knex);
     this.jobPostingRepository = new JobPostingRepository(knex);
+    this.interviewRepository = new InterviewRepository(knex);
+    this.offerLetterRepository = new OfferLetterRepository(knex);
     this.emailService = new EmailService();
   }
 
@@ -67,6 +73,31 @@ export class ApplicantTrackingService {
     const updated = await this.applicantRepository.updateApplicant(applicantId, {
       stage: newStage,
     });
+
+    // On rejection: cancel scheduled interviews and delete draft offer letters
+    if (newStage === 'rejected') {
+      try {
+        const interviews = await this.interviewRepository.getInterviewsByApplicant(applicantId);
+        await Promise.all(
+          interviews
+            .filter((i) => i.status === 'scheduled')
+            .map((i) => this.interviewRepository.updateInterviewStatus(i.id, 'cancelled'))
+        );
+      } catch (err) {
+        console.error('Failed to cancel interviews on rejection:', err);
+      }
+
+      try {
+        const offers = await this.offerLetterRepository.getOfferLettersByApplicant(applicantId);
+        await Promise.all(
+          offers
+            .filter((o) => o.status === 'draft')
+            .map((o) => this.offerLetterRepository.deleteOfferLetter(o.id))
+        );
+      } catch (err) {
+        console.error('Failed to delete draft offers on rejection:', err);
+      }
+    }
 
     // Send notification email (optional - may fail if template not configured)
     const stageMessages: Record<string, string> = {

@@ -82,20 +82,15 @@ export const JobPostingForm: React.FC<JobPostingFormProps> = ({ onSuccess, initi
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent, submitStatus: 'draft' | 'open') => {
     e.preventDefault();
     setLoading(true);
     setErrors({});
     setGeneralError('');
 
     try {
-      // Validate form data
       const validatedData = jobPostingSchema.parse(formData);
-      
-      // Submit to API
-      await recruitmentService.createJobPosting(validatedData);
-      
-      // Reset form
+      await recruitmentService.createJobPosting({ ...validatedData, status: submitStatus });
       setFormData({
         title: '',
         department_id: '',
@@ -110,7 +105,6 @@ export const JobPostingForm: React.FC<JobPostingFormProps> = ({ onSuccess, initi
       onSuccess?.();
     } catch (err) {
       if (err instanceof ZodError) {
-        // Handle validation errors
         const fieldErrors: Record<string, string> = {};
         if (err.issues) {
           err.issues.forEach((issue) => {
@@ -137,7 +131,7 @@ export const JobPostingForm: React.FC<JobPostingFormProps> = ({ onSuccess, initi
         <CardDescription>{isEditing ? 'Update job posting details' : 'Post a new job opening'}</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={(e) => handleSubmit(e, 'open')} className="space-y-4">
           {generalError && (
             <div className="p-3 bg-destructive/10 text-destructive rounded-md text-sm flex items-start gap-2">
               <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
@@ -287,9 +281,26 @@ export const JobPostingForm: React.FC<JobPostingFormProps> = ({ onSuccess, initi
             </div>
           </div>
 
-          <Button type="submit" disabled={loading} className="w-full">
-            {loading ? (isEditing ? 'Updating...' : 'Creating...') : (isEditing ? 'Update Job Posting' : 'Create Job Posting')}
-          </Button>
+          {isEditing ? (
+            <Button type="submit" disabled={loading} className="w-full">
+              {loading ? 'Updating...' : 'Update Job Posting'}
+            </Button>
+          ) : (
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={loading}
+                className="flex-1"
+                onClick={(e) => handleSubmit(e as any, 'draft')}
+              >
+                {loading ? 'Saving...' : 'Save as Draft'}
+              </Button>
+              <Button type="submit" disabled={loading} className="flex-1">
+                {loading ? 'Publishing...' : 'Publish Job'}
+              </Button>
+            </div>
+          )}
         </form>
       </CardContent>
     </Card>
