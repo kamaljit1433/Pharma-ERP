@@ -74,9 +74,9 @@ export class AdvanceSalaryRepository {
       .where({ id })
       .update({
         status: 'rejected',
-        approved_by: rejectedBy,
-        approval_notes: notes,
-        approved_at: this.knex.fn.now(),
+        rejected_by: rejectedBy,
+        rejection_notes: notes,
+        rejected_at: this.knex.fn.now(),
         updated_at: this.knex.fn.now(),
       })
       .returning('*');

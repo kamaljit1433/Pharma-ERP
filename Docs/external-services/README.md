@@ -43,12 +43,12 @@ FILE_URL_EXPIRY=3600
 # ── Email ───────────────────────────────────────────────────────
 EMAIL_PROVIDER=smtp                        # smtp | sendgrid | ses
 EMAIL_FROM_NAME=Pharma ERP
-EMAIL_FROM_ADDRESS=smartops.mailer@gmail.com
+EMAIL_FROM_ADDRESS=XXXXXXXXXXXXXXXXX
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_SECURE=false
-SMTP_USER=smartops.mailer@gmail.com
-SMTP_PASSWORD=rzbrlyqvxahwpntv             # Gmail App Password
+SMTP_USER=XXXXXXXXXXXXXXXXX
+SMTP_PASSWORD=XXXXXXXXXXXXXXXXX             # Gmail App Password
 SENDGRID_API_KEY=SG....                    # only if EMAIL_PROVIDER=sendgrid
 
 # ── Google Maps ─────────────────────────────────────────────────

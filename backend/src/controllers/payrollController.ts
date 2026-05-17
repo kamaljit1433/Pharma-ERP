@@ -135,26 +135,23 @@ export class PayrollController {
 
   async getPayslips(req: Request, res: Response): Promise<void> {
     try {
-      const { employee_id, month, year } = req.query;
-      let payslips;
-      if (employee_id) {
-        payslips = await this.payslipService.getPayslipsByEmployee(employee_id as string);
-      } else if (month && year) {
-        payslips = await this.payslipService.getPayslipsByMonth(
-          parseInt(month as string),
-          parseInt(year as string)
-        );
-      } else {
-        payslips = await this.knex('payslips')
-          .leftJoin('employees', 'payslips.employee_id', 'employees.id')
-          .select(
-            'payslips.*',
-            this.knex.raw("CONCAT(employees.first_name, ' ', employees.last_name) as employee_name")
-          )
-          .orderBy('payslips.year', 'desc')
-          .orderBy('payslips.month', 'desc')
-          .limit(50);
-      }
+      const { employee_id, month, year } = req.query as Record<string, string | undefined>;
+
+      // Always JOIN employees so employee_name is present regardless of which filters are applied.
+      let query = this.knex('payslips')
+        .leftJoin('employees', 'payslips.employee_id', 'employees.id')
+        .select(
+          'payslips.*',
+          this.knex.raw("CONCAT(employees.first_name, ' ', employees.last_name) as employee_name")
+        )
+        .orderBy('payslips.year', 'desc')
+        .orderBy('payslips.month', 'desc');
+
+      if (employee_id) query = query.where('payslips.employee_id', employee_id);
+      if (month) query = query.where('payslips.month', parseInt(month));
+      if (year) query = query.where('payslips.year', parseInt(year));
+
+      const payslips = await query.limit(200);
       res.status(200).json({ success: true, data: payslips });
     } catch (error) {
       res.status(httpStatusFor(error)).json({

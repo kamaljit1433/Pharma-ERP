@@ -83,7 +83,7 @@ Response:
 - **Provider**: Nodemailer
 - **Host**: smtp.gmail.com
 - **Port**: 587
-- **User**: smartops.mailer@gmail.com
+- **User**: XXXXXXXXXXXXXXXXX
 - **Status**: Configured ✓
 
 ### File Storage

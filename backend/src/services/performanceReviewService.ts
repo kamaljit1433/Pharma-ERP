@@ -158,6 +158,11 @@ export class PerformanceReviewService {
     return Math.round((finalRating / totalWeight) * 100) / 100;
   }
 
+  async getAllReviews(): Promise<PerformanceReview[]> {
+    const rows = await this.performanceReviewRepository.listAllReviews();
+    return rows.map((r) => this.mapToPerformanceReview(r));
+  }
+
   async finalizeReview(reviewId: string): Promise<PerformanceReview> {
     const review = await this.getReview(reviewId);
 
@@ -187,7 +192,9 @@ export class PerformanceReviewService {
     return {
       id: row.id,
       employeeId: row.employee_id,
+      employeeName: row.employee_name ?? undefined,
       cycleId: row.cycle_id,
+      reviewType: row.review_type ?? undefined,
       selfRating: reviewType.toLowerCase() === 'self' ? (row.rating ?? undefined) : undefined,
       managerRating: reviewType.toLowerCase() === 'manager' ? (row.rating ?? undefined) : undefined,
       peerRatings: reviewType.toLowerCase() === 'peer' ? [row.rating].filter(Boolean) : [],

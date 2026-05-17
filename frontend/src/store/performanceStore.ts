@@ -87,15 +87,20 @@ interface PerformanceState {
   // Reviews
   reviews: PerformanceReview[];
   loadingReviews: boolean;
+  fetchAllReviews: () => Promise<void>;
   fetchEmployeeReviews: (employeeId: string, cycleId?: string) => Promise<void>;
   submitReview: (data: any) => Promise<void>;
   updateReview: (id: string, data: any) => Promise<void>;
+  deleteReview: (id: string) => Promise<void>;
 
   // Feedback
   feedback: Feedback[];
   loadingFeedback: boolean;
+  fetchAllFeedback: () => Promise<void>;
   fetchEmployeeFeedback: (employeeId: string) => Promise<void>;
   provideFeedback: (data: any) => Promise<void>;
+  updateFeedback: (id: string, data: any) => Promise<void>;
+  deleteFeedback: (id: string) => Promise<void>;
 
   // PIPs
   pips: PIP[];
@@ -262,6 +267,17 @@ export const usePerformanceStore = create<PerformanceState>()(
       // Reviews
       reviews: [],
       loadingReviews: false,
+      fetchAllReviews: async () => {
+        set({ loadingReviews: true, error: null });
+        try {
+          const data = await performanceService.getAllReviews();
+          set({ reviews: Array.isArray(data) ? data : (data.data ?? []) });
+        } catch (error) {
+          set({ error: (error as Error).message });
+        } finally {
+          set({ loadingReviews: false });
+        }
+      },
       fetchEmployeeReviews: async (employeeId, cycleId) => {
         set({ loadingReviews: true, error: null });
         try {
@@ -279,6 +295,7 @@ export const usePerformanceStore = create<PerformanceState>()(
           await performanceService.submitReview(data);
         } catch (error) {
           set({ error: (error as Error).message });
+          throw error;
         }
       },
       updateReview: async (id, data) => {
@@ -289,10 +306,30 @@ export const usePerformanceStore = create<PerformanceState>()(
           set({ error: (error as Error).message });
         }
       },
+      deleteReview: async (id) => {
+        set({ error: null });
+        try {
+          await performanceService.deleteReview(id);
+          set((state) => ({ reviews: state.reviews.filter((r: any) => r.id !== id) }));
+        } catch (error) {
+          set({ error: (error as Error).message });
+        }
+      },
 
       // Feedback
       feedback: [],
       loadingFeedback: false,
+      fetchAllFeedback: async () => {
+        set({ loadingFeedback: true, error: null });
+        try {
+          const data = await performanceService.getAllFeedback();
+          set({ feedback: Array.isArray(data) ? data : (data.data ?? []) });
+        } catch (error) {
+          set({ error: (error as Error).message });
+        } finally {
+          set({ loadingFeedback: false });
+        }
+      },
       fetchEmployeeFeedback: async (employeeId) => {
         set({ loadingFeedback: true, error: null });
         try {
@@ -308,6 +345,27 @@ export const usePerformanceStore = create<PerformanceState>()(
         set({ error: null });
         try {
           await performanceService.provideFeedback(data);
+        } catch (error) {
+          set({ error: (error as Error).message });
+          throw error;
+        }
+      },
+      updateFeedback: async (id, data) => {
+        set({ error: null });
+        try {
+          const updated = await performanceService.updateFeedback(id, data);
+          set((state) => ({
+            feedback: state.feedback.map((f: any) => (f.id === id ? { ...f, ...updated } : f)),
+          }));
+        } catch (error) {
+          set({ error: (error as Error).message });
+        }
+      },
+      deleteFeedback: async (id) => {
+        set({ error: null });
+        try {
+          await performanceService.deleteFeedback(id);
+          set((state) => ({ feedback: state.feedback.filter((f: any) => f.id !== id) }));
         } catch (error) {
           set({ error: (error as Error).message });
         }

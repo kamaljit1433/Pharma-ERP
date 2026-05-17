@@ -48,7 +48,7 @@ export class PayslipService {
       year
     );
 
-    // Check if payslip already exists
+    // Check if payslip already exists — update it with fresh values rather than returning stale data
     const existingPayslip =
       await this.payslipRepository.getPayslipByEmployeeAndMonth(
         employeeId,
@@ -57,7 +57,12 @@ export class PayslipService {
       );
 
     if (existingPayslip) {
-      return existingPayslip;
+      return this.payslipRepository.updatePayslip(existingPayslip.id, {
+        earnings: this.extractEarnings(payroll, earningsComponents),
+        deductions: this.extractDeductions({ total_deductions: payroll.total_deductions || 0 }, deductionsComponents),
+        gross_salary: payroll.gross_salary,
+        net_salary: payroll.net_salary,
+      });
     }
 
     // Create payslip — use component arrays if provided, otherwise fall back to totals

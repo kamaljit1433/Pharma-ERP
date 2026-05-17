@@ -42,6 +42,21 @@ export const benefitsService = {
     return response.data;
   },
 
+  getPendingEnrollmentRequests: async () => {
+    const response = await apiClient.get('/benefits/insurance/enrollments/admin/pending');
+    return response.data;
+  },
+
+  approveEnrollmentRequest: async (id: string) => {
+    const response = await apiClient.put(`/benefits/insurance/enrollments/${id}/approve`);
+    return response.data;
+  },
+
+  rejectEnrollmentRequest: async (id: string) => {
+    const response = await apiClient.put(`/benefits/insurance/enrollments/${id}/reject`);
+    return response.data;
+  },
+
   // ============ PF Details ============
 
   getPFDetails: async (employeeId: string) => {
@@ -95,6 +110,11 @@ export const benefitsService = {
     return response.data;
   },
 
+  getAllReimbursementClaims: async () => {
+    const response = await apiClient.get('/benefits/reimbursements/admin/all');
+    return response.data;
+  },
+
   getPendingClaims: async () => {
     const response = await apiClient.get('/benefits/reimbursements/pending');
     return response.data;
@@ -130,6 +150,11 @@ export const benefitsService = {
 
   getEmployeeRewards: async (employeeId: string) => {
     const response = await apiClient.get(`/benefits/rewards/employee/${employeeId}`);
+    return response.data;
+  },
+
+  getAllRewards: async () => {
+    const response = await apiClient.get('/benefits/rewards/admin/all');
     return response.data;
   },
 

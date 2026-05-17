@@ -6,18 +6,7 @@ import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { BarChart3, Download, Filter } from 'lucide-react';
-
-interface PayrollRecord {
-  id: string;
-  employee_id: string;
-  employee_name: string;
-  month: number;
-  year: number;
-  gross_salary: number;
-  net_salary: number;
-  total_deductions: number;
-  status: 'draft' | 'processed' | 'paid' | 'locked';
-}
+import { PayrollRecord } from '../../types/payroll';
 
 interface PayrollReportsProps {
   payrolls: PayrollRecord[];
@@ -74,6 +63,7 @@ export const PayrollReports: React.FC<PayrollReportsProps> = ({
     totalNet: filteredPayrolls.reduce((sum, p) => sum + Number(p.net_salary), 0),
     processed: filteredPayrolls.filter((p) => p.status === 'processed').length,
     paid: filteredPayrolls.filter((p) => p.status === 'paid').length,
+    locked: filteredPayrolls.filter((p) => p.status === 'locked').length,
   };
 
   const handleExport = async (format: 'CSV' | 'NEFT') => {
@@ -138,7 +128,7 @@ export const PayrollReports: React.FC<PayrollReportsProps> = ({
                 variant="outline"
                 size="sm"
                 onClick={() => handleExport('CSV')}
-                disabled={exporting || isLoading}
+                disabled={exporting || isLoading || filteredPayrolls.length === 0}
                 className="gap-2"
               >
                 <Download className="h-4 w-4" />
@@ -148,7 +138,7 @@ export const PayrollReports: React.FC<PayrollReportsProps> = ({
                 variant="outline"
                 size="sm"
                 onClick={() => handleExport('NEFT')}
-                disabled={exporting || isLoading}
+                disabled={exporting || isLoading || filteredPayrolls.length === 0}
                 className="gap-2"
               >
                 <Download className="h-4 w-4" />
@@ -201,6 +191,7 @@ export const PayrollReports: React.FC<PayrollReportsProps> = ({
         <TabsList>
           <TabsTrigger value="all">All ({filteredPayrolls.length})</TabsTrigger>
           <TabsTrigger value="processed">Processed ({summary.processed})</TabsTrigger>
+          <TabsTrigger value="locked">Locked ({summary.locked})</TabsTrigger>
           <TabsTrigger value="paid">Paid ({summary.paid})</TabsTrigger>
         </TabsList>
 
@@ -322,6 +313,66 @@ export const PayrollReports: React.FC<PayrollReportsProps> = ({
                             <TableCell>
                               <Badge className={getStatusColor(payroll.status)}>
                                 Processed
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="locked">
+          <Card>
+            <CardHeader>
+              <CardTitle>Locked Payroll</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Employee</TableHead>
+                      <TableHead className="text-right">Gross Salary</TableHead>
+                      <TableHead className="text-right">Net Salary</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredPayrolls.filter((p) => p.status === 'locked').length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                          No locked payroll records for the selected period.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredPayrolls
+                        .filter((p) => p.status === 'locked')
+                        .map((payroll) => (
+                          <TableRow key={payroll.id}>
+                            <TableCell className="font-medium">
+                              {payroll.employee_name}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {Number(payroll.gross_salary).toLocaleString('en-IN', {
+                                style: 'currency',
+                                currency: 'INR',
+                                maximumFractionDigits: 0,
+                              })}
+                            </TableCell>
+                            <TableCell className="text-right font-semibold">
+                              {Number(payroll.net_salary).toLocaleString('en-IN', {
+                                style: 'currency',
+                                currency: 'INR',
+                                maximumFractionDigits: 0,
+                              })}
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={getStatusColor(payroll.status)}>
+                                Locked
                               </Badge>
                             </TableCell>
                           </TableRow>

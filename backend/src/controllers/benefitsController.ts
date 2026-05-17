@@ -135,6 +135,33 @@ export class BenefitsController {
     }
   }
 
+  async getPendingEnrollmentRequests(_req: Request, res: Response): Promise<void> {
+    try {
+      const enrollments = await this.insuranceService.getPendingEnrollments();
+      res.status(200).json({ success: true, data: enrollments });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message || 'Failed to fetch pending enrollments' });
+    }
+  }
+
+  async approveEnrollmentRequest(req: Request, res: Response): Promise<void> {
+    try {
+      const enrollment = await this.insuranceService.approveEnrollment((req.params as any).id);
+      res.status(200).json({ success: true, data: enrollment, message: 'Enrollment approved successfully' });
+    } catch (error: any) {
+      res.status(400).json({ success: false, message: error.message || 'Failed to approve enrollment' });
+    }
+  }
+
+  async rejectEnrollmentRequest(req: Request, res: Response): Promise<void> {
+    try {
+      const enrollment = await this.insuranceService.rejectEnrollment((req.params as any).id);
+      res.status(200).json({ success: true, data: enrollment, message: 'Enrollment rejected' });
+    } catch (error: any) {
+      res.status(400).json({ success: false, message: error.message || 'Failed to reject enrollment' });
+    }
+  }
+
   // ============ PF Details ============
 
   async getPFDetails(req: Request, res: Response): Promise<void> {
@@ -286,6 +313,15 @@ export class BenefitsController {
     }
   }
 
+  async getAllClaims(_req: Request, res: Response): Promise<void> {
+    try {
+      const claims = await this.reimbursementService.getAllClaims();
+      res.status(200).json({ success: true, data: claims });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message || 'Failed to fetch claims' });
+    }
+  }
+
   async getPendingClaims(req: Request, res: Response): Promise<void> {
     try {
       const claims = await this.reimbursementService.getClaimsByStatus('pending');
@@ -397,6 +433,15 @@ export class BenefitsController {
         success: false,
         message: error.message || 'Failed to fetch employee rewards',
       });
+    }
+  }
+
+  async getAllRewards(_req: Request, res: Response): Promise<void> {
+    try {
+      const rewards = await this.rewardService.getAllRewards();
+      res.status(200).json({ success: true, data: rewards });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message || 'Failed to fetch rewards' });
     }
   }
 

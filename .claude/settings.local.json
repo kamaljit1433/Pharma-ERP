@@ -29,7 +29,11 @@
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\kamal\\\\Downloads\\\\Pharma-ERP\" -Directory)",
       "Bash(pip show *)",
       "Bash(pip install *)",
-      "Bash(python generate_ppt.py)"
+      "Bash(python generate_ppt.py)",
+      "Bash(dir \"C:\\\\Users\\\\kamal\\\\Downloads\\\\Pharma-ERP\\\\Sample Project Subject report.pdf\")",
+      "Bash(choco --version)",
+      "Bash(winget --version)",
+      "Bash(scoop --version)"
     ]
   }
 }

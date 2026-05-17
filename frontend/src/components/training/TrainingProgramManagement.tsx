@@ -8,33 +8,256 @@ import { GraduationCap, Plus, Edit2, Trash2, Users, Search, X, Check, AlertTrian
 import trainingService, { TrainingProgram } from '../../services/trainingService';
 import employeeService, { Employee } from '../../services/employeeService';
 
+// ─── FormData type ────────────────────────────────────────────────────────────
+
+interface FormData {
+  name: string;
+  description: string;
+  provider: string;
+  start_date: string;
+  end_date: string;
+  duration_hours: number;
+  max_participants: number;
+}
+
+// ─── TrainingFormBody (top-level so it never remounts on parent re-render) ───
+
+interface TrainingFormBodyProps {
+  isEdit: boolean;
+  formData: FormData;
+  setFormData: React.Dispatch<React.SetStateAction<FormData>>;
+  employeeSearch: string;
+  setEmployeeSearch: (v: string) => void;
+  selectedEmployeeIds: Set<string>;
+  filteredEmployees: Employee[];
+  allFilteredSelected: boolean;
+  hasLimit: boolean;
+  maxParticipants: number;
+  loadingEmployees: boolean;
+  enrollmentError: string | null;
+  submitting: boolean;
+  onSubmit: (e: React.FormEvent) => void;
+  toggleEmployee: (id: string) => void;
+  toggleSelectAll: () => void;
+  onCancel: () => void;
+}
+
+const TrainingFormBody: React.FC<TrainingFormBodyProps> = ({
+  isEdit, formData, setFormData,
+  employeeSearch, setEmployeeSearch,
+  selectedEmployeeIds, filteredEmployees,
+  allFilteredSelected, hasLimit, maxParticipants,
+  loadingEmployees, enrollmentError, submitting,
+  onSubmit, toggleEmployee, toggleSelectAll, onCancel,
+}) => (
+  <form onSubmit={onSubmit} className="space-y-6">
+    {/* Program details */}
+    <div>
+      <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Program Details</h3>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="name">Program Name</Label>
+          <Input
+            id="name"
+            value={formData.name}
+            onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="provider">Provider</Label>
+          <Input
+            id="provider"
+            value={formData.provider}
+            onChange={(e) => setFormData((p) => ({ ...p, provider: e.target.value }))}
+          />
+        </div>
+        <div>
+          <Label htmlFor="start_date">Start Date</Label>
+          <Input
+            id="start_date"
+            type="date"
+            value={formData.start_date}
+            onChange={(e) => setFormData((p) => ({ ...p, start_date: e.target.value }))}
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="end_date">End Date</Label>
+          <Input
+            id="end_date"
+            type="date"
+            value={formData.end_date}
+            onChange={(e) => setFormData((p) => ({ ...p, end_date: e.target.value }))}
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="duration_hours">Duration (hours)</Label>
+          <Input
+            id="duration_hours"
+            type="number"
+            value={formData.duration_hours}
+            onChange={(e) => setFormData((p) => ({ ...p, duration_hours: parseInt(e.target.value) || 0 }))}
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="max_participants">Max Participants</Label>
+          <Input
+            id="max_participants"
+            type="number"
+            value={formData.max_participants}
+            onChange={(e) => setFormData((p) => ({ ...p, max_participants: parseInt(e.target.value) || 0 }))}
+          />
+        </div>
+      </div>
+      <div className="mt-4">
+        <Label htmlFor="description">Description</Label>
+        <textarea
+          id="description"
+          value={formData.description}
+          onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+          rows={3}
+        />
+      </div>
+    </div>
+
+    {/* Employee enrollment */}
+    <div className="border-t pt-5">
+      <div className="flex items-center gap-2 mb-3">
+        <Users className="w-4 h-4 text-gray-600" />
+        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+          {isEdit ? 'Manage Enrolled Employees' : 'Enroll Employees'}
+        </h3>
+        {!isEdit && <span className="text-xs text-gray-400">(optional)</span>}
+        <div className="ml-auto flex items-center gap-2">
+          {hasLimit && <span className="text-xs text-gray-400">Limit: {maxParticipants}</span>}
+          {selectedEmployeeIds.size > 0 && (
+            <Badge className={hasLimit && selectedEmployeeIds.size >= maxParticipants ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'}>
+              {selectedEmployeeIds.size}{hasLimit ? ` / ${maxParticipants}` : ''} selected
+            </Badge>
+          )}
+        </div>
+      </div>
+
+      {loadingEmployees ? (
+        <div className="text-sm text-gray-400 py-6 text-center">Loading employees…</div>
+      ) : (
+        <>
+          <div className="relative mb-3">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              placeholder="Search by name, ID, or email…"
+              value={employeeSearch}
+              onChange={(e) => setEmployeeSearch(e.target.value)}
+              className="pl-9"
+            />
+            {employeeSearch && (
+              <button
+                type="button"
+                onClick={() => setEmployeeSearch('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {filteredEmployees.length > 0 && (
+            <div className="border rounded-md overflow-hidden">
+              <div
+                className="flex items-center gap-3 px-3 py-2 bg-gray-50 border-b cursor-pointer hover:bg-gray-100 select-none"
+                onClick={toggleSelectAll}
+              >
+                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${allFilteredSelected ? 'bg-blue-600 border-blue-600' : 'border-gray-400'}`}>
+                  {allFilteredSelected && <Check className="w-3 h-3 text-white" />}
+                </div>
+                <span className="text-sm font-medium text-gray-700">
+                  {allFilteredSelected ? 'Deselect all' : `Select all (${filteredEmployees.length})`}
+                </span>
+              </div>
+
+              <div className="max-h-48 overflow-y-auto divide-y">
+                {filteredEmployees.map((emp) => {
+                  const isSelected = selectedEmployeeIds.has(emp.id);
+                  const atLimit = hasLimit && selectedEmployeeIds.size >= maxParticipants && !isSelected;
+                  return (
+                    <div
+                      key={emp.id}
+                      title={atLimit ? `Maximum ${maxParticipants} participants reached` : undefined}
+                      className={`flex items-center gap-3 px-3 py-2 select-none ${atLimit ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-gray-50'} ${isSelected ? 'bg-blue-50' : ''}`}
+                      onClick={() => !atLimit && toggleEmployee(emp.id)}
+                    >
+                      <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${isSelected ? 'bg-blue-600 border-blue-600' : atLimit ? 'border-gray-300' : 'border-gray-400'}`}>
+                        {isSelected && <Check className="w-3 h-3 text-white" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">{emp.first_name} {emp.last_name}</p>
+                        <p className="text-xs text-gray-500 truncate">{emp.employee_id} &middot; {emp.email}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {hasLimit && selectedEmployeeIds.size >= maxParticipants && (
+                <div className="px-3 py-2 bg-amber-50 border-t text-xs text-amber-700 font-medium">
+                  Maximum of {maxParticipants} participant{maxParticipants > 1 ? 's' : ''} reached. Deselect someone to add another.
+                </div>
+              )}
+            </div>
+          )}
+
+          {filteredEmployees.length === 0 && employeeSearch && (
+            <p className="text-sm text-gray-400 text-center py-4">No employees match "{employeeSearch}"</p>
+          )}
+          {filteredEmployees.length === 0 && !employeeSearch && (
+            <p className="text-sm text-gray-400 text-center py-4">No active employees found</p>
+          )}
+        </>
+      )}
+
+      {enrollmentError && <p className="mt-2 text-sm text-amber-600">{enrollmentError}</p>}
+    </div>
+
+    {/* Actions */}
+    <div className="flex gap-2 pt-1">
+      <Button type="submit" disabled={submitting}>
+        {submitting
+          ? 'Saving…'
+          : isEdit
+          ? selectedEmployeeIds.size > 0 ? 'Save Changes & Update Enrollments' : 'Save Changes'
+          : selectedEmployeeIds.size > 0
+          ? `Save & Enroll ${selectedEmployeeIds.size} Employee${selectedEmployeeIds.size > 1 ? 's' : ''}`
+          : 'Save Program'}
+      </Button>
+      <Button type="button" variant="outline" disabled={submitting} onClick={onCancel}>
+        Cancel
+      </Button>
+    </div>
+  </form>
+);
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
 export const TrainingProgramManagement: React.FC = () => {
   const [programs, setPrograms] = useState<TrainingProgram[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // New program inline form
   const [showNewForm, setShowNewForm] = useState(false);
-
-  // Edit modal
   const [editingProgram, setEditingProgram] = useState<TrainingProgram | null>(null);
-
-  // Delete modal
   const [deleteTarget, setDeleteTarget] = useState<TrainingProgram | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  // Shared form state (used for both create and edit)
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    provider: '',
-    start_date: '',
-    end_date: '',
-    duration_hours: 0,
-    max_participants: 0,
+  const [formData, setFormData] = useState<FormData>({
+    name: '', description: '', provider: '',
+    start_date: '', end_date: '',
+    duration_hours: 0, max_participants: 0,
   });
 
-  // Employee enrollment state
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<Set<string>>(new Set());
   const [enrollmentMap, setEnrollmentMap] = useState<Record<string, string>>({});
@@ -44,9 +267,7 @@ export const TrainingProgramManagement: React.FC = () => {
   const [enrollmentError, setEnrollmentError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    loadPrograms();
-  }, []);
+  useEffect(() => { loadPrograms(); }, []);
 
   const loadPrograms = async () => {
     try {
@@ -144,8 +365,8 @@ export const TrainingProgramManagement: React.FC = () => {
       name: program.name,
       description: program.description || '',
       provider: program.provider || '',
-      start_date: program.start_date.toString().split('T')[0],
-      end_date: program.end_date.toString().split('T')[0],
+      start_date: program.start_date?.toString().split('T')[0] ?? '',
+      end_date: program.end_date?.toString().split('T')[0] ?? '',
       duration_hours: program.duration_hours,
       max_participants: program.max_participants || 0,
     });
@@ -224,11 +445,11 @@ export const TrainingProgramManagement: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'bg-emerald-100 text-emerald-800';
-      case 'draft': return 'bg-gray-100 text-gray-800';
+      case 'active':    return 'bg-emerald-100 text-emerald-800';
+      case 'draft':     return 'bg-gray-100 text-gray-800';
       case 'completed': return 'bg-blue-100 text-blue-800';
       case 'cancelled': return 'bg-rose-100 text-rose-800';
-      default: return 'bg-gray-100 text-gray-800';
+      default:          return 'bg-gray-100 text-gray-800';
     }
   };
 
@@ -236,206 +457,14 @@ export const TrainingProgramManagement: React.FC = () => {
     filteredEmployees.length > 0 &&
     filteredEmployees.every((e) => selectedEmployeeIds.has(e.id));
 
-  // Shared form body used inside both the inline card (create) and the modal (edit)
-  const FormBody = ({ isEdit }: { isEdit: boolean }) => (
-    <form onSubmit={(e) => handleSubmit(e, isEdit)} className="space-y-6">
-      {/* Program details */}
-      <div>
-        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Program Details</h3>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="name">Program Name</Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              required
-            />
-          </div>
-          <div>
-            <Label htmlFor="provider">Provider</Label>
-            <Input
-              id="provider"
-              value={formData.provider}
-              onChange={(e) => setFormData({ ...formData, provider: e.target.value })}
-            />
-          </div>
-          <div>
-            <Label htmlFor="start_date">Start Date</Label>
-            <Input
-              id="start_date"
-              type="date"
-              value={formData.start_date}
-              onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-              required
-            />
-          </div>
-          <div>
-            <Label htmlFor="end_date">End Date</Label>
-            <Input
-              id="end_date"
-              type="date"
-              value={formData.end_date}
-              onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-              required
-            />
-          </div>
-          <div>
-            <Label htmlFor="duration_hours">Duration (hours)</Label>
-            <Input
-              id="duration_hours"
-              type="number"
-              value={formData.duration_hours}
-              onChange={(e) => setFormData({ ...formData, duration_hours: parseInt(e.target.value) })}
-              required
-            />
-          </div>
-          <div>
-            <Label htmlFor="max_participants">Max Participants</Label>
-            <Input
-              id="max_participants"
-              type="number"
-              value={formData.max_participants}
-              onChange={(e) => setFormData({ ...formData, max_participants: parseInt(e.target.value) })}
-            />
-          </div>
-        </div>
-        <div className="mt-4">
-          <Label htmlFor="description">Description</Label>
-          <textarea
-            id="description"
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-            rows={3}
-          />
-        </div>
-      </div>
-
-      {/* Employee enrollment */}
-      <div className="border-t pt-5">
-        <div className="flex items-center gap-2 mb-3">
-          <Users className="w-4 h-4 text-gray-600" />
-          <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-            {isEdit ? 'Manage Enrolled Employees' : 'Enroll Employees'}
-          </h3>
-          {!isEdit && <span className="text-xs text-gray-400">(optional)</span>}
-          <div className="ml-auto flex items-center gap-2">
-            {hasLimit && <span className="text-xs text-gray-400">Limit: {maxParticipants}</span>}
-            {selectedEmployeeIds.size > 0 && (
-              <Badge className={hasLimit && selectedEmployeeIds.size >= maxParticipants ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'}>
-                {selectedEmployeeIds.size}{hasLimit ? ` / ${maxParticipants}` : ''} selected
-              </Badge>
-            )}
-          </div>
-        </div>
-
-        {loadingEmployees ? (
-          <div className="text-sm text-gray-400 py-6 text-center">Loading employees…</div>
-        ) : (
-          <>
-            <div className="relative mb-3">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                placeholder="Search by name, ID, or email…"
-                value={employeeSearch}
-                onChange={(e) => setEmployeeSearch(e.target.value)}
-                className="pl-9"
-              />
-              {employeeSearch && (
-                <button
-                  type="button"
-                  onClick={() => setEmployeeSearch('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-
-            {filteredEmployees.length > 0 && (
-              <div className="border rounded-md overflow-hidden">
-                <div
-                  className="flex items-center gap-3 px-3 py-2 bg-gray-50 border-b cursor-pointer hover:bg-gray-100 select-none"
-                  onClick={toggleSelectAll}
-                >
-                  <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${allFilteredSelected ? 'bg-blue-600 border-blue-600' : 'border-gray-400'}`}>
-                    {allFilteredSelected && <Check className="w-3 h-3 text-white" />}
-                  </div>
-                  <span className="text-sm font-medium text-gray-700">
-                    {allFilteredSelected ? 'Deselect all' : `Select all (${filteredEmployees.length})`}
-                  </span>
-                </div>
-
-                <div className="max-h-48 overflow-y-auto divide-y">
-                  {filteredEmployees.map((emp) => {
-                    const isSelected = selectedEmployeeIds.has(emp.id);
-                    const atLimit = hasLimit && selectedEmployeeIds.size >= maxParticipants && !isSelected;
-                    return (
-                      <div
-                        key={emp.id}
-                        title={atLimit ? `Maximum ${maxParticipants} participants reached` : undefined}
-                        className={`flex items-center gap-3 px-3 py-2 select-none ${atLimit ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-gray-50'} ${isSelected ? 'bg-blue-50' : ''}`}
-                        onClick={() => !atLimit && toggleEmployee(emp.id)}
-                      >
-                        <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${isSelected ? 'bg-blue-600 border-blue-600' : atLimit ? 'border-gray-300' : 'border-gray-400'}`}>
-                          {isSelected && <Check className="w-3 h-3 text-white" />}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">{emp.first_name} {emp.last_name}</p>
-                          <p className="text-xs text-gray-500 truncate">{emp.employee_id} &middot; {emp.email}</p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {hasLimit && selectedEmployeeIds.size >= maxParticipants && (
-                  <div className="px-3 py-2 bg-amber-50 border-t text-xs text-amber-700 font-medium">
-                    Maximum of {maxParticipants} participant{maxParticipants > 1 ? 's' : ''} reached. Deselect someone to add another.
-                  </div>
-                )}
-              </div>
-            )}
-
-            {filteredEmployees.length === 0 && employeeSearch && (
-              <p className="text-sm text-gray-400 text-center py-4">No employees match "{employeeSearch}"</p>
-            )}
-            {filteredEmployees.length === 0 && !employeeSearch && (
-              <p className="text-sm text-gray-400 text-center py-4">No active employees found</p>
-            )}
-          </>
-        )}
-
-        {enrollmentError && <p className="mt-2 text-sm text-amber-600">{enrollmentError}</p>}
-      </div>
-
-      {/* Actions */}
-      <div className="flex gap-2 pt-1">
-        <Button type="submit" disabled={submitting}>
-          {submitting
-            ? 'Saving…'
-            : isEdit
-            ? selectedEmployeeIds.size > 0 ? 'Save Changes & Update Enrollments' : 'Save Changes'
-            : selectedEmployeeIds.size > 0
-            ? `Save & Enroll ${selectedEmployeeIds.size} Employee${selectedEmployeeIds.size > 1 ? 's' : ''}`
-            : 'Save Program'}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={submitting}
-          onClick={() => {
-            resetFormState();
-            if (isEdit) setEditingProgram(null);
-            else setShowNewForm(false);
-          }}
-        >
-          Cancel
-        </Button>
-      </div>
-    </form>
-  );
+  const sharedFormProps = {
+    formData, setFormData,
+    employeeSearch, setEmployeeSearch,
+    selectedEmployeeIds, filteredEmployees,
+    allFilteredSelected, hasLimit, maxParticipants,
+    loadingEmployees, enrollmentError, submitting,
+    toggleEmployee, toggleSelectAll,
+  };
 
   return (
     <div className="space-y-6">
@@ -454,7 +483,12 @@ export const TrainingProgramManagement: React.FC = () => {
       {/* Inline create form */}
       {showNewForm && (
         <Card className="p-6">
-          <FormBody isEdit={false} />
+          <TrainingFormBody
+            {...sharedFormProps}
+            isEdit={false}
+            onSubmit={(e) => handleSubmit(e, false)}
+            onCancel={() => { resetFormState(); setShowNewForm(false); }}
+          />
         </Card>
       )}
 
@@ -498,9 +532,11 @@ export const TrainingProgramManagement: React.FC = () => {
       {/* ── Edit modal ── */}
       {editingProgram && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => { if (!submitting) { resetFormState(); setEditingProgram(null); } }} />
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => { if (!submitting) { resetFormState(); setEditingProgram(null); } }}
+          />
           <div className="relative z-10 w-full max-w-2xl mx-4 bg-white rounded-xl shadow-2xl flex flex-col max-h-[90vh]">
-            {/* Modal header */}
             <div className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0">
               <div className="flex items-center gap-2">
                 <Edit2 className="w-5 h-5 text-gray-500" />
@@ -514,9 +550,13 @@ export const TrainingProgramManagement: React.FC = () => {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            {/* Scrollable body */}
             <div className="overflow-y-auto px-6 py-5 flex-1">
-              <FormBody isEdit={true} />
+              <TrainingFormBody
+                {...sharedFormProps}
+                isEdit={true}
+                onSubmit={(e) => handleSubmit(e, true)}
+                onCancel={() => { resetFormState(); setEditingProgram(null); }}
+              />
             </div>
           </div>
         </div>

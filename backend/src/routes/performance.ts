@@ -96,6 +96,16 @@ export function createPerformanceRoutes(knex: Knex): Router {
     (req: Request, res: Response, next: NextFunction) => controller.submitReview(req, res, next)
   );
 
+  router.get('/reviews', (req: Request, res: Response, next: NextFunction) =>
+    controller.listReviews(req, res, next)
+  );
+
+  router.delete(
+    '/reviews/:id',
+    authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER, UserRole.DEPARTMENT_MANAGER]) as any,
+    (req: Request, res: Response, next: NextFunction) => controller.deleteReview(req, res, next)
+  );
+
   router.get('/reviews/:id', (req: Request, res: Response, next: NextFunction) =>
     controller.getReview(req, res, next)
   );
@@ -112,8 +122,20 @@ export function createPerformanceRoutes(knex: Knex): Router {
 
   // ============ Feedback ============
 
+  router.get('/feedback', (req: Request, res: Response, next: NextFunction) =>
+    controller.listFeedback(req, res, next)
+  );
+
   router.post('/feedback', (req: Request, res: Response, next: NextFunction) =>
     controller.provideFeedback(req, res, next)
+  );
+
+  router.put('/feedback/:id', (req: Request, res: Response, next: NextFunction) =>
+    controller.updateFeedback(req, res, next)
+  );
+
+  router.delete('/feedback/:id', (req: Request, res: Response, next: NextFunction) =>
+    controller.deleteFeedback(req, res, next)
   );
 
   router.get('/feedback/:employeeId', (req: Request, res: Response, next: NextFunction) =>

@@ -7,20 +7,28 @@ export interface InsuranceEnrollmentRecord {
   employee_id: string;
   plan_id: string;
   enrollment_date: Date;
-  status: 'active' | 'pending' | 'cancelled' | 'inactive';
+  status: 'active' | 'pending' | 'cancelled' | 'inactive' | 'rejected';
   created_at: Date;
   updated_at: Date;
+}
+
+export interface EnrollmentWithDetails extends InsuranceEnrollmentRecord {
+  employee_name: string;
+  emp_code: string;
+  plan_name: string;
+  coverage_type: string;
+  premium_amount: number;
 }
 
 export interface CreateEnrollmentDTO {
   employee_id: string;
   plan_id: string;
   enrollment_date: Date;
-  status: 'active' | 'pending' | 'cancelled' | 'inactive';
+  status: 'active' | 'pending' | 'cancelled' | 'inactive' | 'rejected';
 }
 
 export interface UpdateEnrollmentDTO {
-  status?: 'active' | 'pending' | 'cancelled' | 'inactive';
+  status?: 'active' | 'pending' | 'cancelled' | 'inactive' | 'rejected';
   enrollment_date?: Date;
 }
 
@@ -113,6 +121,31 @@ export class InsuranceEnrollmentRepository {
       .first();
 
     return row ? this.mapRow(row) : null;
+  }
+
+  async getPendingEnrollments(): Promise<EnrollmentWithDetails[]> {
+    const rows = await this.db('insurance_enrollments as ie')
+      .join('employees as e', 'e.id', 'ie.employee_id')
+      .join('insurance_plans as ip', 'ip.id', 'ie.insurance_plan_id')
+      .where('ie.status', 'pending')
+      .select(
+        'ie.*',
+        this.db.raw("CONCAT(e.first_name, ' ', e.last_name) as employee_name"),
+        'e.employee_id as emp_code',
+        'ip.name as plan_name',
+        'ip.coverage_type',
+        'ip.premium_amount'
+      )
+      .orderBy('ie.created_at', 'desc');
+
+    return rows.map((r: any) => ({
+      ...this.mapRow(r),
+      employee_name: r.employee_name,
+      emp_code: r.emp_code,
+      plan_name: r.plan_name,
+      coverage_type: r.coverage_type,
+      premium_amount: Number(r.premium_amount),
+    }));
   }
 
   async getActivePlanEnrollments(insurancePlanId: string): Promise<InsuranceEnrollmentRecord[]> {

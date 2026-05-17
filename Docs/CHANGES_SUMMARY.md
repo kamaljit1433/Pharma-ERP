@@ -25,8 +25,8 @@ This document summarizes all changes made to fix the backend configuration and p
 EMAIL_PROVIDER=smtp
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
-SMTP_USER=smartops.mailer@gmail.com
-SMTP_PASSWORD=rzbrlyqvxahwpntv
+SMTP_USER=XXXXXXXXXXXXXXXXX
+SMTP_PASSWORD=XXXXXXXXXXXXXXXXX
 FILE_STORAGE_PROVIDER=local
 ```
 

@@ -5,7 +5,22 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Badge } from '../ui/badge';
 import { Progress } from '../ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Wallet, CheckCircle2, Clock } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../ui/alert-dialog';
+import { Wallet, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
+
+interface FailedEmployee {
+  employeeId: string;
+  reason: string;
+}
 
 interface PayrollSummary {
   total_employees: number;
@@ -14,6 +29,7 @@ interface PayrollSummary {
   total_net_salary: number;
   processed_count: number;
   pending_count: number;
+  failed_employees?: FailedEmployee[];
   month: number;
   year: number;
 }
@@ -31,8 +47,14 @@ export const PayrollProcessing: React.FC<PayrollProcessingProps> = ({
   const [year, setYear] = useState<string>(String(new Date().getFullYear()));
   const [summary, setSummary] = useState<PayrollSummary | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
-  const handleProcess = async () => {
+  const handleProcessClick = () => {
+    setConfirmOpen(true);
+  };
+
+  const handleConfirm = async () => {
+    setConfirmOpen(false);
     setProcessing(true);
     try {
       const result = await onProcess(parseInt(month), parseInt(year));
@@ -54,9 +76,12 @@ export const PayrollProcessing: React.FC<PayrollProcessingProps> = ({
     label: String(new Date().getFullYear() - i),
   }));
 
-  const processedPercentage = summary
-    ? (summary.processed_count / summary.total_employees) * 100
-    : 0;
+  const processedPercentage =
+    summary && summary.total_employees > 0
+      ? (summary.processed_count / summary.total_employees) * 100
+      : 0;
+
+  const selectedMonthName = months.find((m) => m.value === month)?.label ?? month;
 
   return (
     <div className="space-y-6">
@@ -104,7 +129,7 @@ export const PayrollProcessing: React.FC<PayrollProcessingProps> = ({
             </div>
 
             <Button
-              onClick={handleProcess}
+              onClick={handleProcessClick}
               disabled={processing || isLoading}
               className="gap-2"
             >
@@ -113,6 +138,24 @@ export const PayrollProcessing: React.FC<PayrollProcessingProps> = ({
           </div>
         </CardContent>
       </Card>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Process Payroll for {selectedMonthName} {year}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will calculate and record salaries for all active employees. If payroll has already
+              been processed for this period, existing records will be recalculated (locked payrolls
+              will not be modified). This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirm}>Process Payroll</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Summary */}
       {summary && (
@@ -182,11 +225,48 @@ export const PayrollProcessing: React.FC<PayrollProcessingProps> = ({
               <div className="flex items-center gap-2">
                 <Clock className="h-5 w-5 text-warning" />
                 <div>
-                  <p className="text-sm text-muted-foreground">Pending</p>
+                  <p className="text-sm text-muted-foreground">Pending / Failed</p>
                   <p className="text-lg font-semibold">{summary.pending_count}</p>
                 </div>
               </div>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Failed Employees */}
+      {summary && summary.failed_employees && summary.failed_employees.length > 0 && (
+        <Card className="border-destructive">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Failed Employees ({summary.failed_employees.length})
+            </CardTitle>
+            <CardDescription>
+              Payroll could not be processed for the following employees. Fix the issues and re-run.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Employee ID</TableHead>
+                  <TableHead>Reason</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {summary.failed_employees.map((f) => (
+                  <TableRow key={f.employeeId}>
+                    <TableCell className="font-medium font-mono text-sm">{f.employeeId}</TableCell>
+                    <TableCell>
+                      <Badge variant="destructive" className="font-normal">
+                        {f.reason}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
       )}

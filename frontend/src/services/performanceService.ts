@@ -81,9 +81,18 @@ export const performanceService = {
 
   // ============ Performance Reviews ============
 
+  getAllReviews: async () => {
+    const response = await apiClient.get('/performance/reviews');
+    return response.data;
+  },
+
   submitReview: async (data: any) => {
     const response = await apiClient.post('/performance/reviews', data);
     return response.data;
+  },
+
+  deleteReview: async (id: string) => {
+    await apiClient.delete(`/performance/reviews/${id}`);
   },
 
   getReview: async (id: string) => {
@@ -105,9 +114,23 @@ export const performanceService = {
 
   // ============ Feedback ============
 
+  getAllFeedback: async () => {
+    const response = await apiClient.get('/performance/feedback');
+    return response.data;
+  },
+
   provideFeedback: async (data: any) => {
     const response = await apiClient.post('/performance/feedback', data);
     return response.data;
+  },
+
+  updateFeedback: async (id: string, data: any) => {
+    const response = await apiClient.put(`/performance/feedback/${id}`, data);
+    return response.data;
+  },
+
+  deleteFeedback: async (id: string) => {
+    await apiClient.delete(`/performance/feedback/${id}`);
   },
 
   getFeedback: async (id: string) => {

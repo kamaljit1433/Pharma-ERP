@@ -72,6 +72,13 @@ export class ReimbursementService {
   }
 
   /**
+   * Get all claims (admin view)
+   */
+  async getAllClaims(): Promise<ReimbursementClaim[]> {
+    return this.claimRepository.searchClaims({});
+  }
+
+  /**
    * Get claims by status
    */
   async getClaimsByStatus(status: string): Promise<ReimbursementClaim[]> {

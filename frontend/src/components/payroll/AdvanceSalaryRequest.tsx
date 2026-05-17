@@ -92,9 +92,32 @@ export const AdvanceSalaryRequest: React.FC<AdvanceSalaryRequestProps> = ({
     }
   };
 
-  const monthlyDeduction = formData.amount
-    ? (parseFloat(formData.amount) / parseInt(formData.deduction_months)).toFixed(2)
-    : '0';
+  const monthlyDeductionValue = formData.amount
+    ? parseFloat(formData.amount) / parseInt(formData.deduction_months)
+    : 0;
+  const monthlyDeduction = monthlyDeductionValue.toLocaleString('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 2,
+  });
+
+  if (!employeeId) {
+    return (
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Wallet className="h-5 w-5" />
+            Request Advance Salary
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-6 text-muted-foreground text-sm">
+            Advance salary requests are only available for employee accounts.
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="w-full">

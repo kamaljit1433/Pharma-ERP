@@ -12,22 +12,33 @@ interface PayslipViewerProps {
 }
 
 export const PayslipViewer: React.FC<PayslipViewerProps> = ({ payslipId, onClose }) => {
-  const { fetchPayslipById, downloadPayslip } = usePayrollStore();
+  const { fetchPayslipById, downloadPayslip, error: storeError } = usePayrollStore();
   const [payslip, setPayslip] = useState<Payslip | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     setIsFetching(true);
-    fetchPayslipById(payslipId).then((data) => {
-      if (!cancelled) {
-        setPayslip(data);
-        setIsFetching(false);
-      }
-    });
+    setFetchError(null);
+    fetchPayslipById(payslipId)
+      .then((data) => {
+        if (!cancelled) {
+          setPayslip(data);
+          if (!data) setFetchError(storeError || 'Payslip not found.');
+          setIsFetching(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setFetchError('Failed to load payslip. Please try again.');
+          setIsFetching(false);
+        }
+      });
     return () => { cancelled = true; };
-  }, [payslipId, fetchPayslipById]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [payslipId]);
 
   const handleDownload = async () => {
     if (!payslip) return;
@@ -37,7 +48,7 @@ export const PayslipViewer: React.FC<PayslipViewerProps> = ({ payslipId, onClose
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `payslip-${(payslip as any).payslip_number || payslip.id}.txt`;
+      link.download = `payslip-${payslip.payslip_number || payslip.id}.txt`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -56,8 +67,8 @@ export const PayslipViewer: React.FC<PayslipViewerProps> = ({ payslipId, onClose
       })
     : '';
 
-  const earnings = payslip ? ((payslip as any).earnings as Record<string, number> | undefined) : undefined;
-  const deductions = payslip ? ((payslip as any).deductions as Record<string, number> | undefined) : undefined;
+  const earnings = payslip?.earnings;
+  const deductions = payslip?.deductions;
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -76,6 +87,8 @@ export const PayslipViewer: React.FC<PayslipViewerProps> = ({ payslipId, onClose
 
         {isFetching ? (
           <div className="py-8 text-center text-muted-foreground">Loading payslip...</div>
+        ) : fetchError ? (
+          <div className="py-8 text-center text-destructive text-sm">{fetchError}</div>
         ) : !payslip ? (
           <div className="py-8 text-center text-muted-foreground">Payslip not found.</div>
         ) : (
@@ -84,7 +97,7 @@ export const PayslipViewer: React.FC<PayslipViewerProps> = ({ payslipId, onClose
             <div className="flex items-center justify-between">
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">Payslip Number</p>
-                <Badge variant="outline">{(payslip as any).payslip_number || payslip.id}</Badge>
+                <Badge variant="outline">{payslip.payslip_number || payslip.id}</Badge>
               </div>
               <Button
                 variant="outline"

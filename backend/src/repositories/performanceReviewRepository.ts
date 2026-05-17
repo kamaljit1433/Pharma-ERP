@@ -3,6 +3,7 @@ import { Knex } from 'knex';
 export interface PerformanceReview {
   id: string;
   employee_id: string;
+  employee_name?: string;
   cycle_id: string;
   reviewer_id: string;
   review_type?: string;
@@ -40,10 +41,10 @@ export class PerformanceReviewRepository {
         employee_id: data.employee_id,
         review_cycle_id: data.cycle_id,
         reviewer_id: data.reviewer_id,
-        review_type: data.review_type || 'self',
+        review_type: data.review_type || 'Self',
         rating: data.rating,
         comments: data.comments,
-        status: data.status || 'draft',
+        status: data.status || 'Pending',
         created_at: new Date(),
         updated_at: new Date(),
       })
@@ -127,10 +128,21 @@ export class PerformanceReviewRepository {
     await this.db('performance_reviews').where({ id }).update({ status, updated_at: new Date() });
   }
 
+  async listAllReviews(): Promise<PerformanceReview[]> {
+    const rows = await this.db('performance_reviews as pr')
+      .leftJoin('employees as e', 'e.id', 'pr.employee_id')
+      .select(
+        'pr.*',
+        this.db.raw("CONCAT(e.first_name, ' ', e.last_name) as employee_name")
+      )
+      .orderBy('pr.created_at', 'desc');
+    return rows.map((r: any) => this.mapReview(r));
+  }
+
   async getReviewHistory(employeeId: string): Promise<PerformanceReview[]> {
     const rows = await this.db('performance_reviews')
       .where({ employee_id: employeeId })
-      .whereIn('status', ['approved', 'finalized'])
+      .whereIn('status', ['Finalized', 'Manager Review Complete', 'Self-Assessment Complete'])
       .orderBy('created_at', 'desc');
     return rows.map((r: any) => this.mapReview(r));
   }
@@ -139,6 +151,7 @@ export class PerformanceReviewRepository {
     return {
       id: row.id,
       employee_id: row.employee_id,
+      employee_name: row.employee_name ?? undefined,
       cycle_id: row.review_cycle_id,
       reviewer_id: row.reviewer_id,
       review_type: row.review_type,

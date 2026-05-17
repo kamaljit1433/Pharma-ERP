@@ -21,6 +21,13 @@ import {
   DialogFooter,
 } from '../ui/dialog';
 import { Pencil, Trash2, Search, ChevronLeft, ChevronRight, Archive } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useAuthStore } from '@/store/authStore';
 import { canEditEmployees, canDeleteEmployees } from '@/utils/permissions';
@@ -211,31 +218,31 @@ export const EmployeeList: React.FC<EmployeeListProps> = ({
                 aria-label="Search employees"
               />
             </div>
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-3 py-2 border border-input rounded-md bg-background text-sm"
-              aria-label="Filter by status"
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="on_leave">On Leave</option>
-              <option value="suspended">Suspended</option>
-              <option value="resigned">Resigned</option>
-              <option value="terminated">Terminated</option>
-            </select>
-            <select
-              value={filterEmploymentType}
-              onChange={(e) => setFilterEmploymentType(e.target.value)}
-              className="px-3 py-2 border border-input rounded-md bg-background text-sm"
-              aria-label="Filter by employment type"
-            >
-              <option value="all">All Types</option>
-              <option value="permanent">Permanent</option>
-              <option value="contract">Contract</option>
-              <option value="temporary">Temporary</option>
-              <option value="intern">Intern</option>
-            </select>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-[140px]" aria-label="Filter by status">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="on_leave">On Leave</SelectItem>
+                <SelectItem value="suspended">Suspended</SelectItem>
+                <SelectItem value="resigned">Resigned</SelectItem>
+                <SelectItem value="terminated">Terminated</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filterEmploymentType} onValueChange={setFilterEmploymentType}>
+              <SelectTrigger className="w-[140px]" aria-label="Filter by employment type">
+                <SelectValue placeholder="All Types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="permanent">Permanent</SelectItem>
+                <SelectItem value="contract">Contract</SelectItem>
+                <SelectItem value="temporary">Temporary</SelectItem>
+                <SelectItem value="intern">Intern</SelectItem>
+              </SelectContent>
+            </Select>
             {onIncludeArchivedChange && (
               <label className="flex items-center gap-2 text-sm cursor-pointer select-none whitespace-nowrap">
                 <input

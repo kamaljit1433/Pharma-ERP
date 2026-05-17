@@ -30,13 +30,13 @@ Open `backend/.env` and confirm:
 ```env
 EMAIL_PROVIDER=smtp
 EMAIL_FROM_NAME=Employee Management System
-EMAIL_FROM_ADDRESS=smartops.mailer@gmail.com   # must match SMTP_USER exactly
+EMAIL_FROM_ADDRESS=XXXXXXXXXXXXXXXXX   # must match SMTP_USER exactly
 
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_SECURE=false
-SMTP_USER=smartops.mailer@gmail.com
-SMTP_PASSWORD=rzbrlyqvxahwpntv                 # 16-char Gmail App Password
+SMTP_USER=XXXXXXXXXXXXXXXXX
+SMTP_PASSWORD=XXXXXXXXXXXXXXXXX                 # 16-char Gmail App Password
 ```
 
 > `EMAIL_FROM_ADDRESS` and `SMTP_USER` **must be the same Gmail address**. If they differ, Gmail rejects the send.
@@ -167,8 +167,8 @@ const transporter = nodemailer.createTransport({
   port: 587,
   secure: false,
   auth: {
-    user: 'smartops.mailer@gmail.com',
-    pass: 'rzbrlyqvxahwpntv'
+    user: 'XXXXXXXXXXXXXXXXX',
+    pass: 'XXXXXXXXXXXXXXXXX'
   }
 });
 

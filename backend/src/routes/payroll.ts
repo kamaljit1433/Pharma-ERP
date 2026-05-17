@@ -1,7 +1,9 @@
 import { Router, Request, Response } from 'express';
 import { PayrollController } from '../controllers/payrollController';
-import { authenticateToken } from '../middleware/auth';
+import { authenticateToken, requireRole } from '../middleware/auth';
 import { Knex } from 'knex';
+
+const PAYROLL_ROLES = ['super_admin', 'hr_manager', 'finance'];
 
 export function createPayrollRoutes(knex: Knex): Router {
   const router = Router();
@@ -11,14 +13,23 @@ export function createPayrollRoutes(knex: Knex): Router {
   router.get(
     '/records',
     authenticateToken as any,
+    requireRole(PAYROLL_ROLES) as any,
     async (req: Request, res: Response) => {
       try {
         const { employee_id, month, year } = req.query as Record<string, string>;
-        let query = knex('payroll').select('*').orderBy('year', 'desc').orderBy('month', 'desc');
-        if (employee_id) query = query.where('employee_id', employee_id);
-        if (month) query = query.where('month', parseInt(month));
-        if (year) query = query.where('year', parseInt(year));
-        const records = await query.limit(24);
+        let query = knex('payroll')
+          .leftJoin('employees', 'payroll.employee_id', 'employees.id')
+          .select(
+            'payroll.*',
+            knex.raw("CONCAT(employees.first_name, ' ', employees.last_name) as employee_name"),
+            'employees.employee_id as employee_code'
+          )
+          .orderBy('payroll.year', 'desc')
+          .orderBy('payroll.month', 'desc');
+        if (employee_id) query = query.where('payroll.employee_id', employee_id);
+        if (month) query = query.where('payroll.month', parseInt(month));
+        if (year) query = query.where('payroll.year', parseInt(year));
+        const records = await query.limit(200);
         res.status(200).json({ success: true, data: records });
       } catch (error: any) {
         res.status(500).json({ success: false, error: error.message });
@@ -30,6 +41,7 @@ export function createPayrollRoutes(knex: Knex): Router {
   router.get(
     '/salary-structures',
     authenticateToken as any,
+    requireRole(PAYROLL_ROLES) as any,
     async (req: Request, res: Response) => {
       try {
         const rows = await knex('employees')
@@ -69,6 +81,7 @@ export function createPayrollRoutes(knex: Knex): Router {
   router.post(
     '/salary-structure',
     authenticateToken as any,
+    requireRole(PAYROLL_ROLES) as any,
     (req: Request, res: Response) =>
       controller.configureSalaryStructure(req, res)
   );
@@ -77,6 +90,7 @@ export function createPayrollRoutes(knex: Knex): Router {
   router.get(
     '/salary-structure/:employeeId',
     authenticateToken as any,
+    requireRole(PAYROLL_ROLES) as any,
     (req: Request, res: Response) => controller.getSalaryStructure(req, res)
   );
 
@@ -84,6 +98,7 @@ export function createPayrollRoutes(knex: Knex): Router {
   router.post(
     '/process',
     authenticateToken as any,
+    requireRole(PAYROLL_ROLES) as any,
     (req: Request, res: Response) =>
       controller.processMonthlyPayroll(req, res)
   );
@@ -92,6 +107,7 @@ export function createPayrollRoutes(knex: Knex): Router {
   router.get(
     '/payslips',
     authenticateToken as any,
+    requireRole(PAYROLL_ROLES) as any,
     (req: Request, res: Response) => controller.getPayslips(req, res)
   );
 
@@ -99,6 +115,7 @@ export function createPayrollRoutes(knex: Knex): Router {
   router.post(
     '/payslip/generate',
     authenticateToken as any,
+    requireRole(PAYROLL_ROLES) as any,
     (req: Request, res: Response) => controller.generatePayslip(req, res)
   );
 
@@ -120,6 +137,7 @@ export function createPayrollRoutes(knex: Knex): Router {
   router.get(
     '/export/:month/:year',
     authenticateToken as any,
+    requireRole(PAYROLL_ROLES) as any,
     (req: Request, res: Response) =>
       controller.exportBankFile(req, res)
   );
@@ -136,6 +154,7 @@ export function createPayrollRoutes(knex: Knex): Router {
   router.put(
     '/:id/lock',
     authenticateToken as any,
+    requireRole(PAYROLL_ROLES) as any,
     (req: Request, res: Response) => controller.lockPayroll(req, res)
   );
 
@@ -143,6 +162,7 @@ export function createPayrollRoutes(knex: Knex): Router {
   router.get(
     '/:employeeId/:month/:year',
     authenticateToken as any,
+    requireRole(PAYROLL_ROLES) as any,
     (req: Request, res: Response) =>
       controller.getPayrollDetails(req, res)
   );

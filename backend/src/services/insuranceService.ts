@@ -114,7 +114,7 @@ export class InsuranceService {
       throw new Error(`Enrollment window validation failed: ${windowValidation.reason}`);
     }
 
-    // Check if employee already enrolled in this plan
+    // Check if employee already has an active or pending enrollment for this plan
     const existingEnrollment = await this.insuranceEnrollmentRepository.getEnrollmentByEmployeeAndPlan(
       data.employee_id,
       data.insurance_plan_id
@@ -124,12 +124,34 @@ export class InsuranceService {
       throw new Error('Employee is already enrolled in this insurance plan');
     }
 
+    if (existingEnrollment && existingEnrollment.status === 'pending') {
+      throw new Error('A pending enrollment request already exists for this plan');
+    }
+
     return this.insuranceEnrollmentRepository.createEnrollment({
       employee_id: data.employee_id,
       plan_id: data.insurance_plan_id,
       enrollment_date: data.enrollment_date,
-      status: 'active',
+      status: 'pending',
     }) as any;
+  }
+
+  async getPendingEnrollments() {
+    return this.insuranceEnrollmentRepository.getPendingEnrollments();
+  }
+
+  async approveEnrollment(enrollmentId: string): Promise<InsuranceEnrollment> {
+    const enrollment = await this.insuranceEnrollmentRepository.getEnrollmentById(enrollmentId);
+    if (!enrollment) throw new Error('Enrollment not found');
+    if (enrollment.status !== 'pending') throw new Error(`Cannot approve enrollment with status: ${enrollment.status}`);
+    return this.insuranceEnrollmentRepository.updateEnrollment(enrollmentId, { status: 'active' }) as any;
+  }
+
+  async rejectEnrollment(enrollmentId: string): Promise<InsuranceEnrollment> {
+    const enrollment = await this.insuranceEnrollmentRepository.getEnrollmentById(enrollmentId);
+    if (!enrollment) throw new Error('Enrollment not found');
+    if (enrollment.status !== 'pending') throw new Error(`Cannot reject enrollment with status: ${enrollment.status}`);
+    return this.insuranceEnrollmentRepository.updateEnrollment(enrollmentId, { status: 'rejected' }) as any;
   }
 
   async getEmployeeEnrollments(employeeId: string): Promise<InsuranceEnrollment[]> {

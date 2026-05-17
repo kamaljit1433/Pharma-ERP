@@ -95,6 +95,14 @@ export class FeedbackService {
     return summary;
   }
 
+  async getAllFeedback(): Promise<Feedback[]> {
+    return this.feedbackRepository.listAllFeedback();
+  }
+
+  async updateFeedback(id: string, data: { type?: string; content?: string; visibility?: string }): Promise<Feedback> {
+    return this.feedbackRepository.updateFeedback(id, data);
+  }
+
   async deleteFeedback(feedbackId: string): Promise<void> {
     await this.feedbackRepository.deleteFeedback(feedbackId);
   }

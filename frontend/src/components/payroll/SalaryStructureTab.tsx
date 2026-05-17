@@ -27,6 +27,8 @@ export const SalaryStructureTab: React.FC = () => {
       await payrollService.configureSalaryStructure({ ...data, employee_id: employeeId });
       toast({ type: 'success', message: 'Salary structure saved successfully' });
       setSelected(null);
+    } catch (err) {
+      toast({ type: 'error', message: err instanceof Error ? err.message : 'Failed to save salary structure' });
     } finally {
       setSaving(false);
     }

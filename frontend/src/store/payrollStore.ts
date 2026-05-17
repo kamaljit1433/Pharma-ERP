@@ -91,16 +91,16 @@ export const usePayrollStore = create<PayrollState>((set, get) => ({
     }
   },
 
-  // Fetch single payslip by id
+  // Fetch single payslip by id — does NOT set global loading so the payslip list doesn't flicker
   fetchPayslipById: async (payslipId) => {
-    set({ loading: true, error: null });
+    set({ error: null });
     try {
       const result = await payrollService.getPayslip(payslipId);
       const payslip = (result as any)?.data ?? result;
-      set({ currentPayslip: payslip, loading: false });
+      set({ currentPayslip: payslip });
       return payslip;
     } catch (error) {
-      set({ error: (error as Error).message, loading: false });
+      set({ error: (error as Error).message });
       return null;
     }
   },
@@ -196,18 +196,13 @@ export const usePayrollStore = create<PayrollState>((set, get) => ({
     }
   },
 
-  // Download payslip
+  // Download payslip — does NOT set global loading so the payslip list doesn't flicker
   downloadPayslip: async (payslipId) => {
-    set({ loading: true, error: null });
     try {
       const blob = await payrollService.downloadPayslip(payslipId);
-      set({ loading: false });
       return blob;
     } catch (error) {
-      set({
-        error: (error as Error).message,
-        loading: false,
-      });
+      set({ error: (error as Error).message });
       throw error;
     }
   },
@@ -227,18 +222,13 @@ export const usePayrollStore = create<PayrollState>((set, get) => ({
     }
   },
 
-  // Export bank file
+  // Export bank file — does NOT set global loading so the payroll list doesn't flicker
   exportBankFile: async (month, year, format) => {
-    set({ loading: true, error: null });
+    set({ error: null });
     try {
-      const blob = await payrollService.exportBankFile(month, year, format);
-      set({ loading: false });
-      return blob;
+      return await payrollService.exportBankFile(month, year, format);
     } catch (error) {
-      set({
-        error: (error as Error).message,
-        loading: false,
-      });
+      set({ error: (error as Error).message });
       throw error;
     }
   },

@@ -76,6 +76,10 @@ export class RewardService {
     return this.rewardRepository.getRewardsByEmployee(employeeId);
   }
 
+  async getAllRewards(): Promise<Reward[]> {
+    return this.rewardRepository.getAllRewards();
+  }
+
   async getPublicRewards(): Promise<Reward[]> {
     return this.rewardRepository.getPublicRewards();
   }

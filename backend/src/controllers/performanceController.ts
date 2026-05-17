@@ -296,12 +296,46 @@ export class PerformanceController {
         return;
       }
 
+      const user = (req as any).user;
+      let resolvedReviewerId = reviewerId;
+      if (!resolvedReviewerId) {
+        const reviewerEmployee = await this.knex('employees')
+          .where({ employee_id: user.employeeId })
+          .select('id')
+          .first();
+        resolvedReviewerId = reviewerEmployee?.id;
+      }
+      if (!resolvedReviewerId) {
+        res.status(400).json({ error: 'Could not resolve reviewer employee record' });
+        return;
+      }
+
       const review = await this.reviewService.submitReview(
-        { employeeId, cycleId, reviewType, rating, comments, reviewerId: reviewerId || (req as any).user.id },
-        (req as any).user.id
+        { employeeId, cycleId, reviewType, rating, comments, reviewerId: resolvedReviewerId },
+        user.id
       );
 
       res.status(201).json(review);
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  async listReviews(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const reviews = await this.reviewService.getAllReviews();
+      res.json(reviews);
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  async deleteReview(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const id = req.params['id'] as string;
+      if (!id) { res.status(400).json({ error: 'Review ID is required' }); return; }
+      await this.reviewService.deleteReview(id);
+      res.status(204).send();
     } catch (error) {
       return next(error);
     }
@@ -344,6 +378,38 @@ export class PerformanceController {
 
   // ============ Feedback ============
 
+  async listFeedback(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const feedback = await this.feedbackService.getAllFeedback();
+      res.json(feedback);
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  async updateFeedback(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const id = req.params['id'] as string;
+      if (!id) { res.status(400).json({ error: 'Feedback ID is required' }); return; }
+      const { type, content, visibility } = req.body;
+      const updated = await this.feedbackService.updateFeedback(id, { type, content, visibility });
+      res.json(updated);
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  async deleteFeedback(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const id = req.params['id'] as string;
+      if (!id) { res.status(400).json({ error: 'Feedback ID is required' }); return; }
+      await this.feedbackService.deleteFeedback(id);
+      res.status(204).send();
+    } catch (error) {
+      return next(error);
+    }
+  }
+
   async provideFeedback(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { toEmployeeId, type, content, isAnonymous, visibility } = req.body;
@@ -358,7 +424,18 @@ export class PerformanceController {
         return;
       }
 
-      if (toEmployeeId === (req as any).user.id && !isAnonymous) {
+      const user = (req as any).user;
+      const fromEmployee = await this.knex('employees')
+        .where({ employee_id: user.employeeId })
+        .select('id')
+        .first();
+      const fromEmployeeId = fromEmployee?.id;
+      if (!fromEmployeeId) {
+        res.status(400).json({ error: 'Could not resolve sender employee record' });
+        return;
+      }
+
+      if (toEmployeeId === fromEmployeeId && !isAnonymous) {
         res.status(400).json({ error: 'Cannot provide non-anonymous feedback to yourself' });
         return;
       }
@@ -369,7 +446,7 @@ export class PerformanceController {
         content,
         isAnonymous,
         visibility,
-        (req as any).user.id
+        fromEmployeeId
       );
 
       res.status(201).json(feedback);

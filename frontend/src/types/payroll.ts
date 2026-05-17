@@ -1,6 +1,8 @@
 export interface PayrollRecord {
   id: string;
   employee_id: string;
+  employee_name?: string;
+  employee_code?: string;
   month: number;
   year: number;
   basic_salary?: number;
@@ -58,7 +60,7 @@ export interface Payslip {
   net_salary: number;
   total_deductions?: number;
   earnings?: Record<string, number>;
-  deductions_breakdown?: Record<string, number>;
+  deductions?: Record<string, number>;
 }
 
 export interface PayrollSummary {

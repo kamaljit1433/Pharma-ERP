@@ -77,7 +77,9 @@ export interface CreateReviewCycleDTO {
 export interface PerformanceReview {
   id: string;
   employeeId: string;
+  employeeName?: string;
   cycleId: string;
+  reviewType?: string;
   selfRating?: number; // 1-5
   managerRating?: number; // 1-5
   peerRatings: number[]; // Array of 1-5 ratings

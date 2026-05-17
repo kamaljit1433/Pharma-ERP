@@ -18,6 +18,7 @@ export interface PFContribution {
   pf_account_id: string;
   month: number;
   year: number;
+  basic_salary: number;
   employee_contribution: number;
   employer_contribution: number;
   total_contribution: number;
@@ -42,6 +43,7 @@ export interface UpdatePFAccountInput {
 export interface CreateContributionInput {
   month: number;
   year: number;
+  basic_salary: number;
   employee_contribution: number;
   employer_contribution: number;
   total_contribution: number;
@@ -57,7 +59,7 @@ export class PFRepository {
     const [row] = await this.knex('pf_accounts')
       .insert({
         employee_id: resolvedId,
-        pf_number: data.pf_number,
+        pf_account_number: data.pf_number,
         employee_contribution_rate: data.employee_contribution_rate,
         employer_contribution_rate: data.employer_contribution_rate,
         account_status: data.account_status || 'active',
@@ -92,7 +94,7 @@ export class PFRepository {
 
   async updatePFAccount(id: string, data: UpdatePFAccountInput): Promise<PFAccount> {
     const updateData: any = { updated_at: new Date() };
-    if (data.pf_number !== undefined) updateData.pf_number = data.pf_number;
+    if (data.pf_number !== undefined) updateData.pf_account_number = data.pf_number;
     if (data.employee_contribution_rate !== undefined) updateData.employee_contribution_rate = data.employee_contribution_rate;
     if (data.employer_contribution_rate !== undefined) updateData.employer_contribution_rate = data.employer_contribution_rate;
     if (data.account_status !== undefined) updateData.account_status = data.account_status;
@@ -111,6 +113,7 @@ export class PFRepository {
         pf_account_id: pfAccountId,
         month: data.month,
         year: data.year,
+        basic_salary: data.basic_salary,
         employee_contribution: data.employee_contribution,
         employer_contribution: data.employer_contribution,
         total_contribution: data.total_contribution,
@@ -161,6 +164,7 @@ export class PFRepository {
     return this.recordContribution(account.id, {
       month: data.month,
       year: data.year,
+      basic_salary: data.basic_salary,
       employee_contribution: emp,
       employer_contribution: emr,
       total_contribution: emp + emr,
@@ -183,7 +187,7 @@ export class PFRepository {
     return {
       id: row.id,
       employee_id: row.employee_id,
-      pf_number: row.pf_number,
+      pf_number: row.pf_account_number,
       employee_contribution_rate: parseFloat(row.employee_contribution_rate),
       employer_contribution_rate: parseFloat(row.employer_contribution_rate),
       account_status: row.account_status,
@@ -199,6 +203,7 @@ export class PFRepository {
       pf_account_id: row.pf_account_id,
       month: row.month,
       year: row.year,
+      basic_salary: parseFloat(row.basic_salary ?? 0),
       employee_contribution: parseFloat(row.employee_contribution),
       employer_contribution: parseFloat(row.employer_contribution),
       total_contribution: parseFloat(row.total_contribution),

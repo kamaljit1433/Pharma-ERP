@@ -4,9 +4,10 @@ import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Calendar, Briefcase, Building2, Hash, ChevronDown } from 'lucide-react';
+import { Calendar, Briefcase, Building2, Hash, ChevronDown, Package } from 'lucide-react';
 import hierarchyService from '../../services/hierarchyService';
 import employeeService from '../../services/employeeService';
+import { assetService, Asset } from '../../services/assetService';
 
 interface Employee {
   id: string;
@@ -47,6 +48,8 @@ export const EmployeeEmploymentDetails: React.FC<Props> = ({ employee, canEdit =
   const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<EmployeeStatus>(employee.status);
   const [isSaving, setIsSaving] = useState(false);
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [assetsLoading, setAssetsLoading] = useState(true);
 
   useEffect(() => {
     hierarchyService.getDepartments().then((depts) => {
@@ -65,6 +68,14 @@ export const EmployeeEmploymentDetails: React.FC<Props> = ({ employee, canEdit =
       setManagerName(null);
     }
   }, [employee.department_id, employee.designation_id, employee.reporting_manager_id]);
+
+  useEffect(() => {
+    setAssetsLoading(true);
+    assetService.getByEmployee(employee.id)
+      .then(setAssets)
+      .catch(() => setAssets([]))
+      .finally(() => setAssetsLoading(false));
+  }, [employee.id]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -201,6 +212,47 @@ export const EmployeeEmploymentDetails: React.FC<Props> = ({ employee, canEdit =
               <p className="font-medium">{employee.email}</p>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Assigned Assets Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Package className="h-5 w-5" />
+            Assigned Assets
+            {!assetsLoading && (
+              <span className="ml-auto text-sm font-normal text-muted-foreground">
+                {assets.length} {assets.length === 1 ? 'item' : 'items'}
+              </span>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {assetsLoading ? (
+            <p className="text-sm text-muted-foreground">Loading…</p>
+          ) : assets.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No assets assigned to this employee.</p>
+          ) : (
+            <div className="divide-y divide-border">
+              {assets.map((asset) => (
+                <div key={asset.id} className="py-3 flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="font-medium truncate">{asset.name}</p>
+                    <p className="text-xs text-muted-foreground font-mono">{asset.asset_code}</p>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <Badge variant="outline" className="text-xs">{asset.category}</Badge>
+                    {asset.assigned_date && (
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                        Since {new Date(asset.assigned_date).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 

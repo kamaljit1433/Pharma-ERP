@@ -74,6 +74,19 @@ export class PayrollProcessingService {
             year
           );
 
+        // Locked payroll must not be overwritten
+        if (existingPayroll?.status === 'locked') {
+          processedCount++;
+          totalGrossSalary += existingPayroll.gross_salary;
+          totalDeductions += existingPayroll.total_deductions ?? 0;
+          totalNetSalary += existingPayroll.net_salary;
+          continue;
+        }
+
+        const pfDeduction = calculation.deductions.find((d) => d.name === 'Provident Fund (PF)')?.amount ?? 0;
+        const esiDeduction = calculation.deductions.find((d) => d.name === 'Employee State Insurance (ESI)')?.amount ?? 0;
+        const tdsDeduction = calculation.deductions.find((d) => d.name === 'Tax Deducted at Source (TDS)')?.amount ?? 0;
+
         let payroll;
         if (existingPayroll) {
           payroll = await this.payrollRepository.updatePayroll(existingPayroll.id, {
@@ -81,6 +94,9 @@ export class PayrollProcessingService {
             net_salary: calculation.net_pay,
             total_deductions: calculation.total_deductions,
             total_earnings: calculation.gross_pay,
+            pf_deduction: pfDeduction,
+            esi_deduction: esiDeduction,
+            tds_deduction: tdsDeduction,
           });
         } else {
           payroll = await this.payrollRepository.createPayroll({
@@ -91,6 +107,9 @@ export class PayrollProcessingService {
             net_salary: calculation.net_pay,
             total_deductions: calculation.total_deductions,
             total_earnings: calculation.gross_pay,
+            pf_deduction: pfDeduction,
+            esi_deduction: esiDeduction,
+            tds_deduction: tdsDeduction,
           });
         }
 
@@ -223,7 +242,11 @@ export class PayrollProcessingService {
     year: number,
     format: 'NEFT' | 'CSV'
   ): Promise<Buffer> {
-    const payrolls = await this.payrollRepository.getPayrollsByMonth(month, year);
+    const [lockedPayrolls, paidPayrolls] = await Promise.all([
+      this.payrollRepository.getPayrollByStatus('locked', month, year),
+      this.payrollRepository.getPayrollByStatus('paid', month, year),
+    ]);
+    const payrolls = [...lockedPayrolls, ...paidPayrolls];
 
     if (format === 'CSV') {
       if (payrolls.length === 0) {
@@ -251,19 +274,27 @@ export class PayrollProcessingService {
   }
 
   private async generateCSVFile(payrolls: any[]): Promise<Buffer> {
+    const employeeIds = payrolls.map((p) => p.employee_id);
+    const [employees, bankAccounts] = await Promise.all([
+      this.knex('employees').whereIn('id', employeeIds),
+      this.knex('bank_accounts').whereIn('employee_id', employeeIds).where('is_primary', true),
+    ]);
+    const employeeMap = new Map(employees.map((e: any) => [e.id, e]));
+    const bankAccountMap = new Map(bankAccounts.map((b: any) => [b.employee_id, b]));
+
     let csv = 'Employee ID,Employee Name,Amount,Bank Account (Masked),IFSC Code\n';
     const skipped: string[] = [];
 
     for (const payroll of payrolls) {
-      const employee = await this.knex('employees').where({ id: payroll.employee_id }).first();
-      const bankAccount = await this.knex('bank_accounts')
-        .where({ employee_id: payroll.employee_id, is_primary: true })
-        .first();
+      const employee = employeeMap.get(payroll.employee_id) as any;
+      const bankAccount = bankAccountMap.get(payroll.employee_id) as any;
 
       if (bankAccount) {
         // Mask the account number before writing to file — never expose raw/encrypted values
         const masked = this.maskAccountNumber(bankAccount.account_number_encrypted);
-        csv += `${employee.employee_id},${employee.first_name} ${employee.last_name},${payroll.net_salary},${masked},${bankAccount.ifsc_code}\n`;
+        const empId = employee?.employee_id ?? payroll.employee_id;
+        const empName = employee ? `${employee.first_name} ${employee.last_name}` : 'Unknown';
+        csv += `${empId},${empName},${payroll.net_salary},${masked},${bankAccount.ifsc_code}\n`;
       } else {
         skipped.push(employee?.employee_id ?? payroll.employee_id);
         logger.error(`No primary bank account for employee ${payroll.employee_id} — skipped in CSV export`);
@@ -278,19 +309,27 @@ export class PayrollProcessingService {
   }
 
   private async generateNEFTFile(payrolls: any[]): Promise<Buffer> {
+    const employeeIds = payrolls.map((p) => p.employee_id);
+    const [employees, bankAccounts] = await Promise.all([
+      this.knex('employees').whereIn('id', employeeIds),
+      this.knex('bank_accounts').whereIn('employee_id', employeeIds).where('is_primary', true),
+    ]);
+    const employeeMap = new Map(employees.map((e: any) => [e.id, e]));
+    const bankAccountMap = new Map(bankAccounts.map((b: any) => [b.employee_id, b]));
+
     let neft = '';
     const skipped: string[] = [];
 
     for (const payroll of payrolls) {
-      const employee = await this.knex('employees').where({ id: payroll.employee_id }).first();
-      const bankAccount = await this.knex('bank_accounts')
-        .where({ employee_id: payroll.employee_id, is_primary: true })
-        .first();
+      const employee = employeeMap.get(payroll.employee_id) as any;
+      const bankAccount = bankAccountMap.get(payroll.employee_id) as any;
 
       if (bankAccount) {
         // Mask the account number before writing to file
         const masked = this.maskAccountNumber(bankAccount.account_number_encrypted);
-        neft += `${employee.employee_id}|${employee.first_name} ${employee.last_name}|${payroll.net_salary}|${masked}|${bankAccount.ifsc_code}\n`;
+        const empId = employee?.employee_id ?? payroll.employee_id;
+        const empName = employee ? `${employee.first_name} ${employee.last_name}` : 'Unknown';
+        neft += `${empId}|${empName}|${payroll.net_salary}|${masked}|${bankAccount.ifsc_code}\n`;
       } else {
         skipped.push(employee?.employee_id ?? payroll.employee_id);
         logger.error(`No primary bank account for employee ${payroll.employee_id} — skipped in NEFT export`);

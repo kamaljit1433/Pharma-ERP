@@ -125,18 +125,23 @@ export class PayrollCalculationService {
     const startDate = new Date(Date.UTC(year, month - 1, 1));
     const endDate = new Date(Date.UTC(year, month, 0));
 
-    // Use a single JOIN to avoid N+1 queries (one query per leave record)
+    // Include leaves that overlap the month, not just those that start within it.
+    // A leave starting last month but running into this month must be counted.
     const leaves = await this.knex('leaves')
       .join('leave_types', 'leaves.leave_type_id', 'leave_types.id')
       .where({ 'leaves.employee_id': employeeId, 'leaves.status': 'approved' })
-      .whereBetween('leaves.from_date', [startDate, endDate])
+      .where('leaves.from_date', '<=', endDate)
+      .where('leaves.to_date', '>=', startDate)
       .select('leaves.from_date', 'leaves.to_date', 'leave_types.is_paid');
 
     let paidLeaveDays = 0;
     let unpaidLeaveDays = 0;
 
     for (const leave of leaves) {
-      const days = this.calculateLeaveDays(leave.from_date, leave.to_date);
+      // Clamp leave range to within this month so cross-month leaves aren't over-counted
+      const effectiveFrom = new Date(Math.max(new Date(leave.from_date).getTime(), startDate.getTime()));
+      const effectiveTo = new Date(Math.min(new Date(leave.to_date).getTime(), endDate.getTime()));
+      const days = this.calculateLeaveDays(effectiveFrom, effectiveTo);
       if (leave.is_paid) {
         paidLeaveDays += days;
       } else {

@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
+import { DatePicker } from '../ui/date-picker';
 import { benefitsService } from '../../services/benefitsService';
-import { CheckCircle2, AlertCircle, Clock, XCircle, BadgeCheck, Banknote, X, Eye, Plus } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Clock, XCircle, BadgeCheck, Banknote, X, Eye, Plus, Paperclip } from 'lucide-react';
 
 interface PastClaim {
   id: string;
@@ -123,10 +124,13 @@ export const ReimbursementClaimForm: React.FC<ReimbursementClaimFormProps> = ({
 }) => {
   const [formData, setFormData] = useState({
     claim_type: '',
+    other_type: '',
     amount: '',
     description: '',
-    claim_date: new Date().toISOString().split('T')[0],
+    claim_date: new Date().toISOString().split('T')[0] ?? '',
   });
+  const [billImage, setBillImage] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [pastClaims, setPastClaims] = useState<PastClaim[]>([]);
@@ -152,11 +156,21 @@ export const ReimbursementClaimForm: React.FC<ReimbursementClaimFormProps> = ({
     }
   };
 
+  const resolvedClaimType =
+    formData.claim_type === 'Other' && formData.other_type.trim()
+      ? formData.other_type.trim()
+      : formData.claim_type;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.claim_type || !formData.amount || !formData.description) {
       setMessage({ type: 'error', text: 'Please fill in all required fields' });
+      return;
+    }
+
+    if (formData.claim_type === 'Other' && !formData.other_type.trim()) {
+      setMessage({ type: 'error', text: 'Please specify the claim type' });
       return;
     }
 
@@ -169,7 +183,7 @@ export const ReimbursementClaimForm: React.FC<ReimbursementClaimFormProps> = ({
       setLoading(true);
       await benefitsService.submitReimbursementClaim({
         employee_id: employeeId,
-        claim_type: formData.claim_type,
+        claim_type: resolvedClaimType,
         amount: parseFloat(formData.amount),
         description: formData.description,
         claim_date: formData.claim_date,
@@ -178,10 +192,12 @@ export const ReimbursementClaimForm: React.FC<ReimbursementClaimFormProps> = ({
       setMessage({ type: 'success', text: 'Reimbursement claim submitted successfully' });
       setFormData({
         claim_type: '',
+        other_type: '',
         amount: '',
         description: '',
-        claim_date: new Date().toISOString().split('T')[0],
+        claim_date: new Date().toISOString().split('T')[0] ?? '',
       });
+      setBillImage(null);
       fetchPastClaims();
       setTimeout(() => { setShowForm(false); setMessage(null); }, 1500);
 
@@ -196,7 +212,12 @@ export const ReimbursementClaimForm: React.FC<ReimbursementClaimFormProps> = ({
     }
   };
 
-  const closeForm = () => { setShowForm(false); setMessage(null); };
+  const closeForm = () => {
+    setShowForm(false);
+    setMessage(null);
+    setBillImage(null);
+    setFormData({ claim_type: '', other_type: '', amount: '', description: '', claim_date: new Date().toISOString().split('T')[0] ?? '' });
+  };
 
   return (
     <div className="space-y-6">
@@ -233,6 +254,7 @@ export const ReimbursementClaimForm: React.FC<ReimbursementClaimFormProps> = ({
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Claim Type */}
               <div>
                 <Label>Claim Type *</Label>
                 <div className="grid grid-cols-3 gap-2 mt-2">
@@ -240,7 +262,7 @@ export const ReimbursementClaimForm: React.FC<ReimbursementClaimFormProps> = ({
                     <button
                       key={type}
                       type="button"
-                      onClick={() => setFormData({ ...formData, claim_type: type })}
+                      onClick={() => setFormData({ ...formData, claim_type: type, other_type: '' })}
                       className={`p-2 rounded-lg border transition text-sm ${
                         formData.claim_type === type
                           ? 'border-primary bg-primary/10'
@@ -251,8 +273,18 @@ export const ReimbursementClaimForm: React.FC<ReimbursementClaimFormProps> = ({
                     </button>
                   ))}
                 </div>
+                {formData.claim_type === 'Other' && (
+                  <Input
+                    className="mt-2"
+                    placeholder="Please specify…"
+                    value={formData.other_type}
+                    onChange={(e) => setFormData({ ...formData, other_type: e.target.value })}
+                    autoFocus
+                  />
+                )}
               </div>
 
+              {/* Amount */}
               <div>
                 <Label htmlFor="amount">Amount (₹) *</Label>
                 <Input
@@ -267,17 +299,18 @@ export const ReimbursementClaimForm: React.FC<ReimbursementClaimFormProps> = ({
                 />
               </div>
 
+              {/* Claim Date */}
               <div>
                 <Label htmlFor="claim_date">Claim Date *</Label>
-                <Input
+                <DatePicker
                   id="claim_date"
-                  type="date"
                   value={formData.claim_date}
-                  onChange={(e) => setFormData({ ...formData, claim_date: e.target.value })}
+                  onChange={(v) => setFormData({ ...formData, claim_date: v })}
                   required
                 />
               </div>
 
+              {/* Description */}
               <div>
                 <Label htmlFor="description">Description *</Label>
                 <textarea
@@ -289,6 +322,40 @@ export const ReimbursementClaimForm: React.FC<ReimbursementClaimFormProps> = ({
                   rows={4}
                   required
                 />
+              </div>
+
+              {/* Bill Upload (optional) */}
+              <div>
+                <Label>Bill / Receipt <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*,application/pdf"
+                  className="hidden"
+                  onChange={(e) => setBillImage(e.target.files?.[0] ?? null)}
+                />
+                {billImage ? (
+                  <div className="mt-2 flex items-center gap-2 px-3 py-2 border border-border rounded-md text-sm">
+                    <Paperclip className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <span className="flex-1 truncate">{billImage.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => { setBillImage(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
+                      className="text-muted-foreground hover:text-destructive transition"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 border border-dashed border-border rounded-md text-sm text-muted-foreground hover:border-primary hover:text-primary transition"
+                  >
+                    <Paperclip className="w-4 h-4" />
+                    Attach bill or receipt
+                  </button>
+                )}
               </div>
 
               <div className="flex gap-3 pt-1">

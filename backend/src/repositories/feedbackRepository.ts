@@ -7,7 +7,7 @@ export class FeedbackRepository {
   async createFeedback(
     data: CreateFeedbackDTO & { fromEmployeeId: string }
   ): Promise<Feedback> {
-    const ids = await this.db('feedback').insert({
+    const [row] = await this.db('feedback').insert({
       to_employee_id: data.toEmployeeId,
       from_employee_id: data.fromEmployeeId,
       type: data.type,
@@ -15,13 +15,13 @@ export class FeedbackRepository {
       is_anonymous: data.isAnonymous,
       visibility: data.visibility,
       created_at: new Date(),
-    });
+    }).returning('id');
 
-    const id = Array.isArray(ids) ? ids[0] : ids;
+    const id = typeof row === 'object' ? row.id : row;
     if (!id) {
       throw new Error('Failed to create feedback');
     }
-    return this.getFeedbackById(id.toString()) as Promise<Feedback>;
+    return this.getFeedbackById(id) as Promise<Feedback>;
   }
 
   async getFeedbackById(id: string): Promise<Feedback | null> {
@@ -87,6 +87,16 @@ export class FeedbackRepository {
         // Others can only see public feedback
         return feedback.visibility === 'Public';
       });
+  }
+
+  async listAllFeedback(): Promise<Feedback[]> {
+    const rows = await this.db('feedback').orderBy('created_at', 'desc');
+    return rows.map((r: any) => this.mapFeedback(r));
+  }
+
+  async updateFeedback(id: string, data: { type?: string; content?: string; visibility?: string }): Promise<Feedback> {
+    await this.db('feedback').where('id', id).update(data);
+    return this.getFeedbackById(id) as Promise<Feedback>;
   }
 
   async deleteFeedback(id: string): Promise<void> {

@@ -42,6 +42,11 @@ export class RewardRepository {
     return rewards.map((r) => this.mapToReward(r));
   }
 
+  async getAllRewards(): Promise<Reward[]> {
+    const rewards = await this.knex('rewards').orderBy('awarded_date', 'desc');
+    return rewards.map((r) => this.mapToReward(r));
+  }
+
   async getPublicRewards(): Promise<Reward[]> {
     const rewards = await this.knex('rewards')
       .where({ is_public: true })

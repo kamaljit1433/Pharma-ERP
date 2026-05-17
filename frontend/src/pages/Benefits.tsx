@@ -3,6 +3,7 @@ import { useAuth } from '../hooks/useAuth';
 import { UserRole } from '../types/auth';
 import { InsurancePlanManagement } from '../components/benefits/InsurancePlanManagement';
 import { InsuranceEnrollment } from '../components/benefits/InsuranceEnrollment';
+import { InsuranceEnrollmentRequests } from '../components/benefits/InsuranceEnrollmentRequests';
 import { PFStatement } from '../components/benefits/PFStatement';
 import { GratuityCalculator } from '../components/benefits/GratuityCalculator';
 import { ReimbursementClaimForm } from '../components/benefits/ReimbursementClaimForm';
@@ -57,6 +58,11 @@ const Benefits: React.FC = () => {
           <div className="space-y-8">
             <InsurancePlanManagement />
             {employeeId && <InsuranceEnrollment employeeId={employeeId} />}
+            {canApprove && (
+              <div className="border rounded-xl p-6">
+                <InsuranceEnrollmentRequests />
+              </div>
+            )}
           </div>
         )}
         {activeTab === 'pf' && <PFStatement employeeId={employeeId} />}

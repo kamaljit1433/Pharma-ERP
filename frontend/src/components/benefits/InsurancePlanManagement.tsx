@@ -4,10 +4,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Badge } from '../ui/badge';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
+import { DatePicker } from '../ui/date-picker';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { benefitsService } from '../../services/benefitsService';
-import { EmployeeSearch } from '../performance/EmployeeSearch';
-import { Employee } from '../../services/employeeService';
-import { Plus, Edit2, Trash2, AlertCircle, X, Users } from 'lucide-react';
+import { Plus, Edit2, Trash2, AlertCircle } from 'lucide-react';
+
+const COVERAGE_TYPES = ['health', 'life', 'disability', 'dental', 'vision'] as const;
 
 interface InsurancePlan {
   id: string;
@@ -34,7 +36,6 @@ export const InsurancePlanManagement: React.FC = () => {
     enrollment_start_date: '',
     enrollment_end_date: '',
   });
-  const [assignedEmployees, setAssignedEmployees] = useState<Employee[]>([]);
 
   useEffect(() => {
     fetchPlans();
@@ -58,7 +59,7 @@ export const InsurancePlanManagement: React.FC = () => {
     try {
       const payload = {
         ...formData,
-        employee_ids: assignedEmployees.map((emp) => emp.id),
+        premium_amount: parseFloat(formData.premium_amount),
       };
       if (editingId) {
         await benefitsService.updateInsurancePlan(editingId, payload);
@@ -67,9 +68,8 @@ export const InsurancePlanManagement: React.FC = () => {
       }
       resetForm();
       fetchPlans();
-    } catch (err) {
-      setError('Failed to save insurance plan');
-      console.error('Failed to save insurance plan:', err);
+    } catch (err: any) {
+      setError(err.response?.data?.message || err.message || 'Failed to save insurance plan');
     }
   };
 
@@ -82,20 +82,8 @@ export const InsurancePlanManagement: React.FC = () => {
       enrollment_start_date: '',
       enrollment_end_date: '',
     });
-    setAssignedEmployees([]);
     setShowForm(false);
     setEditingId(null);
-  };
-
-  const handleEmployeeAdd = (_id: string, employee: Employee | null) => {
-    if (!employee) return;
-    if (!assignedEmployees.find((e) => e.id === employee.id)) {
-      setAssignedEmployees((prev) => [...prev, employee]);
-    }
-  };
-
-  const handleEmployeeRemove = (id: string) => {
-    setAssignedEmployees((prev) => prev.filter((e) => e.id !== id));
   };
 
   const handleEdit = (plan: InsurancePlan) => {
@@ -104,10 +92,9 @@ export const InsurancePlanManagement: React.FC = () => {
       provider: plan.provider,
       coverage_type: plan.coverage_type,
       premium_amount: plan.premium_amount.toString(),
-      enrollment_start_date: plan.enrollment_start_date,
-      enrollment_end_date: plan.enrollment_end_date,
+      enrollment_start_date: plan.enrollment_start_date?.split('T')[0] ?? '',
+      enrollment_end_date: plan.enrollment_end_date?.split('T')[0] ?? '',
     });
-    setAssignedEmployees([]);
     setEditingId(plan.id);
     setShowForm(true);
   };
@@ -175,12 +162,22 @@ export const InsurancePlanManagement: React.FC = () => {
                 </div>
                 <div>
                   <Label htmlFor="coverage_type">Coverage Type</Label>
-                  <Input
-                    id="coverage_type"
+                  <Select
                     value={formData.coverage_type}
-                    onChange={(e) => setFormData({ ...formData, coverage_type: e.target.value })}
+                    onValueChange={(v: string) => setFormData({ ...formData, coverage_type: v })}
                     required
-                  />
+                  >
+                    <SelectTrigger id="coverage_type" className="mt-1">
+                      <SelectValue placeholder="Select coverage type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {COVERAGE_TYPES.map((t) => (
+                        <SelectItem key={t} value={t}>
+                          {t.charAt(0).toUpperCase() + t.slice(1)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label htmlFor="premium_amount">Premium Amount</Label>
@@ -194,54 +191,22 @@ export const InsurancePlanManagement: React.FC = () => {
                 </div>
                 <div>
                   <Label htmlFor="enrollment_start_date">Enrollment Start Date</Label>
-                  <Input
+                  <DatePicker
                     id="enrollment_start_date"
-                    type="date"
                     value={formData.enrollment_start_date}
-                    onChange={(e) => setFormData({ ...formData, enrollment_start_date: e.target.value })}
+                    onChange={(v) => setFormData({ ...formData, enrollment_start_date: v })}
                     required
                   />
                 </div>
                 <div>
                   <Label htmlFor="enrollment_end_date">Enrollment End Date</Label>
-                  <Input
+                  <DatePicker
                     id="enrollment_end_date"
-                    type="date"
                     value={formData.enrollment_end_date}
-                    onChange={(e) => setFormData({ ...formData, enrollment_end_date: e.target.value })}
+                    onChange={(v) => setFormData({ ...formData, enrollment_end_date: v })}
                     required
                   />
                 </div>
-              </div>
-              <div className="col-span-2">
-                <div className="flex items-center gap-2 mb-2">
-                  <Users className="w-4 h-4 text-muted-foreground" />
-                  <Label>Assign Employees</Label>
-                </div>
-                <EmployeeSearch
-                  placeholder="Search employee by name or ID..."
-                  onChange={handleEmployeeAdd}
-                />
-                {assignedEmployees.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    {assignedEmployees.map((emp) => (
-                      <span
-                        key={emp.id}
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20"
-                      >
-                        {emp.first_name} {emp.last_name}
-                        <span className="text-muted-foreground">({emp.employee_id})</span>
-                        <button
-                          type="button"
-                          onClick={() => handleEmployeeRemove(emp.id)}
-                          className="ml-0.5 hover:text-destructive transition-colors"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
               </div>
               <div className="flex gap-2 col-span-2">
                 <Button type="submit">Save Plan</Button>

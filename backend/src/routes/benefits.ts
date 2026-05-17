@@ -51,6 +51,21 @@ export function createBenefitsRoutes(knex: Knex): Router {
     controller.getEmployeeEnrollments(req, res)
   );
 
+  // Get pending enrollment requests (must be before /:id)
+  router.get('/insurance/enrollments/admin/pending', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER, UserRole.DEPARTMENT_MANAGER]) as any, (req: Request, res: Response) =>
+    controller.getPendingEnrollmentRequests(req, res)
+  );
+
+  // Approve enrollment request
+  router.put('/insurance/enrollments/:id/approve', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER, UserRole.DEPARTMENT_MANAGER]) as any, (req: Request, res: Response) =>
+    controller.approveEnrollmentRequest(req, res)
+  );
+
+  // Reject enrollment request
+  router.put('/insurance/enrollments/:id/reject', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER, UserRole.DEPARTMENT_MANAGER]) as any, (req: Request, res: Response) =>
+    controller.rejectEnrollmentRequest(req, res)
+  );
+
   // ============ PF Details ============
 
   // Get PF details for employee
@@ -82,6 +97,11 @@ export function createBenefitsRoutes(knex: Knex): Router {
     controller.submitReimbursementClaim(req, res)
   );
 
+  // Get all claims (admin) — must be before /:id to avoid route conflict
+  router.get('/reimbursements/admin/all', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER, UserRole.DEPARTMENT_MANAGER, UserRole.FINANCE]) as any, (req: Request, res: Response) =>
+    controller.getAllClaims(req, res)
+  );
+
   // Get pending claims (must be before /:id to avoid route conflict)
   router.get('/reimbursements/pending', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER, UserRole.DEPARTMENT_MANAGER, UserRole.FINANCE]) as any, (req: Request, res: Response) =>
     controller.getPendingClaims(req, res)
@@ -97,13 +117,13 @@ export function createBenefitsRoutes(knex: Knex): Router {
     controller.getEmployeeClaims(req, res)
   );
 
-  // Approve reimbursement claim (Manager/Finance)
-  router.put('/reimbursements/:id/approve', authorize([UserRole.DEPARTMENT_MANAGER, UserRole.FINANCE, UserRole.HR_MANAGER]) as any, (req: Request, res: Response) =>
+  // Approve reimbursement claim (Admin/Manager/Finance)
+  router.put('/reimbursements/:id/approve', authorize([UserRole.SUPER_ADMIN, UserRole.DEPARTMENT_MANAGER, UserRole.FINANCE, UserRole.HR_MANAGER]) as any, (req: Request, res: Response) =>
     controller.approveClaim(req, res)
   );
 
-  // Reject reimbursement claim (Manager/Finance)
-  router.put('/reimbursements/:id/reject', authorize([UserRole.DEPARTMENT_MANAGER, UserRole.FINANCE, UserRole.HR_MANAGER]) as any, (req: Request, res: Response) =>
+  // Reject reimbursement claim (Admin/Manager/Finance)
+  router.put('/reimbursements/:id/reject', authorize([UserRole.SUPER_ADMIN, UserRole.DEPARTMENT_MANAGER, UserRole.FINANCE, UserRole.HR_MANAGER]) as any, (req: Request, res: Response) =>
     controller.rejectClaim(req, res)
   );
 
@@ -122,6 +142,11 @@ export function createBenefitsRoutes(knex: Knex): Router {
   // Get employee rewards
   router.get('/rewards/employee/:employeeId', (req: Request, res: Response) =>
     controller.getEmployeeRewards(req, res)
+  );
+
+  // Get all rewards (admin)
+  router.get('/rewards/admin/all', authorize([UserRole.SUPER_ADMIN, UserRole.HR_MANAGER, UserRole.DEPARTMENT_MANAGER]) as any, (req: Request, res: Response) =>
+    controller.getAllRewards(req, res)
   );
 
   // Get public rewards (notice board)

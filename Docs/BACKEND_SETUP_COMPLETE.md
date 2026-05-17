@@ -16,8 +16,8 @@
   SMTP_HOST=smtp.gmail.com
   SMTP_PORT=587
   SMTP_SECURE=false
-  SMTP_USER=smartops.mailer@gmail.com
-  SMTP_PASSWORD=rzbrlyqvxahwpntv
+  SMTP_USER=XXXXXXXXXXXXXXXXX
+  SMTP_PASSWORD=XXXXXXXXXXXXXXXXX
   ```
 - **Provider**: SMTPProvider (Nodemailer) is already implemented and working
 
@@ -58,8 +58,8 @@ REDIS_PORT=6379
 EMAIL_PROVIDER=smtp
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
-SMTP_USER=smartops.mailer@gmail.com
-SMTP_PASSWORD=rzbrlyqvxahwpntv
+SMTP_USER=XXXXXXXXXXXXXXXXX
+SMTP_PASSWORD=XXXXXXXXXXXXXXXXX
 ```
 
 ### Frontend API

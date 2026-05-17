@@ -28,7 +28,6 @@ const Payroll: React.FC = () => {
     clearError,
     fetchRecords,
     fetchPayslips,
-    generatePayslip,
     downloadPayslip,
     processMonthlyPayroll,
     requestAdvanceSalary,
@@ -74,7 +73,8 @@ const Payroll: React.FC = () => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `payslip-${payslipId}.txt`;
+      const ps = payslips.find((p) => p.id === payslipId);
+      link.download = `payslip-${ps?.payslip_number || payslipId}.txt`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -214,7 +214,7 @@ const Payroll: React.FC = () => {
                           <TableCell className="font-medium">{record.employee_id}</TableCell>
                           <TableCell>{record.month}/{record.year}</TableCell>
                           <TableCell>₹{Number(record.gross_salary ?? 0).toLocaleString()}</TableCell>
-                          <TableCell>₹{Number(record.deductions ?? 0).toLocaleString()}</TableCell>
+                          <TableCell>₹{Number(record.total_deductions ?? 0).toLocaleString()}</TableCell>
                           <TableCell className="font-semibold">
                             ₹{Number(record.net_salary ?? 0).toLocaleString()}
                           </TableCell>
@@ -344,7 +344,7 @@ const Payroll: React.FC = () => {
           <PayrollReports
             payrolls={records.map((r) => ({
               ...r,
-              employee_name: r.employee_id,
+              employee_name: r.employee_name || r.employee_code || r.employee_id,
             }))}
             onExport={handleExportBankFile}
             isLoading={loading}
