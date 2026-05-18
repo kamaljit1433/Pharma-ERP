@@ -179,7 +179,7 @@ export const RewardManagement: React.FC<RewardManagementProps> = ({
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Rewards & Recognition</h2>
+        <h2 className="text-xl font-bold">Rewards & Recognition</h2>
         {isAdmin && (
           <Button onClick={() => { setEditingId(null); setSelectedEmployeeLabel(''); setShowForm(true); }} className="gap-2">
             <Plus className="w-4 h-4" />
@@ -351,14 +351,14 @@ export const RewardManagement: React.FC<RewardManagementProps> = ({
         </Card>
       ) : (
         <>
-          <div className="grid gap-4">
+          <div className="grid gap-3">
             {paginated.map((reward) => (
               <Card key={reward.id}>
-                <CardContent className="pt-6">
+                <CardContent className="pt-4">
                   <div className="flex-1">
                     <div className="flex justify-between items-start mb-2">
                       <div>
-                        <h3 className="font-semibold text-lg">{reward.title}</h3>
+                        <h3 className="font-semibold text-base">{reward.title}</h3>
                         <p className="text-sm text-muted-foreground">
                           {new Date(reward.awarded_date).toLocaleDateString()}
                         </p>

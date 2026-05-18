@@ -114,6 +114,18 @@ class NotificationService {
   async deleteTemplate(templateId: string): Promise<void> {
     await apiClient.delete(`/notifications/templates/${templateId}`);
   }
+
+  async registerDeviceToken(token: string, deviceType: 'web' | 'mobile' | 'desktop' = 'web'): Promise<void> {
+    await apiClient.post('/notifications/device-token', { token, deviceType });
+  }
+
+  async unregisterDeviceToken(token: string): Promise<void> {
+    await apiClient.delete('/notifications/device-token', { data: { token } });
+  }
+
+  async markAllAsRead(): Promise<void> {
+    await apiClient.put('/notifications/read-all', {});
+  }
 }
 
 export default new NotificationService();

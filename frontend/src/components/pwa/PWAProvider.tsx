@@ -4,12 +4,15 @@ import { UpdateNotification } from './UpdateNotification';
 import { InstallPrompt } from './InstallPrompt';
 import { registerServiceWorker } from '@/utils/pwaRegister';
 import { initOfflineQueue, setupAutoSync } from '@/utils/offlineQueue';
+import { useFCM } from '@/hooks/useFCM';
 
 interface PWAProviderProps {
   children: React.ReactNode;
 }
 
 export const PWAProvider: React.FC<PWAProviderProps> = ({ children }) => {
+  useFCM();
+
   useEffect(() => {
     // Initialize PWA functionality
     const initPWA = async () => {

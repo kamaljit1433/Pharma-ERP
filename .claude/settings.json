@@ -7,7 +7,11 @@
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\kamal\\\\Downloads\\\\Pharma-ERP\\\\frontend\" -Recurse -Directory)",
       "Bash(Sort-Object FullName)",
       "PowerShell(Get-ChildItem \"c:\\\\Users\\\\kamal\\\\Downloads\\\\Pharma-ERP\\\\frontend\\\\node_modules\" -Directory | Where-Object { $_.Name -match \"face\" } | Select-Object Name)",
-      "PowerShell(head)"
+      "PowerShell(head)",
+      "Bash(Test-Path \"c:\\\\Users\\\\kamal\\\\Downloads\\\\Pharma-ERP\\\\frontend\\\\src\\\\components\\\\ui\\\\date-time-picker.tsx\")"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\kamal\\.claude\\projects\\c--Users-kamal-Downloads-Pharma-ERP\\memory"
     ]
   }
 }

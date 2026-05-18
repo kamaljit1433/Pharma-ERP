@@ -10,6 +10,7 @@ import { Label } from '../components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import {
   Package, Plus, Search, UserCheck, UserX, Loader2,
   Pencil, Trash2, AlertCircle, CheckCircle2, RefreshCw,
@@ -212,24 +213,32 @@ const Assets: React.FC = () => {
                 className="pl-9"
               />
             </div>
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-3 py-2 border border-input rounded-md bg-background text-sm"
+            <Select
+              value={filterStatus || 'all'}
+              onValueChange={(v) => setFilterStatus(v === 'all' ? '' : v)}
             >
-              <option value="">All Statuses</option>
-              {['available', 'assigned', 'damaged', 'lost', 'returned'].map((s) => (
-                <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
-              ))}
-            </select>
-            <select
-              value={filterCategory}
-              onChange={(e) => setFilterCategory(e.target.value)}
-              className="px-3 py-2 border border-input rounded-md bg-background text-sm"
+              <SelectTrigger className="h-10 w-36">
+                <SelectValue placeholder="All Statuses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                {['available', 'assigned', 'damaged', 'lost', 'returned'].map((s) => (
+                  <SelectItem key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={filterCategory || 'all'}
+              onValueChange={(v) => setFilterCategory(v === 'all' ? '' : v)}
             >
-              <option value="">All Categories</option>
-              {categories.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
+              <SelectTrigger className="h-10 w-40">
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              </SelectContent>
+            </Select>
             {canManage && (
               <Button onClick={() => setShowCreate((p) => !p)}>
                 <Plus className="h-4 w-4 mr-1.5" />

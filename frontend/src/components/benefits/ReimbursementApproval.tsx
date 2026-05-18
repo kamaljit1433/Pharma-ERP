@@ -147,7 +147,7 @@ export const ReimbursementApproval: React.FC<ReimbursementApprovalProps> = ({ ap
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Reimbursement Claim Approval</h2>
+      <h2 className="text-xl font-bold">Reimbursement Claim Approval</h2>
 
       {message && (
         <Card className={message.type === 'success' ? 'border-green-400' : 'border-destructive'}>
@@ -257,11 +257,11 @@ export const ReimbursementApproval: React.FC<ReimbursementApprovalProps> = ({ ap
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <p className="text-sm text-muted-foreground">Amount</p>
-                        <p className="text-2xl font-bold">₹{claim.amount.toLocaleString()}</p>
+                        <p className="text-xl font-bold">₹{claim.amount.toLocaleString()}</p>
                       </div>
                       {claim.approved_at && (
                         <div>

@@ -1,6 +1,8 @@
 import logger from '../utils/logger';
 import { NotificationProviderFactory } from './factories/NotificationProviderFactory';
 import { NotificationRepository } from '../repositories/notificationRepository';
+import { DeviceTokenRepository } from '../repositories/deviceTokenRepository';
+import { getKnexInstance } from '../config/knex';
 import config from '../config';
 import {
   NotificationType,
@@ -17,9 +19,18 @@ export class NotificationService {
   private fcmProvider: NotificationProvider | null = null;
   private notificationTemplates: Map<NotificationType, NotificationTemplate> = new Map();
   private notificationRepository: NotificationRepository | null = null;
+  private deviceTokenRepository: DeviceTokenRepository | null = null;
 
-  constructor(notificationRepository?: NotificationRepository) {
+  constructor(notificationRepository?: NotificationRepository, deviceTokenRepository?: DeviceTokenRepository) {
     this.notificationRepository = notificationRepository || null;
+    this.deviceTokenRepository = deviceTokenRepository || null;
+    if (!this.deviceTokenRepository) {
+      try {
+        this.deviceTokenRepository = new DeviceTokenRepository(getKnexInstance());
+      } catch {
+        // DB not ready yet — will remain null; push notifications will be skipped
+      }
+    }
     this.initializeFCM();
     this.initializeTemplates();
     // Attempt to overlay DB-stored templates on top of defaults.
@@ -260,29 +271,46 @@ export class NotificationService {
     }
   }
 
-  private async sendPushNotification(employeeId: string, _data: SendNotificationDTO): Promise<void> {
+  private async sendPushNotification(employeeId: string, data: SendNotificationDTO): Promise<void> {
+    if (!this.fcmProvider) return;
+    if (!this.deviceTokenRepository) {
+      logger.warn(`DeviceTokenRepository not available — skipping push for employee ${employeeId}`);
+      return;
+    }
+
     try {
-      if (!this.fcmProvider) {
-        throw new Error('FCM Provider is not available');
+      const tokens = await this.deviceTokenRepository.getActiveByEmployeeId(employeeId);
+      if (tokens.length === 0) {
+        logger.debug(`No active device tokens for employee ${employeeId}`);
+        return;
       }
 
-      // In a real implementation, fetch device tokens from database
-      // For now, we'll just log the intent
-      logger.info(`Push notification prepared for employee ${employeeId}`);
+      const payload = this.buildPushPayload(data.title, data.body, data.icon, data.image, data.data);
+      const tokenStrings = tokens.map((t) => t.token);
+      await this.fcmProvider.sendToMultipleDevices(tokenStrings, payload);
     } catch (error: any) {
-      logger.error(`Failed to send push notification:`, error.message);
+      logger.error(`Failed to send push notification to employee ${employeeId}:`, error.message);
       throw error;
     }
   }
 
-  private async sendBulkPushNotification(employeeIds: string[], _data: SendBulkNotificationDTO): Promise<void> {
+  private async sendBulkPushNotification(employeeIds: string[], data: SendBulkNotificationDTO): Promise<void> {
+    if (!this.fcmProvider) return;
+    if (!this.deviceTokenRepository) {
+      logger.warn(`DeviceTokenRepository not available — skipping bulk push for ${employeeIds.length} employees`);
+      return;
+    }
+
     try {
-      if (!this.fcmProvider) {
-        throw new Error('FCM Provider is not available');
+      const allTokens = await this.deviceTokenRepository.getActiveByEmployeeIds(employeeIds);
+      if (allTokens.length === 0) {
+        logger.debug(`No active device tokens for bulk push to ${employeeIds.length} employees`);
+        return;
       }
 
-      // In a real implementation, fetch device tokens for all employees from database
-      logger.info(`Bulk push notifications prepared for ${employeeIds.length} employees`);
+      const payload = this.buildPushPayload(data.title, data.body, data.icon, data.image, data.data);
+      const tokenStrings = allTokens.map((t) => t.token);
+      await this.fcmProvider.sendToMultipleDevices(tokenStrings, payload);
     } catch (error: any) {
       logger.error(`Failed to send bulk push notifications:`, error.message);
       throw error;

@@ -13,6 +13,7 @@ import bcrypt from 'bcrypt';
 // employee      | EMP006      | emp3.alpha@company.com
 // employee      | EMP007      | emp1.beta@company.com
 // employee      | EMP008      | emp2.beta@company.com
+// it_admin      | EMP009      | it@company.com
 
 export async function seed(knex: Knex): Promise<void> {
   await knex('users').del();
@@ -92,7 +93,16 @@ export async function seed(knex: Knex): Promise<void> {
       mfa_enabled: false,
       is_active: true,
     },
+    {
+      id: '00000000-0000-0000-0000-000000000009',
+      employee_id: 'EMP009',
+      email: 'it@company.com',
+      password_hash: hash,
+      role: 'it_admin',
+      mfa_enabled: false,
+      is_active: true,
+    },
   ]);
 
-  console.log('Users seeded (8) — password: Password123!');
+  console.log('Users seeded (9) — password: Password123!');
 }

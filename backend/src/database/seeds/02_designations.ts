@@ -22,7 +22,13 @@ export async function seed(knex: Knex): Promise<void> {
       description: 'HR team member',
       level: 'Mid',
     },
+    {
+      id: 'd4444444-4444-4444-4444-444444444444',
+      name: 'IT Administrator',
+      description: 'Manages IT systems, assets, and user accounts',
+      level: 'Mid',
+    },
   ]);
 
-  console.log('Designations seeded (3)');
+  console.log('Designations seeded (4)');
 }

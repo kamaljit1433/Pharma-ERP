@@ -1,6 +1,7 @@
 ﻿import { Response, NextFunction } from 'express';
 import { Knex } from 'knex';
 import { NotificationRepository } from '../repositories/notificationRepository';
+import { DeviceTokenRepository } from '../repositories/deviceTokenRepository';
 import {
   NotificationTemplateRepository,
   CreateNotificationTemplateDTO,
@@ -10,11 +11,26 @@ import { AuthenticatedRequest } from '../middleware/auth';
 
 export class NotificationController {
   private notificationRepository: NotificationRepository;
+  private deviceTokenRepository: DeviceTokenRepository;
   private templateRepository: NotificationTemplateRepository;
 
-  constructor(knex: Knex) {
+  constructor(private knex: Knex) {
     this.notificationRepository = new NotificationRepository(knex);
+    this.deviceTokenRepository = new DeviceTokenRepository(knex);
     this.templateRepository = new NotificationTemplateRepository(knex);
+  }
+
+  private async resolveEmployeeUUID(user: any): Promise<string | null> {
+    if (!user) return null;
+    // user.employeeId is the HR code (e.g. "EMP001") — look up the UUID
+    if (user.employeeId) {
+      const row = await this.knex('employees')
+        .where({ employee_id: user.employeeId })
+        .select('id')
+        .first();
+      if (row) return row.id;
+    }
+    return null;
   }
 
   /**
@@ -23,7 +39,7 @@ export class NotificationController {
    */
   async getNotifications(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const employeeId = (req.user as any)?.id;
+      const employeeId = await this.resolveEmployeeUUID(req.user);
       if (!employeeId) {
         res.status(401).json({
           error: {
@@ -66,7 +82,7 @@ export class NotificationController {
   async markAsRead(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const id = req.params['id'] as string;
-      const employeeId = (req.user as any)?.id;
+      const employeeId = await this.resolveEmployeeUUID(req.user);
 
       if (!employeeId) {
         res.status(401).json({
@@ -106,6 +122,103 @@ export class NotificationController {
 
       const updated = await this.notificationRepository.markAsRead(id);
       res.json(updated);
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  /**
+   * POST /api/v1/notifications/device-token
+   * Register an FCM device token for the authenticated employee
+   */
+  async registerDeviceToken(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const employeeId = await this.resolveEmployeeUUID(req.user);
+      if (!employeeId) {
+        res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required', timestamp: new Date().toISOString() } });
+        return;
+      }
+
+      const { token, deviceType } = req.body as { token?: string; deviceType?: string };
+      if (!token || typeof token !== 'string' || token.trim() === '') {
+        res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'token is required', timestamp: new Date().toISOString() } });
+        return;
+      }
+
+      const validDeviceTypes = ['web', 'mobile', 'desktop'] as const;
+      const normalizedType = (validDeviceTypes.includes(deviceType as any) ? deviceType : 'web') as 'web' | 'mobile' | 'desktop';
+
+      const record = await this.deviceTokenRepository.upsert(employeeId, token.trim(), normalizedType);
+      res.status(200).json({ data: record });
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  /**
+   * DELETE /api/v1/notifications/device-token
+   * Unregister (deactivate) an FCM device token
+   */
+  async unregisterDeviceToken(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const employeeId = await this.resolveEmployeeUUID(req.user);
+      if (!employeeId) {
+        res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required', timestamp: new Date().toISOString() } });
+        return;
+      }
+
+      const { token } = req.body as { token?: string };
+      if (!token || typeof token !== 'string' || token.trim() === '') {
+        res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'token is required', timestamp: new Date().toISOString() } });
+        return;
+      }
+
+      await this.deviceTokenRepository.deactivate(employeeId, token.trim());
+      res.status(204).send();
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  /**
+   * PUT /api/v1/notifications/mark-read
+   * Mark multiple notifications as read by ID array
+   */
+  async markMultipleAsRead(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const employeeId = await this.resolveEmployeeUUID(req.user);
+      if (!employeeId) {
+        res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required', timestamp: new Date().toISOString() } });
+        return;
+      }
+
+      const { ids } = req.body as { ids?: string[] };
+      if (!Array.isArray(ids) || ids.length === 0) {
+        res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'ids must be a non-empty array', timestamp: new Date().toISOString() } });
+        return;
+      }
+
+      await this.notificationRepository.markMultipleAsRead(ids);
+      res.status(204).send();
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  /**
+   * PUT /api/v1/notifications/read-all
+   * Mark all notifications for the authenticated employee as read
+   */
+  async markAllAsRead(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const employeeId = await this.resolveEmployeeUUID(req.user);
+      if (!employeeId) {
+        res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required', timestamp: new Date().toISOString() } });
+        return;
+      }
+
+      await this.notificationRepository.markAllAsRead(employeeId);
+      res.status(204).send();
     } catch (error) {
       return next(error);
     }

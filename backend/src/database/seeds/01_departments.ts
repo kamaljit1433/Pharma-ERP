@@ -16,7 +16,13 @@ export async function seed(knex: Knex): Promise<void> {
       parent_department_id: null,
       head_employee_id: null,
     },
+    {
+      id: '33333333-3333-3333-3333-333333333333',
+      name: 'Information Technology',
+      parent_department_id: null,
+      head_employee_id: null,
+    },
   ]);
 
-  console.log('Departments seeded (2)');
+  console.log('Departments seeded (3)');
 }

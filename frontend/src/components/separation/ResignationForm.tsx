@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
+import { DatePicker } from '../ui/date-picker';
 import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 
 interface ResignationData {
@@ -104,11 +104,10 @@ export const ResignationForm: React.FC<ResignationFormProps> = ({
 
           <div className="space-y-2">
             <Label htmlFor="resignation_date">Resignation Date</Label>
-            <Input
+            <DatePicker
               id="resignation_date"
-              type="date"
               value={toDateString(formData.resignation_date)}
-              onChange={(e) => handleDateChange('resignation_date', e.target.value)}
+              onChange={(v) => handleDateChange('resignation_date', v)}
               required
             />
             <p className="text-xs text-muted-foreground">The date you are submitting your resignation</p>
@@ -116,11 +115,10 @@ export const ResignationForm: React.FC<ResignationFormProps> = ({
 
           <div className="space-y-2">
             <Label htmlFor="last_working_day">Last Working Day</Label>
-            <Input
+            <DatePicker
               id="last_working_day"
-              type="date"
               value={toDateString(formData.last_working_day)}
-              onChange={(e) => handleDateChange('last_working_day', e.target.value)}
+              onChange={(v) => handleDateChange('last_working_day', v)}
               required
             />
             <p className="text-xs text-muted-foreground">Your final day of work (end of notice period)</p>

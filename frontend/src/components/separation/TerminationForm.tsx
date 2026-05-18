@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
+import { DatePicker } from '../ui/date-picker';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { EmployeeSearch } from '../performance/EmployeeSearch';
 import { Employee } from '../../services/employeeService';
@@ -152,34 +153,35 @@ export const TerminationForm: React.FC<TerminationFormProps> = ({
 
           <div className="space-y-2">
             <Label htmlFor="termination_date">Termination Date</Label>
-            <Input
+            <DatePicker
               id="termination_date"
-              type="date"
               value={toDateString(formData.termination_date)}
-              onChange={(e) => handleDateChange('termination_date', e.target.value)}
+              onChange={(v) => handleDateChange('termination_date', v)}
               required
             />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="termination_type">Termination Type</Label>
-            <select
-              id="termination_type"
+            <Select
               value={formData.termination_type}
-              onChange={(e) =>
+              onValueChange={(v) =>
                 setFormData((prev) => ({
                   ...prev,
-                  termination_type: e.target.value as TerminationData['termination_type'],
+                  termination_type: v as TerminationData['termination_type'],
                 }))
               }
-              className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm"
-              required
             >
-              <option value="involuntary">Involuntary Termination</option>
-              <option value="voluntary">Voluntary Termination</option>
-              <option value="retirement">Retirement</option>
-              <option value="contract_end">Contract End</option>
-            </select>
+              <SelectTrigger id="termination_type">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="involuntary">Involuntary Termination</SelectItem>
+                <SelectItem value="voluntary">Voluntary Termination</SelectItem>
+                <SelectItem value="retirement">Retirement</SelectItem>
+                <SelectItem value="contract_end">Contract End</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
@@ -196,13 +198,10 @@ export const TerminationForm: React.FC<TerminationFormProps> = ({
 
           <div className="space-y-2">
             <Label htmlFor="final_settlement_date">Final Settlement Date (Optional)</Label>
-            <Input
+            <DatePicker
               id="final_settlement_date"
-              type="date"
-              value={
-                formData.final_settlement_date ? toDateString(formData.final_settlement_date) : ''
-              }
-              onChange={(e) => handleDateChange('final_settlement_date', e.target.value)}
+              value={formData.final_settlement_date ? toDateString(formData.final_settlement_date) : ''}
+              onChange={(v) => handleDateChange('final_settlement_date', v)}
             />
             <p className="text-xs text-muted-foreground">Expected date for final settlement payment</p>
           </div>

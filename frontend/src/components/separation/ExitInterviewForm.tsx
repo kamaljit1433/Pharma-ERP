@@ -2,9 +2,9 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
-import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
+import { DateTimePicker } from '../ui/date-time-picker';
 import {
   Dialog,
   DialogContent,
@@ -462,12 +462,10 @@ export const ExitInterviewForm: React.FC<ExitInterviewFormProps> = ({
               )}
               <div className="space-y-2">
                 <Label htmlFor="scheduled_date">Interview Date &amp; Time</Label>
-                <Input
+                <DateTimePicker
                   id="scheduled_date"
-                  type="datetime-local"
                   value={scheduledDate}
-                  onChange={(e) => setScheduledDate(e.target.value)}
-                  min={new Date().toISOString().slice(0, 16)}
+                  onChange={(v) => setScheduledDate(v)}
                   required
                 />
               </div>

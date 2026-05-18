@@ -18,6 +18,11 @@ const E5 = 'e0000000-0000-0000-0000-000000000005'; // Emp Alpha 2
 const E6 = 'e0000000-0000-0000-0000-000000000006'; // Emp Alpha 3
 const E7 = 'e0000000-0000-0000-0000-000000000007'; // Emp Beta 1
 const E8 = 'e0000000-0000-0000-0000-000000000008'; // Emp Beta 2
+const E9 = 'e0000000-0000-0000-0000-000000000009'; // IT Admin
+
+// IT Dept / Designation IDs
+const IT   = '33333333-3333-3333-3333-333333333333';
+const D_IT = 'd4444444-4444-4444-4444-444444444444';
 
 export async function seed(knex: Knex): Promise<void> {
   await knex('employees').del();
@@ -224,7 +229,33 @@ export async function seed(knex: Knex): Promise<void> {
       employment_type: 'permanent',
       status: 'active',
     },
+
+    // ── IT Admin ──────────────────────────────────────────────────────────────
+    {
+      id: E9,
+      employee_id: 'EMP009',
+      first_name: 'Vikram',
+      last_name: 'Nair',
+      email: 'it@company.com',
+      phone: '+91-9000000009',
+      date_of_birth: '1990-03-22',
+      gender: 'male',
+      blood_group: 'B+',
+      address: '9 IT Street',
+      city: 'Bengaluru',
+      state: 'Karnataka',
+      postal_code: '560001',
+      country: 'India',
+      pan: 'IIICZ9012N',
+      aadhar: '9999-0000-1111',
+      department_id: IT,
+      designation_id: D_IT,
+      reporting_manager_id: E1,
+      date_of_joining: '2021-02-01',
+      employment_type: 'permanent',
+      status: 'active',
+    },
   ]);
 
-  console.log('Employees seeded (8): 1 super admin + 2 HR managers + 5 employees');
+  console.log('Employees seeded (9): 1 super admin + 2 HR managers + 5 employees + 1 IT admin');
 }
