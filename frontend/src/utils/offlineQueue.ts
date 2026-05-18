@@ -170,14 +170,13 @@ export async function processOfflineQueue(
       const newRetryCount = operation.retryCount + 1;
       
       if (newRetryCount >= MAX_RETRIES) {
-        // Remove from queue after max retries
+        // Permanently drop after max retries — only count these as failed
         await removeQueuedOperation(operation.id);
         failed++;
         console.warn('Operation removed after max retries:', operation.id);
       } else {
-        // Update retry count
+        // Keep in queue for the next sync cycle — not a failure yet
         await updateOperationRetryCount(operation.id, newRetryCount);
-        failed++;
       }
     }
   }

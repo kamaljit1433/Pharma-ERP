@@ -210,7 +210,7 @@ export const GratuityCalculator: React.FC<GratuityCalculatorProps> = ({ employee
               </div>
 
               {/* Years of Service */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Card className="border-border">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground">

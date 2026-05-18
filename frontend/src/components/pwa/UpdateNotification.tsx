@@ -10,7 +10,7 @@ export const UpdateNotification: React.FC = () => {
       return;
     }
 
-    const handleUpdate = (reg: ServiceWorkerRegistration) => {
+    const markUpdateAvailable = (reg: ServiceWorkerRegistration) => {
       setRegistration(reg);
       setShowUpdate(true);
     };
@@ -22,35 +22,39 @@ export const UpdateNotification: React.FC = () => {
         if (newWorker) {
           newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              handleUpdate(reg);
+              markUpdateAvailable(reg);
             }
           });
         }
       });
     });
 
-    // Listen for messages from service worker
-    navigator.serviceWorker.addEventListener('message', (event) => {
-      if (event.data && event.data.type === 'UPDATE_AVAILABLE') {
-        navigator.serviceWorker.ready.then((reg) => {
-          handleUpdate(reg);
-        });
+    // Listen for explicit UPDATE_AVAILABLE messages from the service worker
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'UPDATE_AVAILABLE') {
+        navigator.serviceWorker.ready.then(markUpdateAvailable);
       }
-    });
+    };
+    navigator.serviceWorker.addEventListener('message', handleMessage);
+
+    return () => {
+      navigator.serviceWorker.removeEventListener('message', handleMessage);
+    };
   }, []);
 
   const handleUpdate = () => {
-    if (!registration || !registration.waiting) {
+    if (!registration?.waiting) {
       return;
     }
 
     // Tell the service worker to skip waiting
     registration.waiting.postMessage({ type: 'SKIP_WAITING' });
 
-    // Reload the page when the new service worker takes control
+    // { once: true } ensures exactly one reload regardless of how many times
+    // the user clicks "Reload Now" before the controller changes
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       window.location.reload();
-    });
+    }, { once: true });
   };
 
   const handleDismiss = () => {

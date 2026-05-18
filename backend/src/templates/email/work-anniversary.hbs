@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Work Anniversary</title>
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #0A0A0A;
+            background-color: #FFFFFF;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            padding: 40px 0;
+            border-bottom: 1px solid #E5E5E5;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: 600;
+            color: #171717;
+        }
+        .content {
+            padding: 40px 0;
+        }
+        .milestone-banner {
+            background: linear-gradient(135deg, #171717 0%, #404040 100%);
+            color: #FFFFFF;
+            text-align: center;
+            padding: 32px 24px;
+            border-radius: 12px;
+            margin: 24px 0;
+        }
+        .milestone-years {
+            font-size: 52px;
+            font-weight: 700;
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+        .milestone-label {
+            font-size: 16px;
+            font-weight: 500;
+            opacity: 0.85;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .page-title {
+            font-size: 26px;
+            font-weight: 600;
+            color: #171717;
+            text-align: center;
+            margin: 24px 0 8px 0;
+        }
+        .info-box {
+            background-color: #F5F5F5;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #E5E5E5;
+        }
+        .info-row:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+        .info-label {
+            font-weight: 500;
+            color: #737373;
+        }
+        .info-value {
+            font-weight: 600;
+            color: #171717;
+        }
+        .appreciation-message {
+            background-color: #F5F5F5;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-style: italic;
+            color: #525252;
+            font-size: 15px;
+            line-height: 1.7;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px 0;
+            border-top: 1px solid #E5E5E5;
+            color: #737373;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">Employee Management System</div>
+        </div>
+
+        <div class="content">
+            <h1 class="page-title">Happy Work Anniversary! 🎊</h1>
+
+            <div class="milestone-banner">
+                <div class="milestone-years">{{yearsOfService}}</div>
+                <div class="milestone-label">{{#if (eq yearsOfService 1)}}Year{{else}}Years{{/if}} with {{companyName}}</div>
+            </div>
+
+            <p>Dear {{employeeName}},</p>
+
+            <p>Today marks <strong>{{yearsOfService}} {{#if (eq yearsOfService 1)}}year{{else}}years{{/if}}</strong> since you joined us. This is a milestone worth celebrating, and we want you to know how much your contribution means to the entire team.</p>
+
+            <div class="info-box">
+                <div class="info-row">
+                    <span class="info-label">Employee Name:</span>
+                    <span class="info-value">{{employeeName}}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Date of Joining:</span>
+                    <span class="info-value">{{joinDate}}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Years of Service:</span>
+                    <span class="info-value">{{yearsOfService}} {{#if (eq yearsOfService 1)}}year{{else}}years{{/if}}</span>
+                </div>
+            </div>
+
+            <div class="appreciation-message">
+                "Your dedication, hard work, and commitment over the past {{yearsOfService}} {{#if (eq yearsOfService 1)}}year{{else}}years{{/if}} have made a real difference. Thank you for being an integral part of {{companyName}}. We look forward to many more years of shared success."
+            </div>
+
+            <p>Here's to continued growth and success together. Thank you for everything you do!</p>
+
+            <p>Warm regards,<br><strong>The {{companyName}} HR Team</strong></p>
+        </div>
+
+        <div class="footer">
+            <p>This is an automated message from the Employee Management System.</p>
+        </div>
+    </div>
+</body>
+</html>

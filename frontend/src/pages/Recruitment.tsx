@@ -172,18 +172,18 @@ const Recruitment: React.FC = () => {
     return (
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-              <Briefcase className="h-8 w-8" />
+            <h1 className="text-xl font-bold tracking-tight sm:text-2xl lg:text-3xl flex items-center gap-2">
+              <Briefcase className="h-6 w-6 sm:h-8 sm:w-8" />
               Recruitment Management
             </h1>
             <p className="text-muted-foreground mt-1">
               Manage job postings, track candidates, and monitor recruitment pipeline
             </p>
           </div>
-          <Link to="/recruitment/jobs/new">
-            <Button className="gap-2">
+          <Link to="/recruitment/jobs/new" className="flex-shrink-0">
+            <Button className="gap-2 w-full sm:w-auto">
               <Plus className="h-4 w-4" />
               New Job Posting
             </Button>
@@ -203,7 +203,7 @@ const Recruitment: React.FC = () => {
         )}
 
         {/* Metrics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           {/* Total Job Postings */}
           <Card>
             <CardHeader className="pb-3">
@@ -283,7 +283,7 @@ const Recruitment: React.FC = () => {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="w-full">
             <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
             <TabsTrigger value="interviews">Interviews</TabsTrigger>
             <TabsTrigger value="offers">Job Offers</TabsTrigger>
@@ -341,12 +341,12 @@ const Recruitment: React.FC = () => {
           <TabsContent value="jobs" className="space-y-6">
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <CardTitle>Active Job Postings</CardTitle>
                     <CardDescription>View all job postings with applicant counts</CardDescription>
                   </div>
-                  <Button variant="outline" size="sm" onClick={handleSyncNow} disabled={syncing} className="gap-2">
+                  <Button variant="outline" size="sm" onClick={handleSyncNow} disabled={syncing} className="gap-2 self-start sm:self-auto flex-shrink-0">
                     {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                     Sync Applications
                   </Button>
@@ -486,7 +486,7 @@ const Recruitment: React.FC = () => {
                       </TableBody>
                     </Table>
                   </div>
-                  <div className="flex items-center justify-between mt-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mt-4">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <span>Rows per page:</span>
                       {[10, 25, 50, 100].map((size) => (
@@ -543,7 +543,7 @@ const Recruitment: React.FC = () => {
 
           {/* Metrics Tab */}
           <TabsContent value="metrics" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid gap-4 sm:grid-cols-2">
               {/* Pipeline Breakdown */}
               <Card>
                 <CardHeader>
@@ -623,7 +623,7 @@ const Recruitment: React.FC = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-muted-foreground">
                       Average Applicants per Job

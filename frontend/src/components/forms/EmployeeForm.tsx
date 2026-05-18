@@ -331,7 +331,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
       )}
 
       <Tabs defaultValue="personal" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="w-full">
           <TabsTrigger value="personal">Personal</TabsTrigger>
           <TabsTrigger value="employment">Employment</TabsTrigger>
           <TabsTrigger value="photo">Photo</TabsTrigger>
@@ -339,7 +339,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
 
         {/* Personal Information Tab */}
         <TabsContent value="personal" className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="first_name">
                 First Name <span className="text-red-500">*</span>
@@ -399,7 +399,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="phone">Phone</Label>
               <Input
@@ -436,7 +436,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="gender">Gender</Label>
               <select
@@ -470,7 +470,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="city">City</Label>
               <Input
@@ -498,7 +498,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="postal_code">Postal Code</Label>
               <Input

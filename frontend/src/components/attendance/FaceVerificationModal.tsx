@@ -8,11 +8,12 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { AlertCircle, Camera, CheckCircle2, Loader2, ScanFace, ShieldCheck } from 'lucide-react';
+import { AlertCircle, Camera, CheckCircle2, Loader2, ScanFace, ShieldCheck, WifiOff } from 'lucide-react';
 import { faceDetectionService } from '../../services/faceDetectionService';
 
 export type VerificationStatus =
   | 'idle'
+  | 'offline'
   | 'camera_starting'
   | 'models_loading'
   | 'ready'
@@ -64,6 +65,13 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
     let cancelled = false;
 
     const initialize = async () => {
+      // If the device is offline, face verification can't load model weights
+      // from the CDN. Offer a bypass so the check-in can still be queued.
+      if (!navigator.onLine) {
+        setStatus('offline');
+        return;
+      }
+
       try {
         setStatus('camera_starting');
 
@@ -79,7 +87,14 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
         }
 
         setStatus('models_loading');
-        await faceDetectionService.loadFaceApiModels();
+        try {
+          await faceDetectionService.loadFaceApiModels();
+        } catch {
+          // Model weights couldn't be fetched (offline / CDN unreachable).
+          // Fall back to the same offline bypass path.
+          if (!cancelled) setStatus('offline');
+          return;
+        }
         if (cancelled) return;
 
         // Load reference descriptor from employee photo
@@ -152,6 +167,8 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
 
   const statusBadge = () => {
     switch (status) {
+      case 'offline':
+        return <Badge variant="secondary" className="gap-1"><WifiOff className="w-3 h-3" />Offline</Badge>;
       case 'camera_starting':
       case 'models_loading':
         return <Badge variant="secondary" className="gap-1"><Loader2 className="w-3 h-3 animate-spin" />{status === 'models_loading' ? 'Loading models…' : 'Starting camera…'}</Badge>;
@@ -170,6 +187,7 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
     }
   };
 
+  const isOffline = status === 'offline';
   const isInitializing = status === 'idle' || status === 'camera_starting' || status === 'models_loading';
   const canScan = status === 'ready' || status === 'no_face' || status === 'failed';
 
@@ -227,6 +245,17 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
             </p>
           )}
 
+          {/* Offline notice */}
+          {isOffline && (
+            <div className="flex gap-2 p-3 bg-amber-50 border border-amber-200 rounded-md">
+              <WifiOff className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-amber-800">
+                Face verification requires an internet connection to load its models.
+                You can still check in — your attendance will be saved and synced when you're back online.
+              </p>
+            </div>
+          )}
+
           {/* Error */}
           {errorMsg && (
             <div className="flex gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-md">
@@ -237,6 +266,12 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
 
           {/* Actions */}
           <div className="flex gap-2">
+            {isOffline && (
+              <Button onClick={onVerified} className="flex-1 gap-2">
+                <CheckCircle2 className="w-4 h-4" />
+                Continue Check-In
+              </Button>
+            )}
             {canScan && (
               <Button onClick={handleVerify} className="flex-1 gap-2">
                 <ScanFace className="w-4 h-4" />

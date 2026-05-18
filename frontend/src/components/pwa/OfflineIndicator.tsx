@@ -1,26 +1,54 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { WifiOff, Wifi } from 'lucide-react';
 import { onOnlineStatusChange } from '@/utils/pwaRegister';
 
+// Confirm we're actually offline by attempting a small network request.
+// navigator.onLine and the 'offline' event can fire false positives when
+// switching networks, VPN changes, or Windows briefly drops the adapter.
+async function confirmOffline(): Promise<boolean> {
+  try {
+    await fetch('/favicon.ico', {
+      method: 'HEAD',
+      cache: 'no-store',
+      // Short timeout — if we're online this should complete in <1 s
+      signal: AbortSignal.timeout(3000),
+    });
+    return false; // fetch succeeded → we are online
+  } catch {
+    return true; // fetch failed → genuinely offline
+  }
+}
+
 export const OfflineIndicator: React.FC = () => {
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isOnline, setIsOnline] = useState(true);
   const [showIndicator, setShowIndicator] = useState(false);
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onOnlineStatusChange((online) => {
-      setIsOnline(online);
+    const unsubscribe = onOnlineStatusChange(async (online) => {
       if (!online) {
-        setShowIndicator(true);
-      } else {
-        // Show online indicator briefly
-        setShowIndicator(true);
-        const timer = setTimeout(() => setShowIndicator(false), 3000);
-        return () => clearTimeout(timer);
+        // Don't trust the 'offline' event alone — verify with a real request
+        const actuallyOffline = await confirmOffline();
+        if (!actuallyOffline) return; // false positive, stay silent
+      }
+
+      if (hideTimerRef.current) {
+        clearTimeout(hideTimerRef.current);
+        hideTimerRef.current = null;
+      }
+
+      setIsOnline(online);
+      setShowIndicator(true);
+
+      if (online) {
+        // Auto-hide the "back online" badge after 3 seconds
+        hideTimerRef.current = setTimeout(() => setShowIndicator(false), 3000);
       }
     });
 
     return () => {
       unsubscribe();
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
     };
   }, []);
 
@@ -45,7 +73,7 @@ export const OfflineIndicator: React.FC = () => {
         fontWeight: 500,
         color: isOnline ? '#065f46' : '#7f1d1d',
         zIndex: 9997,
-        animation: 'slideIn 0.3s ease-out',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
       }}
     >
       {isOnline ? (

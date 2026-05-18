@@ -112,7 +112,7 @@ export const PFStatement: React.FC<PFStatementProps> = ({ employeeId }) => {
       <h2 className="text-2xl font-bold">PF Statement</h2>
 
       {/* Account Summary */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">PF Account Number</CardTitle>

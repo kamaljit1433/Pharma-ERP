@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
-import { registerServiceWorker, onOnlineStatusChange, isStandalone } from '@/utils/pwaRegister';
+import { registerServiceWorker, isStandalone } from '@/utils/pwaRegister';
 import { initializeOfflineStorage } from '@/utils/offlineStorage';
 import { useSessionManagement } from '@/hooks/useSessionManagement';
 import { useAuthInitialization } from '@/hooks/useAuthInitialization';
 import { useThemeInitialization } from '@/hooks/useThemeInitialization';
+import { OfflineIndicator, UpdateNotification } from '@/components/pwa';
 
 const App: React.FC = () => {
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isInstalled, setIsInstalled] = useState(false);
   
   // Initialize auth on app startup (validate persisted tokens)
@@ -47,7 +47,6 @@ const App: React.FC = () => {
 
         // Initialize offline storage
         await initializeOfflineStorage();
-        console.log('Offline storage initialized');
 
         // Check if app is installed
         setIsInstalled(isStandalone());
@@ -57,44 +56,12 @@ const App: React.FC = () => {
     };
 
     initPWA();
-
-    // Listen for online/offline status changes
-    const unsubscribe = onOnlineStatusChange((online) => {
-      setIsOnline(online);
-      if (online) {
-        // Trigger sync when coming back online
-        window.dispatchEvent(new CustomEvent('app-online'));
-      } else {
-        window.dispatchEvent(new CustomEvent('app-offline'));
-      }
-    });
-
-    return () => {
-      unsubscribe();
-    };
   }, []);
 
   return (
     <div style={{ minHeight: '100vh' }}>
-      {!isOnline && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            backgroundColor: '#fca5a5',
-            color: '#7f1d1d',
-            padding: '12px 16px',
-            textAlign: 'center',
-            zIndex: 9999,
-            fontSize: '14px',
-            fontWeight: 500,
-          }}
-        >
-          You are offline. Some features may be limited.
-        </div>
-      )}
+      <OfflineIndicator />
+      <UpdateNotification />
       <Outlet />
     </div>
   );

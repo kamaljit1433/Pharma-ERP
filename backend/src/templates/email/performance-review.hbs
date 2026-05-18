@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Performance Review</title>
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #0A0A0A;
+            background-color: #FFFFFF;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            padding: 40px 0;
+            border-bottom: 1px solid #E5E5E5;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: 600;
+            color: #171717;
+        }
+        .content {
+            padding: 40px 0;
+        }
+        .page-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #171717;
+            margin-bottom: 6px;
+        }
+        .review-type-badge {
+            display: inline-block;
+            background-color: #171717;
+            color: #FAFAFA;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-bottom: 24px;
+        }
+        .review-info {
+            background-color: #F5F5F5;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #E5E5E5;
+        }
+        .info-row:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+        .info-label {
+            font-weight: 500;
+            color: #737373;
+        }
+        .info-value {
+            font-weight: 600;
+            color: #171717;
+        }
+        .due-date-highlight {
+            color: #EF4444;
+        }
+        .what-to-expect {
+            background-color: #F5F5F5;
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+        .what-to-expect h3 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            color: #171717;
+        }
+        .what-to-expect ul {
+            margin: 0;
+            padding-left: 20px;
+            color: #525252;
+        }
+        .what-to-expect li {
+            margin-bottom: 5px;
+        }
+        .deadline-notice {
+            background-color: #FEF3C7;
+            border: 1px solid #F59E0B;
+            padding: 14px 16px;
+            border-radius: 6px;
+            margin: 20px 0;
+            color: #92400E;
+            font-size: 14px;
+        }
+        .cta-button {
+            display: inline-block;
+            background-color: #171717;
+            color: #FAFAFA;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 500;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px 0;
+            border-top: 1px solid #E5E5E5;
+            color: #737373;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">Employee Management System</div>
+        </div>
+
+        <div class="content">
+            <h1 class="page-title">Performance Review</h1>
+            <div><span class="review-type-badge">{{reviewType}}</span></div>
+
+            <p>Dear {{employeeName}},</p>
+
+            <p>Your <strong>{{reviewType}}</strong> performance review for the <strong>{{reviewCycle}}</strong> cycle is now open. This is an opportunity to reflect on your accomplishments, set goals, and have a meaningful conversation with your manager.</p>
+
+            <div class="review-info">
+                <div class="info-row">
+                    <span class="info-label">Review Cycle:</span>
+                    <span class="info-value">{{reviewCycle}}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Review Type:</span>
+                    <span class="info-value">{{reviewType}}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Submission Deadline:</span>
+                    <span class="info-value due-date-highlight">{{dueDate}}</span>
+                </div>
+            </div>
+
+            <div class="what-to-expect">
+                <h3>What to include in your self-assessment:</h3>
+                <ul>
+                    <li>Key achievements and contributions during this cycle</li>
+                    <li>Challenges faced and how you addressed them</li>
+                    <li>Skills developed and areas of improvement</li>
+                    <li>Goals you would like to set for the next cycle</li>
+                    <li>Any support or resources you need from your manager</li>
+                </ul>
+            </div>
+
+            <div class="deadline-notice">
+                <strong>Deadline:</strong> Please complete your self-assessment by <strong>{{dueDate}}</strong>. Submissions after the deadline may not be included in this review cycle.
+            </div>
+
+            <a href="{{reviewUrl}}" class="cta-button">Start Performance Review</a>
+
+            <p>If you have any questions about the review process, please reach out to your manager or the HR team.</p>
+        </div>
+
+        <div class="footer">
+            <p>This is an automated message from the Employee Management System.</p>
+        </div>
+    </div>
+</body>
+</html>

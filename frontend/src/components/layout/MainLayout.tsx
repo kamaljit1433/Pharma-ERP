@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useUIStore } from '@/store/uiStore';
 import { cn } from '@/lib/utils';
 import { Header } from './Header';
@@ -24,6 +25,14 @@ interface MainLayoutProps {
  */
 export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const { sidebarOpen, setSidebarOpen } = useUIStore();
+  const location = useLocation();
+
+  // Close sidebar on route change (mobile)
+  useEffect(() => {
+    if (window.innerWidth < 768) {
+      setSidebarOpen(false);
+    }
+  }, [location.pathname, setSidebarOpen]);
 
   // Close sidebar on mobile by default
   useEffect(() => {
@@ -78,20 +87,20 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       {/* Skip Navigation Links - Requirement 21.10 */}
       <SkipNavigation />
 
-      <div className="flex h-screen overflow-hidden bg-background">
+      <div className="flex h-screen overflow-hidden overflow-x-hidden bg-background">
         {/* Sidebar Navigation - Requirement 21.1, 21.2 */}
         <aside
           id="navigation"
           role="navigation"
           aria-label="Main navigation"
           className={cn(
-            'fixed inset-y-0 left-0 z-50 flex flex-col border-r bg-card transition-all duration-300 ease-in-out',
+            'fixed inset-y-0 left-0 z-50 flex flex-col border-r bg-card transition-all duration-300 ease-in-out overflow-hidden',
             // Mobile: Full overlay when open, hidden when closed
             'md:relative md:z-auto',
-            // Width transitions
+            // Width transitions — keep w-64 so -translate-x-full actually slides off-screen
             sidebarOpen
               ? 'w-64 translate-x-0'
-              : 'w-0 -translate-x-full md:w-16 md:translate-x-0'
+              : 'w-64 -translate-x-full md:w-16 md:translate-x-0'
           )}
         >
           {/* Render Sidebar component */}
@@ -128,7 +137,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             tabIndex={-1}
             className="flex-1 overflow-y-auto overflow-x-hidden focus:outline-none"
           >
-            <div className="container mx-auto p-4 md:p-6 lg:p-8">
+            <div className="w-full max-w-screen-2xl mx-auto px-3 py-4 pb-safe sm:px-4 md:px-6 md:py-6 lg:px-8 lg:py-8">
               {/* Breadcrumb navigation - Requirement 4.9 */}
               <Breadcrumbs />
               {children}

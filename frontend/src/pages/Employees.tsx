@@ -141,10 +141,10 @@ export const Employees: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <Users className="h-8 w-8" />
+          <h1 className="text-xl font-bold tracking-tight sm:text-2xl lg:text-3xl flex items-center gap-2">
+            <Users className="h-6 w-6 sm:h-8 sm:w-8" />
             Employees
           </h1>
           <p className="text-muted-foreground mt-1">
@@ -152,7 +152,7 @@ export const Employees: React.FC = () => {
           </p>
         </div>
         {canManageEmployees && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {/* Export dropdown */}
             <div className="relative" ref={exportMenuRef}>
               <Button

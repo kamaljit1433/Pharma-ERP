@@ -10,6 +10,7 @@ export interface PWAConfig {
 }
 
 let swRegistration: ServiceWorkerRegistration | null = null;
+let updateIntervalId: ReturnType<typeof setInterval> | null = null;
 
 /**
  * Register service worker for PWA functionality
@@ -20,18 +21,33 @@ export async function registerServiceWorker(config: PWAConfig = {}): Promise<Ser
     return null;
   }
 
+  // In dev mode Vite hasn't built sw.js — skip registration.
+  // Also unregister any SW that was previously registered (e.g. from a production
+  // build or the old /service-worker.js path) so it doesn't intercept Vite's HMR
+  // WebSocket or CSS module requests and cause network errors.
+  if (import.meta.env.DEV) {
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    for (const reg of registrations) {
+      await reg.unregister();
+    }
+    return null;
+  }
+
   try {
-    const swPath = config.swPath || '/service-worker.js';
+    // Default to the VitePWA-generated workbox SW so there is only one active SW
+    const swPath = config.swPath || '/sw.js';
     swRegistration = await navigator.serviceWorker.register(swPath, {
       scope: '/',
     });
 
     console.log('Service Worker registered:', swRegistration);
 
-    // Check for updates periodically
-    setInterval(() => {
-      swRegistration?.update();
-    }, 60000); // Check every minute
+    // Check for updates periodically — guard against duplicate registrations
+    if (updateIntervalId === null) {
+      updateIntervalId = setInterval(() => {
+        swRegistration?.update();
+      }, 60000);
+    }
 
     // Listen for updates
     swRegistration.addEventListener('updatefound', () => {
@@ -251,7 +267,10 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 }
 
 /**
- * Check online status
+ * Check online status.
+ * navigator.onLine alone is unreliable (returns true even on captive portals),
+ * so this is a best-effort synchronous check. Prefer the online/offline events
+ * (onOnlineStatusChange) for reactive updates.
  */
 export function isOnline(): boolean {
   return navigator.onLine;

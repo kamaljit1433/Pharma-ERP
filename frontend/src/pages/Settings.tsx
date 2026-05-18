@@ -631,8 +631,8 @@ const Settings: React.FC = () => {
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
       <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <SettingsIcon className="h-6 w-6" />
+        <h1 className="text-xl font-bold flex items-center gap-2 sm:text-2xl lg:text-3xl">
+          <SettingsIcon className="h-5 w-5 sm:h-6 sm:w-6" />
           Settings
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -641,7 +641,7 @@ const Settings: React.FC = () => {
       </div>
 
       <Tabs defaultValue="profile">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="w-full">
           <TabsTrigger value="profile" className="flex items-center gap-1.5">
             <User className="h-3.5 w-3.5" /> Profile
           </TabsTrigger>

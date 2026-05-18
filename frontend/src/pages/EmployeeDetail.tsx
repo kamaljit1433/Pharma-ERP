@@ -209,7 +209,7 @@ export const EmployeeDetail: React.FC = () => {
       ) : (
         /* View Mode - Tabs */
         <Tabs defaultValue="personal" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="w-full">
             <TabsTrigger value="personal">Personal</TabsTrigger>
             <TabsTrigger value="employment">Employment</TabsTrigger>
             <TabsTrigger value="documents">Documents</TabsTrigger>

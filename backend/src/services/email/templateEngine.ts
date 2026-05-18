@@ -173,6 +173,7 @@ export class EmailTemplateEngine {
       [EmailTemplateType.ATTENDANCE_ALERT]: ['employeeName', 'date', 'alertType', 'managerName', 'actionUrl'],
       [EmailTemplateType.PERFORMANCE_REVIEW]: ['employeeName', 'reviewCycle', 'dueDate', 'reviewType', 'reviewUrl'],
       [EmailTemplateType.SYSTEM_NOTIFICATION]: ['employeeName', 'title', 'message'],
+      [EmailTemplateType.ACCOUNT_CREDENTIALS]: ['employeeName', 'employeeId', 'email', 'temporaryPassword', 'loginUrl'],
     };
 
     const required = requiredFields[templateType];

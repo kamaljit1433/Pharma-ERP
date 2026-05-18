@@ -28,7 +28,7 @@ const Organization: React.FC = () => {
     <div className="space-y-4">
       {/* Page Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Organization</h1>
+        <h1 className="text-xl font-bold tracking-tight sm:text-2xl lg:text-3xl">Organization</h1>
         <p className="text-sm text-muted-foreground mt-1">
           View the company hierarchy, manage departments and designations
         </p>

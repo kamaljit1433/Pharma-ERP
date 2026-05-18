@@ -219,7 +219,7 @@ export const EmployeeList: React.FC<EmployeeListProps> = ({
               />
             </div>
             <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-[140px]" aria-label="Filter by status">
+              <SelectTrigger className="w-full sm:w-[140px]" aria-label="Filter by status">
                 <SelectValue placeholder="All Status" />
               </SelectTrigger>
               <SelectContent>
@@ -232,7 +232,7 @@ export const EmployeeList: React.FC<EmployeeListProps> = ({
               </SelectContent>
             </Select>
             <Select value={filterEmploymentType} onValueChange={setFilterEmploymentType}>
-              <SelectTrigger className="w-[140px]" aria-label="Filter by employment type">
+              <SelectTrigger className="w-full sm:w-[140px]" aria-label="Filter by employment type">
                 <SelectValue placeholder="All Types" />
               </SelectTrigger>
               <SelectContent>
@@ -281,8 +281,8 @@ export const EmployeeList: React.FC<EmployeeListProps> = ({
                   >
                     Name <SortIndicator column="name" />
                   </TableHead>
-                  <TableHead className="text-muted-foreground">Email</TableHead>
-                  <TableHead className="text-muted-foreground">Employment Type</TableHead>
+                  <TableHead className="text-muted-foreground hidden sm:table-cell">Email</TableHead>
+                  <TableHead className="text-muted-foreground hidden md:table-cell">Employment Type</TableHead>
                   <TableHead className="text-muted-foreground">Status</TableHead>
                   <TableHead
                     className="cursor-pointer hover:bg-muted/80 text-muted-foreground"
@@ -327,8 +327,8 @@ export const EmployeeList: React.FC<EmployeeListProps> = ({
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-sm">{employee.email}</TableCell>
-                      <TableCell className="text-sm">
+                      <TableCell className="text-sm hidden sm:table-cell">{employee.email}</TableCell>
+                      <TableCell className="text-sm hidden md:table-cell">
                         {getEmploymentTypeLabel(employee.employment_type)}
                       </TableCell>
                       <TableCell>
@@ -376,7 +376,7 @@ export const EmployeeList: React.FC<EmployeeListProps> = ({
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div className="text-sm text-muted-foreground">
                 Page {currentPage} of {totalPages}
               </div>

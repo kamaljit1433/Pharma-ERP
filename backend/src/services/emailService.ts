@@ -356,6 +356,194 @@ export class EmailService {
       }
     );
   }
+
+  async sendPasswordResetEmail(
+    to: string,
+    employeeName: string,
+    resetUrl: string,
+    expiryTime: string
+  ): Promise<EmailResult> {
+    return this.sendWithTemplate(
+      EmailTemplateType.PASSWORD_RESET,
+      to,
+      'Password Reset Request',
+      { employeeName, resetUrl, expiryTime }
+    );
+  }
+
+  async sendLeaveApprovedEmail(
+    to: string,
+    employeeName: string,
+    leaveType: string,
+    fromDate: string,
+    toDate: string,
+    days: number,
+    approverName: string
+  ): Promise<EmailResult> {
+    return this.sendWithTemplate(
+      EmailTemplateType.LEAVE_APPROVED,
+      to,
+      `Your ${leaveType} leave has been approved`,
+      { employeeName, leaveType, fromDate, toDate, days, approverName }
+    );
+  }
+
+  async sendLeaveRejectedEmail(
+    to: string,
+    employeeName: string,
+    leaveType: string,
+    fromDate: string,
+    toDate: string,
+    days: number,
+    approverName: string,
+    reason: string
+  ): Promise<EmailResult> {
+    return this.sendWithTemplate(
+      EmailTemplateType.LEAVE_REJECTED,
+      to,
+      `Update on your ${leaveType} leave request`,
+      { employeeName, leaveType, fromDate, toDate, days, approverName, reason }
+    );
+  }
+
+  async sendWorkAnniversaryEmail(
+    to: string,
+    employeeName: string,
+    yearsOfService: number,
+    joinDate: string,
+    companyName: string
+  ): Promise<EmailResult> {
+    return this.sendWithTemplate(
+      EmailTemplateType.WORK_ANNIVERSARY,
+      to,
+      `Happy ${yearsOfService}-Year Work Anniversary, ${employeeName}!`,
+      { employeeName, yearsOfService, joinDate, companyName }
+    );
+  }
+
+  async sendInterviewScheduledEmail(
+    to: string,
+    candidateName: string,
+    jobTitle: string,
+    interviewDate: string,
+    interviewTime: string,
+    interviewMode: string,
+    interviewerName: string,
+    location?: string
+  ): Promise<EmailResult> {
+    return this.sendWithTemplate(
+      EmailTemplateType.INTERVIEW_SCHEDULED,
+      to,
+      `Interview Scheduled: ${jobTitle}`,
+      {
+        candidateName,
+        jobTitle,
+        interviewDate,
+        interviewTime,
+        interviewMode,
+        interviewerName,
+        ...(location && { location }),
+      }
+    );
+  }
+
+  async sendOnboardingChecklistEmail(
+    to: string,
+    employeeName: string,
+    startDate: string,
+    checklistItems: string[],
+    hrContactName: string,
+    hrContactEmail: string
+  ): Promise<EmailResult> {
+    return this.sendWithTemplate(
+      EmailTemplateType.ONBOARDING_CHECKLIST,
+      to,
+      `Your Onboarding Checklist — Starting ${startDate}`,
+      { employeeName, startDate, checklistItems, hrContactName, hrContactEmail }
+    );
+  }
+
+  async sendTrainingReminderEmail(
+    to: string,
+    employeeName: string,
+    trainingName: string,
+    trainingDate: string,
+    trainingTime: string,
+    location: string,
+    instructor: string,
+    daysRemaining: number
+  ): Promise<EmailResult> {
+    return this.sendWithTemplate(
+      EmailTemplateType.TRAINING_REMINDER,
+      to,
+      `Reminder: ${trainingName} — ${daysRemaining} day(s) away`,
+      { employeeName, trainingName, trainingDate, trainingTime, location, instructor, daysRemaining }
+    );
+  }
+
+  async sendDocumentExpiryEmail(
+    to: string,
+    employeeName: string,
+    documentName: string,
+    expiryDate: string,
+    daysRemaining: number,
+    actionRequired: string
+  ): Promise<EmailResult> {
+    return this.sendWithTemplate(
+      EmailTemplateType.DOCUMENT_EXPIRY,
+      to,
+      `Action Required: ${documentName} expires in ${daysRemaining} day(s)`,
+      { employeeName, documentName, expiryDate, daysRemaining, actionRequired }
+    );
+  }
+
+  async sendAttendanceAlertEmail(
+    to: string,
+    employeeName: string,
+    date: string,
+    alertType: 'late' | 'absent' | 'incomplete',
+    managerName: string,
+    actionUrl: string
+  ): Promise<EmailResult> {
+    return this.sendWithTemplate(
+      EmailTemplateType.ATTENDANCE_ALERT,
+      to,
+      `Attendance Alert: ${alertType} on ${date}`,
+      { employeeName, date, alertType, managerName, actionUrl }
+    );
+  }
+
+  async sendAccountCredentialsEmail(
+    to: string | string[],
+    employeeName: string,
+    employeeId: string,
+    email: string,
+    temporaryPassword: string,
+    loginUrl: string
+  ): Promise<EmailResult> {
+    return this.sendWithTemplate(
+      EmailTemplateType.ACCOUNT_CREDENTIALS,
+      to,
+      'Your account credentials — action required',
+      { employeeName, employeeId, email, temporaryPassword, loginUrl }
+    );
+  }
+
+  async sendPerformanceReviewEmail(
+    to: string,
+    employeeName: string,
+    reviewCycle: string,
+    dueDate: string,
+    reviewType: 'self' | 'manager' | 'peer',
+    reviewUrl: string
+  ): Promise<EmailResult> {
+    return this.sendWithTemplate(
+      EmailTemplateType.PERFORMANCE_REVIEW,
+      to,
+      `Action Required: ${reviewType} Performance Review — Due ${dueDate}`,
+      { employeeName, reviewCycle, dueDate, reviewType, reviewUrl }
+    );
+  }
 }
 
 // Export singleton instance

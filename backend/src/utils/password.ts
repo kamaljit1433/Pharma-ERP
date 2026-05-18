@@ -1,4 +1,5 @@
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 
 const SALT_ROUNDS = 12;
 
@@ -17,6 +18,38 @@ export const comparePassword = async (
   hash: string
 ): Promise<boolean> => {
   return bcrypt.compare(password, hash);
+};
+
+/**
+ * Generate a cryptographically secure random password that meets all strength requirements.
+ * Uses unambiguous characters (no 0/O/1/l/I) to make it easy to read and type.
+ */
+export const generatePassword = (): string => {
+  const upper   = 'ABCDEFGHJKMNPQRSTUVWXYZ';
+  const lower   = 'abcdefghjkmnpqrstuvwxyz';
+  const digits  = '23456789';
+  const special = '!@#$%^&*';
+  const all     = upper + lower + digits + special;
+
+  const pick = (pool: string) => pool[crypto.randomInt(pool.length)]!;
+
+  // Guarantee at least 2 chars from each required class (12-char password total)
+  const chars = [
+    pick(upper),  pick(upper),
+    pick(lower),  pick(lower),
+    pick(digits), pick(digits),
+    pick(special),pick(special),
+    pick(all),    pick(all),
+    pick(all),    pick(all),
+  ];
+
+  // Fisher-Yates shuffle
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = crypto.randomInt(i + 1);
+    [chars[i], chars[j]] = [chars[j]!, chars[i]!];
+  }
+
+  return chars.join('');
 };
 
 /**

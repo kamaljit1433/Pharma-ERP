@@ -139,7 +139,7 @@ export const JobPostingForm: React.FC<JobPostingFormProps> = ({ onSuccess, initi
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="title">Job Title *</Label>
               <Input
@@ -198,7 +198,7 @@ export const JobPostingForm: React.FC<JobPostingFormProps> = ({ onSuccess, initi
             {errors.positions_count && <p className="text-destructive text-sm mt-1">{errors.positions_count}</p>}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="experience_min">Min Experience (years) *</Label>
               <Input

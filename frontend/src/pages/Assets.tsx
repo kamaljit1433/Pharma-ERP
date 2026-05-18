@@ -182,12 +182,12 @@ const Assets: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Asset Management</h1>
+        <h1 className="text-xl font-bold tracking-tight sm:text-2xl lg:text-3xl">Asset Management</h1>
         <p className="text-muted-foreground mt-2">Track, assign, and manage company assets</p>
       </div>
 
       <Tabs defaultValue="inventory">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="w-full">
           <TabsTrigger value="inventory" className="flex items-center gap-1.5">
             <Package className="h-4 w-4" />
             <span className="hidden sm:inline">Inventory</span>

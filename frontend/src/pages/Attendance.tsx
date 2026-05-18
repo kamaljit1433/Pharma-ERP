@@ -109,7 +109,7 @@ export const Attendance: React.FC = () => {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Attendance</h1>
+          <h1 className="text-xl font-bold sm:text-2xl lg:text-3xl">Attendance</h1>
         </div>
         <div className="text-center py-12 text-muted-foreground">Loading...</div>
       </div>
@@ -129,8 +129,8 @@ export const Attendance: React.FC = () => {
         </>
       )}
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Attendance</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-xl font-bold sm:text-2xl lg:text-3xl">Attendance</h1>
         <AttendanceMarker
           employeeId={user?.employeeId || ''}
           employeePhotoUrl={employeePhotoUrl}
@@ -205,7 +205,7 @@ export const Attendance: React.FC = () => {
       {/* Tabs */}
       {isManager ? (
         <Tabs defaultValue="history" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="w-full">
             <TabsTrigger value="history">History</TabsTrigger>
             <TabsTrigger value="reports">Reports</TabsTrigger>
             <TabsTrigger value="regularization">Regularization</TabsTrigger>

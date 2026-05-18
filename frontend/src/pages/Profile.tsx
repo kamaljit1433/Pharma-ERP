@@ -188,7 +188,7 @@ const Profile: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="space-y-6 p-6">
+      <div className="space-y-6">
         <Skeleton className="h-8 w-48" />
         <div className="flex items-center gap-6">
           <Skeleton className="h-24 w-24 rounded-full" />
@@ -204,8 +204,8 @@ const Profile: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 p-6 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold">My Profile</h1>
+    <div className="space-y-6 max-w-4xl mx-auto">
+      <h1 className="text-xl font-bold sm:text-2xl lg:text-3xl">My Profile</h1>
 
       {/* Profile Header */}
       <Card>
@@ -278,7 +278,7 @@ const Profile: React.FC = () => {
 
       {/* Tabs */}
       <Tabs defaultValue="personal">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="w-full">
           <TabsTrigger value="personal">Personal Info</TabsTrigger>
           <TabsTrigger value="employment">Employment</TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>

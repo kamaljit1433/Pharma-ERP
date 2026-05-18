@@ -4,8 +4,13 @@
  * and face-api.js for identity verification against stored employee photos.
  */
 
-// CDN base for face-api.js model weights (no local binary files required)
-const FACE_API_MODELS_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
+// Static import so the library is bundled (not lazily fetched) and available
+// after the service worker has cached the app — dynamic import would fail offline.
+import * as faceapi from 'face-api.js';
+
+// Local model weights served from public/models/ (downloaded by npm run download:models).
+// Served from the same origin so the service worker can precache them for offline use.
+const FACE_API_MODELS_URL = '/models';
 
 /** How close two face descriptors must be to count as the same person (lower = stricter) */
 const RECOGNITION_THRESHOLD = 0.45;
@@ -213,7 +218,6 @@ class FaceDetectionService {
     if (this.faceApiLoadPromise) return this.faceApiLoadPromise;
 
     this.faceApiLoadPromise = (async () => {
-      const faceapi = await import('face-api.js');
       await Promise.all([
         faceapi.nets.ssdMobilenetv1.loadFromUri(FACE_API_MODELS_URL),
         faceapi.nets.faceLandmark68Net.loadFromUri(FACE_API_MODELS_URL),
@@ -231,7 +235,6 @@ class FaceDetectionService {
    */
   async getDescriptorFromUrl(imageUrl: string): Promise<Float32Array | null> {
     await this.loadFaceApiModels();
-    const faceapi = await import('face-api.js');
 
     const img = await faceapi.fetchImage(imageUrl);
     const detection = await faceapi
@@ -250,7 +253,6 @@ class FaceDetectionService {
     videoElement: HTMLVideoElement
   ): Promise<Float32Array | null> {
     await this.loadFaceApiModels();
-    const faceapi = await import('face-api.js');
 
     const detection = await faceapi
       .detectSingleFace(videoElement)

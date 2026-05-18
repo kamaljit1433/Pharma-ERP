@@ -160,13 +160,10 @@ const Separation: React.FC = () => {
     }
   };
 
-  const tabCount = isHR ? 6 : 5;
-  const gridCols = tabCount === 6 ? 'grid-cols-6' : 'grid-cols-5';
-
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Separation Management</h1>
+        <h1 className="text-xl font-bold tracking-tight sm:text-2xl lg:text-3xl">Separation Management</h1>
         <p className="text-muted-foreground mt-2">
           Manage employee offboarding, resignations, and full &amp; final settlements
         </p>
@@ -226,7 +223,7 @@ const Separation: React.FC = () => {
         </div>
       ) : (
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className={`grid w-full ${gridCols}`}>
+          <TabsList className="w-full">
             <TabsTrigger value="overview" className="flex items-center gap-1.5">
               <LogOut className="h-4 w-4" />
               <span className="hidden sm:inline">Overview</span>

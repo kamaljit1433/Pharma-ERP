@@ -141,7 +141,7 @@ export const InsurancePlanManagement: React.FC = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="name">Plan Name</Label>
                   <Input
@@ -234,7 +234,7 @@ export const InsurancePlanManagement: React.FC = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Coverage Type</p>
                   <p className="font-medium">{plan.coverage_type}</p>

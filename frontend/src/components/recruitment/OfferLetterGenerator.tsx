@@ -92,7 +92,7 @@ export const OfferLetterGenerator: React.FC<OfferLetterGeneratorProps> = ({ appl
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && <div className="p-3 bg-destructive/10 text-destructive rounded-md text-sm">{error}</div>}
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="position">Position</Label>
               <Input
@@ -118,7 +118,7 @@ export const OfferLetterGenerator: React.FC<OfferLetterGeneratorProps> = ({ appl
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="salary">Annual Salary</Label>
               <Input

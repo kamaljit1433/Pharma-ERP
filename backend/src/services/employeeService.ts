@@ -1,5 +1,6 @@
 import { Knex } from 'knex';
 import { EmployeeRepository } from '../repositories/employeeRepository';
+import { AuthRepository } from '../repositories/authRepository';
 import {
   Employee,
   CreateEmployeeDTO,
@@ -14,12 +15,19 @@ import {
 import { isValidEmail, isValidPhone } from '../utils/validation';
 import { logAuditEvent } from '../utils/auditLog';
 import { AppError } from '../middleware/errorHandler';
+import { hashPassword, generatePassword } from '../utils/password';
+import { emailService } from './emailService';
+import logger from '../utils/logger';
+
+const LOGIN_URL = `${process.env['FRONTEND_URL'] || 'http://localhost:5173'}/login`;
 
 export class EmployeeService {
   private employeeRepository: EmployeeRepository;
+  private authRepository: AuthRepository;
 
   constructor(private db: Knex) {
     this.employeeRepository = new EmployeeRepository(db);
+    this.authRepository = new AuthRepository(db);
   }
 
   async createEmployee(data: CreateEmployeeDTO): Promise<Employee> {
@@ -39,7 +47,74 @@ export class EmployeeService {
       throw new AppError('Employee with this email already exists', 409);
     }
 
-    return this.employeeRepository.createEmployee(data);
+    let employee: Employee;
+    try {
+      employee = await this.employeeRepository.createEmployee(data);
+    } catch (err: any) {
+      // PostgreSQL unique constraint violation — covers archived employees too
+      if (err?.code === '23505' && err?.constraint === 'employees_email_unique') {
+        throw new AppError('Employee with this email already exists', 409);
+      }
+      throw err;
+    }
+
+    // Create login credentials and send welcome email
+    await this.provisionUserAccount(employee);
+
+    return employee;
+  }
+
+  private async provisionUserAccount(employee: Employee): Promise<void> {
+    const employeeName = `${employee.first_name} ${employee.last_name}`;
+
+    // Generate and hash a temporary password
+    const temporaryPassword = generatePassword();
+    const passwordHash = await hashPassword(temporaryPassword);
+
+    // Create the user account (best-effort — don't fail employee creation if this errors)
+    try {
+      const existingUser = await this.authRepository.findByEmployeeId(employee.employee_id);
+      if (!existingUser) {
+        await this.authRepository.createUser({
+          employeeId: employee.employee_id,
+          email: employee.email,
+          passwordHash,
+        });
+      }
+    } catch (err) {
+      logger.error('Failed to create user account for employee', {
+        employeeId: employee.employee_id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return; // skip email if account creation failed
+    }
+
+    // Send credentials to work email
+    const recipients: string[] = [employee.email];
+
+    // Also send to personal email if provided
+    if (employee.personal_email) {
+      recipients.push(employee.personal_email);
+    }
+
+    for (const recipient of recipients) {
+      try {
+        await emailService.sendAccountCredentialsEmail(
+          recipient,
+          employeeName,
+          employee.employee_id,
+          employee.email,
+          temporaryPassword,
+          LOGIN_URL
+        );
+      } catch (err) {
+        logger.error('Failed to send credentials email', {
+          recipient,
+          employeeId: employee.employee_id,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
   }
 
   async getEmployee(id: string): Promise<Employee> {

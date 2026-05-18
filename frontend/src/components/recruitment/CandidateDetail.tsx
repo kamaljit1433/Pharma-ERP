@@ -77,7 +77,7 @@ export const CandidateDetail: React.FC<CandidateDetailProps> = ({
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="w-full">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="resume">Resume</TabsTrigger>
               <TabsTrigger value="communication">Communication</TabsTrigger>

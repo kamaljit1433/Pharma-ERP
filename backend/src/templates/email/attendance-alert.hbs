@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Alert</title>
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #0A0A0A;
+            background-color: #FFFFFF;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            padding: 40px 0;
+            border-bottom: 1px solid #E5E5E5;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: 600;
+            color: #171717;
+        }
+        .content {
+            padding: 40px 0;
+        }
+        .page-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #171717;
+            margin-bottom: 20px;
+        }
+        .alert-type-badge {
+            display: inline-block;
+            background-color: #FEF3C7;
+            color: #92400E;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 20px;
+        }
+        .alert-info {
+            background-color: #F5F5F5;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #E5E5E5;
+        }
+        .info-row:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+        .info-label {
+            font-weight: 500;
+            color: #737373;
+        }
+        .info-value {
+            font-weight: 600;
+            color: #171717;
+        }
+        .alert-message {
+            background-color: #FEF3C7;
+            border: 1px solid #F59E0B;
+            padding: 16px;
+            border-radius: 6px;
+            margin: 20px 0;
+            color: #92400E;
+            font-size: 14px;
+        }
+        .cta-button {
+            display: inline-block;
+            background-color: #171717;
+            color: #FAFAFA;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 500;
+            margin: 20px 0;
+        }
+        .policy-note {
+            background-color: #F5F5F5;
+            padding: 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            color: #525252;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px 0;
+            border-top: 1px solid #E5E5E5;
+            color: #737373;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">Employee Management System</div>
+        </div>
+
+        <div class="content">
+            <h1 class="page-title">Attendance Alert</h1>
+            <div><span class="alert-type-badge">{{alertType}}</span></div>
+
+            <p>Dear {{employeeName}},</p>
+
+            <p>An attendance irregularity has been recorded for your profile. Please review the details below and take the necessary action.</p>
+
+            <div class="alert-info">
+                <div class="info-row">
+                    <span class="info-label">Employee:</span>
+                    <span class="info-value">{{employeeName}}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Date:</span>
+                    <span class="info-value">{{date}}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Alert Type:</span>
+                    <span class="info-value">{{alertType}}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Reported To:</span>
+                    <span class="info-value">{{managerName}}</span>
+                </div>
+            </div>
+
+            <div class="alert-message">
+                <strong>Please Note:</strong> This alert has been shared with your reporting manager, <strong>{{managerName}}</strong>. If this was due to an emergency or approved reason, please provide an explanation through the portal or contact HR directly.
+            </div>
+
+            <a href="{{actionUrl}}" class="cta-button">Review &amp; Respond</a>
+
+            <div class="policy-note">
+                Consistent attendance is important for team operations. Repeated alerts may be reviewed during your performance evaluation. Please reach out to your manager or HR if you need any support.
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>This is an automated message from the Employee Management System.</p>
+        </div>
+    </div>
+</body>
+</html>

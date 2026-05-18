@@ -67,14 +67,14 @@ export const Leave: React.FC = () => {
     <div className="space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Leave Management</h1>
+          <h1 className="text-xl font-bold tracking-tight sm:text-2xl lg:text-3xl">Leave Management</h1>
           <p className="text-muted-foreground mt-2">
             Manage your leave requests and view leave balance
           </p>
         </div>
 
         {/* Summary Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           {/* Available Balance Card */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -126,7 +126,7 @@ export const Leave: React.FC = () => {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="balance" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 lg:grid-cols-5">
+          <TabsList className="w-full">
             <TabsTrigger value="balance">Leave Balance</TabsTrigger>
             <TabsTrigger value="request">Request Leave</TabsTrigger>
             <TabsTrigger value="history">History</TabsTrigger>

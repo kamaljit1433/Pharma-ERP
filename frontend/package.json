@@ -6,7 +6,8 @@
   "description": "Employee Management System - Frontend PWA",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "download:models": "node scripts/download-face-models.cjs",
+    "build": "node scripts/download-face-models.cjs && tsc && vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint . --ext ts,tsx --fix",

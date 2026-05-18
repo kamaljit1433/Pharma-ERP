@@ -85,7 +85,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
       </button>
 
       {open && (
-        <div className="absolute z-50 top-full mt-2 left-0 bg-background border border-border rounded-xl shadow-xl w-[280px] overflow-hidden">
+        <div className="absolute z-50 top-full mt-2 left-0 bg-background border border-border rounded-xl shadow-xl w-[280px] max-w-[calc(100vw-1.5rem)] overflow-hidden">
           {/* Header */}
           <div className="bg-primary/5 px-4 pt-4 pb-2">
             <div className="flex items-center justify-between mb-3">

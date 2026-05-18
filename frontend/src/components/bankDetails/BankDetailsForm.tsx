@@ -191,7 +191,7 @@ export const BankDetailsForm: React.FC<BankDetailsFormProps> = ({ employeeId, on
                     </div>
                     <p className="text-sm text-muted-foreground mb-3">{account.branch_name}</p>
 
-                    <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                       <div>
                         <p className="text-muted-foreground">Account Holder</p>
                         <p className="font-medium">{account.account_holder_name}</p>
@@ -271,7 +271,7 @@ export const BankDetailsForm: React.FC<BankDetailsFormProps> = ({ employeeId, on
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="bank_name">Bank Name *</Label>
                   <Input
@@ -306,7 +306,7 @@ export const BankDetailsForm: React.FC<BankDetailsFormProps> = ({ employeeId, on
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="account_number">Account Number *</Label>
                   <Input

@@ -169,7 +169,7 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
           {/* Personal Information */}
           <div>
             <h3 className="text-sm font-semibold mb-4">Personal Information</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium">First Name *</label>
                 <Input
@@ -224,7 +224,7 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
           {/* Contact Information */}
           <div>
             <h3 className="text-sm font-semibold mb-4">Contact Information</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium">Work Email *</label>
                 <Input
@@ -264,7 +264,7 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
           {/* Address Information */}
           <div>
             <h3 className="text-sm font-semibold mb-4">Address</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="col-span-2">
                 <label className="text-sm font-medium">Street Address</label>
                 <Input
@@ -316,7 +316,7 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
           {/* Employment Information */}
           <div>
             <h3 className="text-sm font-semibold mb-4">Employment Information</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium">Date of Joining *</label>
                 <Input
@@ -368,7 +368,7 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
           {/* Government IDs */}
           <div>
             <h3 className="text-sm font-semibold mb-4">Government IDs</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium">PAN</label>
                 <Input
@@ -408,18 +408,18 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
           </div>
 
           {/* Form Actions */}
-          <div className="flex gap-3 justify-end pt-4 border-t">
+          <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end pt-4 border-t">
             <Button
               type="button"
               variant="outline"
               onClick={onCancel}
               disabled={isLoading}
-              className="gap-2"
+              className="gap-2 w-full sm:w-auto"
             >
               <X className="h-4 w-4" />
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading} className="gap-2">
+            <Button type="submit" disabled={isLoading} className="gap-2 w-full sm:w-auto">
               <Save className="h-4 w-4" />
               {isLoading ? 'Saving...' : 'Save Employee'}
             </Button>

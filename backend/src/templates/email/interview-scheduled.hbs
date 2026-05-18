@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interview Scheduled</title>
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #0A0A0A;
+            background-color: #FFFFFF;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            padding: 40px 0;
+            border-bottom: 1px solid #E5E5E5;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: 600;
+            color: #171717;
+        }
+        .content {
+            padding: 40px 0;
+        }
+        .page-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #171717;
+            margin-bottom: 6px;
+        }
+        .job-title-badge {
+            display: inline-block;
+            background-color: #171717;
+            color: #FAFAFA;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 24px;
+        }
+        .interview-info {
+            background-color: #F5F5F5;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #E5E5E5;
+        }
+        .info-row:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+        .info-label {
+            font-weight: 500;
+            color: #737373;
+        }
+        .info-value {
+            font-weight: 600;
+            color: #171717;
+        }
+        .mode-badge {
+            display: inline-block;
+            background-color: #DBEAFE;
+            color: #1E40AF;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .preparation-tips {
+            background-color: #F5F5F5;
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+        .preparation-tips h3 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            color: #171717;
+        }
+        .preparation-tips ul {
+            margin: 0;
+            padding-left: 20px;
+            color: #525252;
+        }
+        .preparation-tips li {
+            margin-bottom: 5px;
+        }
+        .confirm-note {
+            background-color: #FEF3C7;
+            border: 1px solid #F59E0B;
+            padding: 14px 16px;
+            border-radius: 6px;
+            margin: 20px 0;
+            color: #92400E;
+            font-size: 14px;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px 0;
+            border-top: 1px solid #E5E5E5;
+            color: #737373;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">Employee Management System</div>
+        </div>
+
+        <div class="content">
+            <h1 class="page-title">Your Interview is Scheduled</h1>
+            <div><span class="job-title-badge">{{jobTitle}}</span></div>
+
+            <p>Dear {{candidateName}},</p>
+
+            <p>Congratulations! We are pleased to invite you for an interview for the position of <strong>{{jobTitle}}</strong>. Please find the details below:</p>
+
+            <div class="interview-info">
+                <div class="info-row">
+                    <span class="info-label">Position:</span>
+                    <span class="info-value">{{jobTitle}}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Date:</span>
+                    <span class="info-value">{{interviewDate}}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Time:</span>
+                    <span class="info-value">{{interviewTime}}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Mode:</span>
+                    <span class="info-value"><span class="mode-badge">{{interviewMode}}</span></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Interviewer:</span>
+                    <span class="info-value">{{interviewerName}}</span>
+                </div>
+                {{#if location}}
+                <div class="info-row">
+                    <span class="info-label">Location / Link:</span>
+                    <span class="info-value">{{location}}</span>
+                </div>
+                {{/if}}
+            </div>
+
+            <div class="preparation-tips">
+                <h3>Tips to prepare:</h3>
+                <ul>
+                    <li>Review the job description and align your experience accordingly</li>
+                    <li>Research our company — products, culture, and recent updates</li>
+                    <li>Prepare examples that demonstrate your skills (use STAR method)</li>
+                    <li>Test your audio and video setup if this is a virtual interview</li>
+                    <li>Join the call or arrive at the venue 5 minutes early</li>
+                </ul>
+            </div>
+
+            <div class="confirm-note">
+                <strong>Action Required:</strong> Please confirm your availability by replying to this email or contacting HR. If you are unable to attend, let us know at least 24 hours in advance so we can reschedule.
+            </div>
+
+            <p>We look forward to speaking with you. Best of luck!</p>
+        </div>
+
+        <div class="footer">
+            <p>This is an automated message from the Employee Management System.</p>
+        </div>
+    </div>
+</body>
+</html>

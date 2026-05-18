@@ -330,7 +330,7 @@ const GoalsTab: React.FC = () => {
                 rows={3}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label>Type</Label>
                 <Select value={editForm.type} onValueChange={(v) => setEditForm((p) => ({ ...p, type: v }))}>
@@ -354,7 +354,7 @@ const GoalsTab: React.FC = () => {
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <Label>Target Value</Label>
                 <Input
@@ -974,7 +974,7 @@ const FeedbackTab: React.FC = () => {
             <DialogTitle>Edit Feedback</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label>Type</Label>
                 <Select value={editForm.type} onValueChange={(v) => setEditForm((p) => ({ ...p, type: v }))}>
@@ -1049,12 +1049,12 @@ const Performance: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Performance Management</h1>
+        <h1 className="text-xl font-bold sm:text-2xl lg:text-3xl">Performance Management</h1>
         <p className="text-muted-foreground mt-1">Manage goals, reviews, and feedback</p>
       </div>
 
       <Tabs defaultValue="dashboard">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="w-full">
           <TabsTrigger value="dashboard" className="flex items-center gap-2">
             <LayoutDashboard className="w-4 h-4" />
             <span className="hidden sm:inline">Dashboard</span>

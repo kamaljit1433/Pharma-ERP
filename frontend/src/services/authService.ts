@@ -23,16 +23,16 @@ export interface RefreshSessionResponse {
   user: User;
 }
 
-// Token storage utilities
+// Token storage utilities — sessionStorage keeps each tab's session independent
 const TOKEN_STORAGE_KEY = 'auth_tokens';
 
 export const tokenStorage = {
   setTokens: (tokens: { accessToken: string; refreshToken: string }) => {
-    localStorage.setItem(TOKEN_STORAGE_KEY, JSON.stringify(tokens));
+    sessionStorage.setItem(TOKEN_STORAGE_KEY, JSON.stringify(tokens));
   },
-  
+
   getAccessToken: (): string | null => {
-    const tokens = localStorage.getItem(TOKEN_STORAGE_KEY);
+    const tokens = sessionStorage.getItem(TOKEN_STORAGE_KEY);
     if (!tokens) return null;
     try {
       return JSON.parse(tokens).accessToken;
@@ -40,9 +40,9 @@ export const tokenStorage = {
       return null;
     }
   },
-  
+
   getRefreshToken: (): string | null => {
-    const tokens = localStorage.getItem(TOKEN_STORAGE_KEY);
+    const tokens = sessionStorage.getItem(TOKEN_STORAGE_KEY);
     if (!tokens) return null;
     try {
       return JSON.parse(tokens).refreshToken;
@@ -50,9 +50,9 @@ export const tokenStorage = {
       return null;
     }
   },
-  
+
   clearTokens: () => {
-    localStorage.removeItem(TOKEN_STORAGE_KEY);
+    sessionStorage.removeItem(TOKEN_STORAGE_KEY);
   },
 };
 
@@ -92,6 +92,10 @@ export const authService = {
   
   // Initialize tokens from storage on app startup
   initializeTokens: () => {
+    // Remove any leftover tokens from the old localStorage-based storage
+    localStorage.removeItem('auth_tokens');
+    localStorage.removeItem('auth-storage');
+
     const accessToken = tokenStorage.getAccessToken();
     if (accessToken) {
       apiClient.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;

@@ -95,11 +95,11 @@ export const PayrollProcessing: React.FC<PayrollProcessingProps> = ({
           <CardDescription>Select month and year to process payroll for all employees</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4 items-end">
+          <div className="flex flex-wrap gap-4 items-end">
             <div className="space-y-2">
               <label className="text-sm font-medium">Month</label>
               <Select value={month} onValueChange={setMonth}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-full sm:w-40">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -115,7 +115,7 @@ export const PayrollProcessing: React.FC<PayrollProcessingProps> = ({
             <div className="space-y-2">
               <label className="text-sm font-medium">Year</label>
               <Select value={year} onValueChange={setYear}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-full sm:w-40">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -159,18 +159,18 @@ export const PayrollProcessing: React.FC<PayrollProcessingProps> = ({
 
       {/* Summary */}
       {summary && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
           <Card>
             <CardContent className="pt-6">
               <p className="text-sm text-muted-foreground">Total Employees</p>
-              <p className="text-3xl font-bold">{summary.total_employees}</p>
+              <p className="text-2xl font-bold sm:text-3xl">{summary.total_employees}</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardContent className="pt-6">
               <p className="text-sm text-muted-foreground">Gross Salary</p>
-              <p className="text-3xl font-bold">
+              <p className="text-2xl font-bold sm:text-3xl">
                 {(summary.total_gross_salary / 100000).toFixed(1)}L
               </p>
             </CardContent>
@@ -179,7 +179,7 @@ export const PayrollProcessing: React.FC<PayrollProcessingProps> = ({
           <Card>
             <CardContent className="pt-6">
               <p className="text-sm text-muted-foreground">Total Deductions</p>
-              <p className="text-3xl font-bold">
+              <p className="text-2xl font-bold sm:text-3xl">
                 {(summary.total_deductions / 100000).toFixed(1)}L
               </p>
             </CardContent>
@@ -188,7 +188,7 @@ export const PayrollProcessing: React.FC<PayrollProcessingProps> = ({
           <Card>
             <CardContent className="pt-6">
               <p className="text-sm text-muted-foreground">Net Salary</p>
-              <p className="text-3xl font-bold">
+              <p className="text-2xl font-bold sm:text-3xl">
                 {(summary.total_net_salary / 100000).toFixed(1)}L
               </p>
             </CardContent>

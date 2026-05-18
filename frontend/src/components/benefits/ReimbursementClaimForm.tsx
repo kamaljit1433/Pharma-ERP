@@ -64,7 +64,7 @@ const ClaimDetailModal: React.FC<{ claim: PastClaim; onClose: () => void }> = ({
         </div>
 
         {/* Details grid */}
-        <div className="grid grid-cols-2 gap-4 text-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
           <div>
             <p className="text-muted-foreground">Amount</p>
             <p className="font-bold text-xl">₹{claim.amount.toLocaleString()}</p>

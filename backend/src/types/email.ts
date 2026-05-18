@@ -96,7 +96,8 @@ export enum EmailTemplateType {
   DOCUMENT_EXPIRY = 'document-expiry',
   ATTENDANCE_ALERT = 'attendance-alert',
   PERFORMANCE_REVIEW = 'performance-review',
-  SYSTEM_NOTIFICATION = 'system-notification'
+  SYSTEM_NOTIFICATION = 'system-notification',
+  ACCOUNT_CREDENTIALS = 'account-credentials'
 }
 
 export interface EmailTemplateData {
@@ -224,5 +225,12 @@ export interface EmailTemplateData {
     message: string;
     actionUrl?: string;
     actionText?: string;
+  };
+  [EmailTemplateType.ACCOUNT_CREDENTIALS]: {
+    employeeName: string;
+    employeeId: string;
+    email: string;
+    temporaryPassword: string;
+    loginUrl: string;
   };
 }

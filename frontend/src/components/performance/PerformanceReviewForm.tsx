@@ -120,7 +120,7 @@ export const PerformanceReviewForm: React.FC<PerformanceReviewFormProps> = ({ on
             onChange={(id) => setSelectedEmployeeId(id)}
           />
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="cycleId">Review Cycle</Label>
               <Select

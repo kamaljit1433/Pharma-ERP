@@ -126,21 +126,19 @@ const Payroll: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <Wallet className="h-8 w-8" />
-            Payroll Management
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Process payroll, manage salary components, and generate payslips
-          </p>
-        </div>
+      <div>
+        <h1 className="text-xl font-bold tracking-tight sm:text-2xl lg:text-3xl flex items-center gap-2">
+          <Wallet className="h-6 w-6 sm:h-8 sm:w-8" />
+          Payroll Management
+        </h1>
+        <p className="text-muted-foreground mt-1">
+          Process payroll, manage salary components, and generate payslips
+        </p>
       </div>
 
       {/* Tabs */}
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="w-full">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="processing">Processing</TabsTrigger>
           <TabsTrigger value="payslips">Payslips</TabsTrigger>

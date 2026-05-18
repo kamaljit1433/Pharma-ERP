@@ -54,7 +54,7 @@ const TrainingFormBody: React.FC<TrainingFormBodyProps> = ({
     {/* Program details */}
     <div>
       <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Program Details</h3>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <Label htmlFor="name">Program Name</Label>
           <Input
@@ -469,12 +469,12 @@ export const TrainingProgramManagement: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
-          <GraduationCap className="w-6 h-6" />
-          <h2 className="text-2xl font-bold">Training Programs</h2>
+          <GraduationCap className="w-5 h-5 sm:w-6 sm:h-6" />
+          <h2 className="text-xl font-bold sm:text-2xl">Training Programs</h2>
         </div>
-        <Button onClick={openNewForm} className="gap-2">
+        <Button onClick={openNewForm} className="gap-2 w-full sm:w-auto flex-shrink-0">
           <Plus className="w-4 h-4" />
           New Program
         </Button>
@@ -509,7 +509,7 @@ export const TrainingProgramManagement: React.FC = () => {
                 <div className="flex-1">
                   <h3 className="font-semibold text-lg">{program.name}</h3>
                   <p className="text-sm text-gray-600">{program.description}</p>
-                  <div className="mt-2 flex items-center gap-4 text-sm">
+                  <div className="mt-2 flex flex-wrap items-center gap-2 sm:gap-4 text-sm">
                     <span>Provider: {program.provider || 'N/A'}</span>
                     <span>Duration: {program.duration_hours} hours</span>
                     <Badge className={getStatusColor(program.status)}>{program.status}</Badge>

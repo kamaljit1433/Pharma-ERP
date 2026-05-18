@@ -32,7 +32,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
     <header
       role="banner"
       className={cn(
-        'sticky top-0 z-30 flex h-16 items-center border-b bg-card px-4 shadow-sm',
+        'sticky top-0 z-30 flex h-16 items-center border-b bg-card px-4 shadow-sm pt-safe',
         className
       )}
     >
@@ -69,7 +69,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
 
         {/* Right section: Actions */}
         <nav
-          className="flex items-center gap-2"
+          className="flex items-center gap-1 sm:gap-2"
           aria-label="User actions"
         >
           {/* Notification bell */}

@@ -56,15 +56,15 @@ export default function DepartmentManagerDashboard() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Department Manager Dashboard</h1>
-          <p className="text-muted-foreground mt-2">
+          <h1 className="text-xl font-bold tracking-tight sm:text-2xl lg:text-3xl">Department Manager Dashboard</h1>
+          <p className="text-muted-foreground mt-1 sm:mt-2">
             Team attendance and performance metrics
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="text-xs">
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <Badge variant="outline" className="text-xs hidden sm:inline-flex">
             Last updated: {stats?.generatedAt ? new Date(stats.generatedAt).toLocaleTimeString() : 'Never'}
           </Badge>
           <Button
@@ -155,7 +155,7 @@ export default function DepartmentManagerDashboard() {
       )}
 
       {/* Main Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Team Members</CardTitle>
@@ -210,7 +210,7 @@ export default function DepartmentManagerDashboard() {
       </div>
 
       {/* Attendance Overview */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Today's Attendance</CardTitle>

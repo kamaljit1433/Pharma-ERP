@@ -137,7 +137,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
       <Separator />
 
       {/* Collapse Toggle (Desktop only) - Requirement 21.1 */}
-      <div className="hidden border-t p-2 md:block">
+      <div className="hidden border-t p-2 pb-safe md:block">
         <Button
           variant="ghost"
           size="sm"

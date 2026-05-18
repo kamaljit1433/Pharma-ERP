@@ -207,16 +207,16 @@ export default function EmployeeDashboard() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
+          <h1 className="text-xl font-bold tracking-tight sm:text-2xl lg:text-3xl">
             Welcome back, {user?.employeeId}!
           </h1>
-          <p className="text-muted-foreground mt-2">
+          <p className="text-muted-foreground mt-1 sm:mt-2">
             Here's your personal dashboard
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           {getAttendanceStatusBadge()}
           <Button
             variant="outline"
@@ -265,7 +265,7 @@ export default function EmployeeDashboard() {
           <CardDescription>Your attendance status for today</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div className="space-y-2">
               <p className="text-sm font-medium text-muted-foreground">Check-In Time</p>
               <div className="flex items-center gap-2">
@@ -298,7 +298,7 @@ export default function EmployeeDashboard() {
       </Card>
 
       {/* Monthly Attendance Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Present Days</CardTitle>
@@ -373,7 +373,7 @@ export default function EmployeeDashboard() {
       </Card>
 
       {/* Upcoming Leaves & Events */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Upcoming Leaves</CardTitle>

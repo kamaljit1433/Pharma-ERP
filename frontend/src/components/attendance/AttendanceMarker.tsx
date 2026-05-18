@@ -277,7 +277,7 @@ export const AttendanceMarker: React.FC<AttendanceMarkerProps> = ({
           </DialogHeader>
 
           <Tabs value={mode} onValueChange={(v: string) => setMode(v as 'web' | 'gps' | 'biometric')}>
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="w-full">
               <TabsTrigger value="web" className="gap-1">
                 <Globe className="w-4 h-4" />
                 <span className="hidden sm:inline">Web</span>
