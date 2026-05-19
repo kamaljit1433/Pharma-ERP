@@ -228,10 +228,12 @@ const Separation: React.FC = () => {
               <LogOut className="h-4 w-4" />
               <span className="hidden sm:inline">Overview</span>
             </TabsTrigger>
-            <TabsTrigger value="resignation" className="flex items-center gap-1.5">
-              <FileText className="h-4 w-4" />
-              <span className="hidden sm:inline">Resignation</span>
-            </TabsTrigger>
+            {!isHR && (
+              <TabsTrigger value="resignation" className="flex items-center gap-1.5">
+                <FileText className="h-4 w-4" />
+                <span className="hidden sm:inline">Resignation</span>
+              </TabsTrigger>
+            )}
             {isHR && (
               <TabsTrigger value="termination" className="flex items-center gap-1.5">
                 <UserX className="h-4 w-4" />
@@ -261,14 +263,16 @@ const Separation: React.FC = () => {
             />
           </TabsContent>
 
-          <TabsContent value="resignation" className="mt-6">
-            <ResignationForm
-              employeeId={activeEmployeeId}
-              onSubmit={handleSubmitResignation}
-              onCancel={() => setActiveTab('overview')}
-              isLoading={isSubmitting}
-            />
-          </TabsContent>
+          {!isHR && (
+            <TabsContent value="resignation" className="mt-6">
+              <ResignationForm
+                employeeId={activeEmployeeId}
+                onSubmit={handleSubmitResignation}
+                onCancel={() => setActiveTab('overview')}
+                isLoading={isSubmitting}
+              />
+            </TabsContent>
+          )}
 
           {isHR && (
             <TabsContent value="termination" className="mt-6">

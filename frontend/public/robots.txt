@@ -1,0 +1,16 @@
+User-agent: *
+Allow: /login
+Disallow: /dashboard
+Disallow: /employees
+Disallow: /attendance
+Disallow: /leave
+Disallow: /payroll
+Disallow: /recruitment
+Disallow: /performance
+Disallow: /training
+Disallow: /benefits
+Disallow: /separation
+Disallow: /assets
+Disallow: /hierarchy
+Disallow: /settings
+Disallow: /profile

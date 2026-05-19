@@ -69,17 +69,25 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
     if (!triggerRef.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
     const dropdownWidth = 320;
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const spaceAbove = rect.top;
-    const openAbove = spaceBelow < 440 && spaceAbove > spaceBelow;
+    const estimatedHeight = 430;
+    const spaceBelow = window.innerHeight - rect.bottom - 8;
+    const spaceAbove = rect.top - 8;
+    const openAbove = spaceBelow < estimatedHeight && spaceAbove > spaceBelow;
+    const top = openAbove
+      ? Math.max(8, rect.top - estimatedHeight - 8)
+      : rect.bottom + 8;
+    const maxHeight = openAbove
+      ? Math.min(estimatedHeight, spaceAbove)
+      : Math.min(estimatedHeight, spaceBelow);
 
     setDropdownStyle({
       position: 'fixed',
       left: Math.min(rect.left, window.innerWidth - dropdownWidth - 8),
-      top: openAbove ? undefined : rect.bottom + 8,
-      bottom: openAbove ? window.innerHeight - rect.top + 8 : undefined,
+      top,
       width: dropdownWidth,
+      maxHeight,
       zIndex: 9999,
+      pointerEvents: 'auto',
     });
   }, []);
 
@@ -149,7 +157,9 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
     <div
       ref={dropdownRef}
       style={dropdownStyle}
-      className="bg-background border border-border rounded-xl shadow-2xl overflow-hidden"
+      className="bg-background border border-border rounded-xl shadow-2xl overflow-y-auto overflow-x-hidden"
+      onPointerDown={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
     >
       {/* Calendar header */}
       <div className="bg-primary/5 px-4 pt-4 pb-2">

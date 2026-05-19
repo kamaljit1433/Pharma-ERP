@@ -168,7 +168,7 @@ app.use(`/api/${config.apiVersion}/separation`, separationRoutes);
 app.use(`/api/${config.apiVersion}/assets`, assetRoutes);
 
 // Geo Tracking routes
-app.use(`/api/${config.apiVersion}/geo`, createGeoTrackingRoutes(knex));
+app.use(`/api/${config.apiVersion}/geo-tracking`, createGeoTrackingRoutes(knex));
 
 // Hierarchy routes
 app.use(`/api/${config.apiVersion}/hierarchy`, createHierarchyRoutes(knex));

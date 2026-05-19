@@ -20,6 +20,7 @@ export enum Permission {
   VIEW_SETTINGS = 'settings:read',
   VIEW_USERS = 'users:read',
   VIEW_ORGANIZATION = 'organization:read',
+  VIEW_GEO_TRACKING = 'geo_tracking:read',
 }
 
 /** Low-level permission shape used in role mappings */
@@ -72,6 +73,9 @@ const rolePermissions: Record<UserRole, PermissionDef[]> = {
     { resource: 'documents', action: 'update' },
     // Organization chart
     { resource: 'organization', action: 'read' },
+    // Geo tracking
+    { resource: 'geo_tracking', action: 'read' },
+    { resource: 'geo_tracking', action: 'update' },
   ],
   [UserRole.DEPARTMENT_MANAGER]: [
     // Assets read-only
@@ -91,6 +95,9 @@ const rolePermissions: Record<UserRole, PermissionDef[]> = {
     { resource: 'performance', action: 'update' },
     // Organization chart
     { resource: 'organization', action: 'read' },
+    // Geo tracking
+    { resource: 'geo_tracking', action: 'read' },
+    { resource: 'geo_tracking', action: 'update' },
   ],
   [UserRole.FINANCE]: [
     // Assets read-only
@@ -106,6 +113,8 @@ const rolePermissions: Record<UserRole, PermissionDef[]> = {
     { resource: 'benefits', action: 'update' },
     // Organization chart
     { resource: 'organization', action: 'read' },
+    // Geo tracking (read allowances)
+    { resource: 'geo_tracking', action: 'read' },
   ],
   [UserRole.EMPLOYEE]: [
     // Self-service only — no organization or settings access
@@ -117,6 +126,9 @@ const rolePermissions: Record<UserRole, PermissionDef[]> = {
     { resource: 'payroll', action: 'read' },
     { resource: 'benefits', action: 'read' },
     { resource: 'performance', action: 'read' },
+    // Geo tracking (self-service)
+    { resource: 'geo_tracking', action: 'create' },
+    { resource: 'geo_tracking', action: 'read' },
   ],
   [UserRole.IT_ADMIN]: [
     // Assets full access
@@ -133,6 +145,11 @@ const rolePermissions: Record<UserRole, PermissionDef[]> = {
     { resource: 'users', action: 'update' },
     // Organization chart
     { resource: 'organization', action: 'read' },
+    // Geo tracking (geo-fence management)
+    { resource: 'geo_tracking', action: 'create' },
+    { resource: 'geo_tracking', action: 'read' },
+    { resource: 'geo_tracking', action: 'update' },
+    { resource: 'geo_tracking', action: 'delete' },
   ],
 };
 

@@ -89,7 +89,9 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         skipWaiting: true,
         clientsClaim: true,
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2,json,bin}'],
+        // Exclude .bin model files — they are 5-6 MB each and handled via runtime cache below
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2,json}'],
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3 MiB for large vendor chunks
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -163,6 +165,21 @@ export default defineConfig({
               },
             },
           },
+          {
+            // Cache local model binary files from /models/ — too large to precache, served on demand
+            urlPattern: /\/models\/.*\.bin$/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'local-face-models',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
         ],
       },
       devOptions: {
@@ -184,6 +201,48 @@ export default defineConfig({
       '@assets': path.resolve(__dirname, './src/assets'),
       '@lib': path.resolve(__dirname, './src/lib'),
       '@config': path.resolve(__dirname, './src/config'),
+    },
+  },
+
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Core React runtime — tiny, always needed
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          // Radix UI primitives — used across many pages
+          'radix-ui': [
+            '@radix-ui/react-alert-dialog',
+            '@radix-ui/react-avatar',
+            '@radix-ui/react-checkbox',
+            '@radix-ui/react-dialog',
+            '@radix-ui/react-dropdown-menu',
+            '@radix-ui/react-label',
+            '@radix-ui/react-progress',
+            '@radix-ui/react-select',
+            '@radix-ui/react-separator',
+            '@radix-ui/react-slot',
+            '@radix-ui/react-switch',
+            '@radix-ui/react-tabs',
+            '@radix-ui/react-toast',
+            '@radix-ui/react-tooltip',
+          ],
+          // Charts — only loaded on dashboard/payroll pages
+          'charts': ['recharts'],
+          // Firebase — only needed for notifications
+          'firebase': ['firebase/app', 'firebase/messaging'],
+          // TensorFlow + face-api — only loaded on attendance face-check page
+          'tensorflow': ['@tensorflow/tfjs', 'face-api.js'],
+          // Org chart — only loaded on hierarchy page
+          'flow': ['@xyflow/react'],
+          // Excel export — only loaded on payroll/reports
+          'xlsx': ['xlsx'],
+          // State + validation
+          'state': ['zustand', 'zod'],
+          // Date utilities
+          'date': ['date-fns'],
+        },
+      },
     },
   },
 

@@ -444,7 +444,7 @@ export const ExitInterviewForm: React.FC<ExitInterviewFormProps> = ({
 
       {/* Schedule modal */}
       <Dialog open={scheduleOpen} onOpenChange={setScheduleOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md" onInteractOutside={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>Schedule Exit Interview</DialogTitle>
             <DialogDescription>
